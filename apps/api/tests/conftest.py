@@ -31,6 +31,13 @@ def pg_engine():
     command.upgrade(cfg, "head")
     engine = create_engine(parsed.set(drivername="postgresql+psycopg"))
     yield engine
+    # Imported fixtures may contain results that 0001 cannot represent.
+    # Remove only data in the guarded, disposable test database before teardown.
+    from app.database.base import Base
+
+    with engine.begin() as conn:
+        names = ",".join('"' + name + '"' for name in Base.metadata.tables)
+        conn.execute(text("TRUNCATE " + names + " CASCADE"))
     engine.dispose()
     command.downgrade(cfg, "base")
     get_settings.cache_clear()

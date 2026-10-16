@@ -1,4 +1,6 @@
 from sqlalchemy import (
+    JSON,
+    Boolean,
     CheckConstraint,
     Column,
     DateTime,
@@ -7,6 +9,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     Uuid,
+    text,
 )
 
 from app.database.base import Base, Record
@@ -26,6 +29,8 @@ class ImportJob(Record, Base):
     status = Column(String(20), nullable=False, server_default="pending")
     started_at = Column(DateTime(timezone=True))
     finished_at = Column(DateTime(timezone=True))
+    counts = Column(JSON)
+    conflicts = Column(JSON)
     error_code = Column(String(80))
     __table_args__ = (
         UniqueConstraint("data_source_id", "idempotency_key"),
@@ -48,6 +53,7 @@ class ExternalMapping(Record, Base):
     entrant_id = Column(Uuid, ForeignKey("event_entrants.id"), index=True)
     synced_at = Column(DateTime(timezone=True), nullable=False)
     source_updated_at = Column(DateTime(timezone=True))
+    manual_locked = Column(Boolean, nullable=False, server_default=text("false"))
     payload_hash = Column(String(64))
     __table_args__ = (
         UniqueConstraint("data_source_id", "entity_type", "external_id"),

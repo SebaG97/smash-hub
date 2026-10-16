@@ -1,0 +1,377 @@
+{
+  "tournament": {
+    "id": 100,
+    "name": "Fixture Open",
+    "slug": "tournament/fixture-open",
+    "state": 3,
+    "startAt": 1699900000,
+    "endAt": 1700100000,
+    "city": "Asunción",
+    "countryCode": "PY",
+    "events": [
+      {
+        "id": 10
+      },
+      {
+        "id": 20
+      }
+    ]
+  },
+  "participants": [
+    {
+      "id": 1,
+      "gamerTag": "Same",
+      "player": {
+        "id": 100
+      }
+    },
+    {
+      "id": 2,
+      "gamerTag": "Same",
+      "player": {
+        "id": 101
+      }
+    },
+    {
+      "id": 3,
+      "gamerTag": "Team member 2",
+      "player": {
+        "id": 102
+      }
+    },
+    {
+      "id": 4,
+      "gamerTag": "Team member 3",
+      "player": null
+    }
+  ],
+  "events": [
+    {
+      "id": 10,
+      "name": "Structured singles",
+      "slug": "tournament/fixture-open/event/a",
+      "state": "COMPLETED",
+      "type": 1,
+      "numEntrants": 2,
+      "teamRosterSize": null,
+      "videogame": {
+        "id": 1386,
+        "name": "Super Smash Bros. Ultimate",
+        "slug": "ultimate"
+      },
+      "entrants": [
+        {
+          "id": 11,
+          "name": "Same",
+          "initialSeedNum": 1,
+          "participants": [
+            {
+              "id": 1,
+              "gamerTag": "Same",
+              "player": {
+                "id": 100
+              }
+            }
+          ]
+        },
+        {
+          "id": 12,
+          "name": "Same",
+          "initialSeedNum": 2,
+          "participants": [
+            {
+              "id": 2,
+              "gamerTag": "Same",
+              "player": {
+                "id": 101
+              }
+            }
+          ]
+        }
+      ],
+      "standings": [
+        {
+          "id": 1,
+          "placement": 1,
+          "isFinal": true,
+          "entrant": {
+            "id": 11
+          }
+        },
+        {
+          "id": 2,
+          "placement": 2,
+          "isFinal": true,
+          "entrant": {
+            "id": 12
+          }
+        }
+      ],
+      "sets": [
+        {
+          "id": 1001,
+          "state": 3,
+          "winnerId": 11,
+          "fullRoundText": "Final",
+          "completedAt": 1700000000,
+          "updatedAt": 1700000001,
+          "displayScore": "2 - 0",
+          "slots": [
+            {
+              "entrant": {
+                "id": 11
+              },
+              "standing": {
+                "stats": {
+                  "score": {
+                    "value": 2
+                  }
+                }
+              }
+            },
+            {
+              "entrant": {
+                "id": 12
+              },
+              "standing": {
+                "stats": {
+                  "score": {
+                    "value": 0
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": 1002,
+          "state": 1,
+          "winnerId": null,
+          "fullRoundText": "Pending",
+          "completedAt": null,
+          "updatedAt": 1700000001,
+          "displayScore": "2 - 0",
+          "slots": [
+            {
+              "entrant": {
+                "id": 11
+              },
+              "standing": {
+                "stats": {
+                  "score": {
+                    "value": 1
+                  }
+                }
+              }
+            },
+            {
+              "entrant": {
+                "id": 12
+              },
+              "standing": {
+                "stats": {
+                  "score": {
+                    "value": 1
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": 1003,
+          "state": 3,
+          "winnerId": 11,
+          "fullRoundText": "DQ",
+          "completedAt": 1700000000,
+          "updatedAt": 1700000001,
+          "displayScore": "DQ",
+          "slots": [
+            {
+              "entrant": {
+                "id": 11
+              },
+              "standing": {
+                "stats": {
+                  "score": {
+                    "value": 0
+                  }
+                }
+              }
+            },
+            {
+              "entrant": {
+                "id": 12
+              },
+              "standing": {
+                "stats": {
+                  "score": {
+                    "value": -1
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": 1004,
+          "state": 3,
+          "winnerId": 11,
+          "fullRoundText": "BYE",
+          "completedAt": 1700000000,
+          "updatedAt": 1700000001,
+          "displayScore": "BYE",
+          "slots": [
+            {
+              "entrant": {
+                "id": 11
+              },
+              "standing": {
+                "stats": {
+                  "score": {
+                    "value": 2
+                  }
+                }
+              }
+            },
+            {
+              "entrant": null,
+              "standing": null
+            }
+          ]
+        },
+        {
+          "id": 1005,
+          "state": 3,
+          "winnerId": 11,
+          "fullRoundText": "Missing score",
+          "completedAt": 1700000000,
+          "updatedAt": 1700000001,
+          "displayScore": "2 - 0",
+          "slots": [
+            {
+              "entrant": {
+                "id": 11
+              },
+              "standing": {
+                "stats": {
+                  "score": {
+                    "value": null
+                  }
+                }
+              }
+            },
+            {
+              "entrant": {
+                "id": 12
+              },
+              "standing": {
+                "stats": {
+                  "score": {
+                    "value": null
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": 1006,
+          "state": 3,
+          "winnerId": 11,
+          "fullRoundText": "Missing date",
+          "completedAt": null,
+          "updatedAt": 1700000001,
+          "displayScore": "2 - 0",
+          "slots": [
+            {
+              "entrant": {
+                "id": 11
+              },
+              "standing": {
+                "stats": {
+                  "score": {
+                    "value": 2
+                  }
+                }
+              }
+            },
+            {
+              "entrant": {
+                "id": 12
+              },
+              "standing": {
+                "stats": {
+                  "score": {
+                    "value": 0
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "name": "Team bracket",
+      "slug": "tournament/fixture-open/event/a",
+      "state": "COMPLETED",
+      "type": 2,
+      "numEntrants": 2,
+      "teamRosterSize": {
+        "minPlayers": 2,
+        "maxPlayers": 2
+      },
+      "videogame": {
+        "id": 1386,
+        "name": "Super Smash Bros. Ultimate",
+        "slug": "ultimate"
+      },
+      "entrants": [
+        {
+          "id": 21,
+          "name": "Team 0",
+          "initialSeedNum": 1,
+          "participants": [
+            {
+              "id": 1,
+              "gamerTag": "Same",
+              "player": {
+                "id": 100
+              }
+            },
+            {
+              "id": 2,
+              "gamerTag": "Same",
+              "player": {
+                "id": 101
+              }
+            }
+          ]
+        },
+        {
+          "id": 22,
+          "name": "Team 1",
+          "initialSeedNum": 2,
+          "participants": [
+            {
+              "id": 3,
+              "gamerTag": "Team member 2",
+              "player": {
+                "id": 102
+              }
+            },
+            {
+              "id": 4,
+              "gamerTag": "Team member 3",
+              "player": null
+            }
+          ]
+        }
+      ],
+      "standings": [],
+      "sets": []
+    }
+  ]
+}

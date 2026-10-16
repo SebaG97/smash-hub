@@ -1,6 +1,6 @@
 # Modelo de datos
 
-La revisión `0001` crea 19 tablas de dominio. Todas tienen `id UUID` generado por la aplicación, `created_at TIMESTAMPTZ DEFAULT now()` y `updated_at TIMESTAMPTZ DEFAULT now()` (actualizado por SQLAlchemy en cambios ORM). Los IDs externos nunca reemplazan las claves internas. Las FKs restringen borrados de entidades referenciadas para preservar historial.
+La revisión congelada `0001` crea 19 tablas de dominio; `0002` agrega procedencia, publicación, conflictos y resultados incompletos sin nuevas tablas. `0003` separa estado, resolución y elegibilidad de sets (ADR-009). Todas tienen `id UUID` generado por la aplicación, `created_at TIMESTAMPTZ DEFAULT now()` y `updated_at TIMESTAMPTZ DEFAULT now()` (actualizado por SQLAlchemy en cambios ORM). Los IDs externos nunca reemplazan las claves internas. Las FKs restringen borrados de entidades referenciadas para preservar historial.
 
 ## Relaciones
 
@@ -40,13 +40,14 @@ La cardinalidad del roster se comprueba al commit: `team_size=1` singles, `2` do
 
 ## Invariantes competitivas
 
-- `players.tag` está indexado y no es único. `player_aliases` conserva intervalos de tags; `tag_snapshot` en la inscripción evita reescribir la presentación histórica. El futuro servicio de identidad deberá cerrar y abrir aliases en una misma transacción; todavía no hay endpoint de cambio de tag.
+- `players.tag` está indexado y no es único. `player_aliases` conserva intervalos de tags; `tag_snapshot` en la inscripción evita reescribir la presentación histórica. El importador registra aliases observados sin inventar intervalos de exclusividad; el tag actual solo cambia con evidencia de un torneo posterior y sin bloqueo manual.
 - `tournament_participants` tiene una inscripción por jugador/torneo. `entrant_members` apunta a esta inscripción, no directamente a un nombre. FKs compuestas impiden integrar participantes de otro torneo y lados de otro evento.
 - Un participante solo integra un entrant por evento. El roster debe tener exactamente el tamaño del evento, con posiciones únicas entre 1 y ese tamaño. Los triggers validan al commit y bloquean las filas de entrant/evento durante la comprobación.
+- El status de sets es formato legado de Misión 01/02 para sus triggers; el estado público proviene de lifecycle_status y se interpreta junto a resolution. stats_eligible/ranking_eligible excluyen BYE, DQ, placeholders, resets no utilizados y resultados insuficientes.
 - Un set tiene como máximo dos lados distintos y no puede enfrentar un entrant consigo mismo. Los lados pueden estar incompletos mientras el set esté pendiente; no se guardan ganadores ni scores de pendientes.
 - `completed`: dos entrants, un ganador, dos scores no negativos y score ganador mayor. Si existe best_of, debe ser impar positivo y el ganador alcanza `best_of // 2 + 1` victorias.
 - `dq`: dos entrants, un ganador y scores ausentes. `bye`: un entrant, un ganador y scores ausentes. DQ doble y juegos con más de dos lados quedan para una extensión explícita del modelo.
-- Todo resultado final tiene `completed_at`; un pendiente no lo tiene. Los checks por fila se complementan con triggers diferidos por set/lado, que también validan borrados o modificaciones de lados.
+- `completed_at` es nullable cuando la fuente no publica fecha; un pendiente no lo tiene. `incomplete` conserva resultados finales insuficientes o ambiguos. Solo completed con scores válidos y fecha habilita ranking_eligible como candidato futuro; no se calcula ranking. Los checks por fila se complementan con triggers diferidos por set/lado, que también validan borrados o modificaciones de lados.
 - `external_mappings` tiene unicidad fuente/tipo/id externo y fuente/destino interno. Un set externo no puede producir dos sets internos. Cada mapeo apunta a exactamente una FK del tipo declarado; no existen referencias polimórficas sin FK.
 - `import_jobs` usa unicidad fuente/idempotency_key. La futura integración realizará escrituras y mapeos en una transacción y hará upsert sobre estas claves; la fundación no importa datos por sí sola.
 
@@ -106,7 +107,7 @@ Personajes únicos por slug dentro de cada juego.
 
 ### `import_jobs`
 
-Unidad de importación idempotente con estado y fechas.
+Un intento de importación con estado, conteos, conflictos y fechas.
 
 | Campo | Tipo | Nullable | Referencia |
 | --- | --- | --- | --- |
@@ -115,6 +116,8 @@ Unidad de importación idempotente con estado y fechas.
 | `status` | `VARCHAR(20)` | no | — |
 | `started_at` | `DATETIME` | sí | — |
 | `finished_at` | `DATETIME` | sí | — |
+| `counts` | `JSON` | sí | — |
+| `conflicts` | `JSON` | sí | — |
 | `error_code` | `VARCHAR(80)` | sí | — |
 
 Check: `finished_at IS NULL OR (started_at IS NOT NULL AND finished_at >= started_at)`.
@@ -158,6 +161,7 @@ Persona/identidad competitiva persistente; el tag no es identificador.
 
 | Campo | Tipo | Nullable | Referencia |
 | --- | --- | --- | --- |
+| `manual_locked` | `BOOLEAN` | no | — |
 | `tag` | `VARCHAR(120)` | no | — |
 | `country_id` | `CHAR(32)` | sí | regions.country_id, countries.id |
 | `region_id` | `CHAR(32)` | sí | regions.id |
@@ -190,7 +194,7 @@ Cuenta externa vinculada a jugador, con sincronización.
 
 ### `player_aliases`
 
-Historial de tags con inicio y fin opcional.
+Tags observados: valid_from es primera evidencia conocida del tag, valid_to no se inventa.
 
 | Campo | Tipo | Nullable | Referencia |
 | --- | --- | --- | --- |
@@ -210,6 +214,10 @@ Encuentro organizativo; puede contener varios juegos.
 | `community_id` | `CHAR(32)` | no | communities.id |
 | `slug` | `VARCHAR(160)` | no | — |
 | `name` | `VARCHAR(200)` | no | — |
+| `published` | `BOOLEAN` | no | — |
+| `status` | `VARCHAR(30)` | sí | — |
+| `location` | `JSON` | sí | — |
+| `synced_at` | `DATETIME` | sí | — |
 | `starts_at` | `DATETIME` | sí | — |
 | `ends_at` | `DATETIME` | sí | — |
 
@@ -227,6 +235,9 @@ Competencia concreta de un juego y tamaño de equipo.
 | `game_id` | `CHAR(32)` | no | games.id |
 | `slug` | `VARCHAR(120)` | no | — |
 | `name` | `VARCHAR(200)` | no | — |
+| `status` | `VARCHAR(30)` | sí | — |
+| `competition_type` | `INTEGER` | sí | — |
+| `num_entrants` | `INTEGER` | sí | — |
 | `team_size` | `INTEGER` | no | — |
 
 Check: `team_size >= 1`.
@@ -243,7 +254,11 @@ Inscripción de jugador a torneo, con tag conservado.
 | --- | --- | --- | --- |
 | `tournament_id` | `CHAR(32)` | no | tournaments.id |
 | `player_id` | `CHAR(32)` | no | players.id |
+| `external_id` | `VARCHAR(200)` | sí | — |
+| `manual_locked` | `BOOLEAN` | no | — |
 | `tag_snapshot` | `VARCHAR(120)` | no | — |
+
+Única: `external_id`.
 
 Única: `id, tournament_id`.
 
@@ -258,6 +273,7 @@ Unidad competitiva inscrita al evento, individual o equipo.
 | `event_id` | `CHAR(32)` | no | events.id |
 | `tournament_id` | `CHAR(32)` | no | events.tournament_id |
 | `name` | `VARCHAR(200)` | no | — |
+| `placement` | `INTEGER` | sí | — |
 | `seed` | `INTEGER` | sí | — |
 
 Check: `seed IS NULL OR seed > 0`.
@@ -276,15 +292,35 @@ Enfrentamiento con estado y formato opcional.
 | --- | --- | --- | --- |
 | `event_id` | `CHAR(32)` | no | events.id |
 | `status` | `VARCHAR(20)` | no | — |
+| `lifecycle_status` | `VARCHAR(20)` | no | — |
+| `resolution` | `VARCHAR(24)` | no | — |
+| `classification_reason` | `VARCHAR(80)` | no | — |
+| `normalization_version` | `INTEGER` | no | — |
+| `round_number` | `INTEGER` | sí | — |
+| `stats_eligible` | `BOOLEAN` | no | — |
+| `manual_locked` | `BOOLEAN` | no | — |
+| `ranking_eligible` | `BOOLEAN` | no | — |
+| `source_result` | `JSON` | sí | — |
+| `result_history` | `JSON` | no | — |
 | `round_label` | `VARCHAR(100)` | sí | — |
 | `best_of` | `INTEGER` | sí | — |
 | `completed_at` | `DATETIME` | sí | — |
 
 Check: `best_of IS NULL OR (best_of > 0 AND best_of % 2 = 1)`.
 
-Check: `(status = 'pending' AND completed_at IS NULL) OR (status <> 'pending' AND completed_at IS NOT NULL)`.
+Check: `status <> 'pending' OR completed_at IS NULL`.
 
-Check: `status IN ('pending','completed','dq','bye')`.
+Check: `NOT stats_eligible OR (lifecycle_status = 'completed' AND resolution = 'played' AND status = 'completed')`.
+
+Check: `NOT ranking_eligible OR (status = 'completed' AND completed_at IS NOT NULL)`.
+
+Check: `NOT ranking_eligible OR stats_eligible`.
+
+Check: `lifecycle_status IN ('pending','in_progress','completed','not_played','unknown')`.
+
+Check: `resolution IN ('unresolved','played','dq','bye','placeholder','conditional_unused')`.
+
+Check: `status IN ('pending','completed','dq','bye','incomplete')`.
 
 Única: `id, event_id`.
 
@@ -321,6 +357,7 @@ Correspondencia verificable entre proveedor e identidad interna.
 | `entrant_id` | `CHAR(32)` | sí | event_entrants.id |
 | `synced_at` | `DATETIME` | no | — |
 | `source_updated_at` | `DATETIME` | sí | — |
+| `manual_locked` | `BOOLEAN` | no | — |
 | `payload_hash` | `VARCHAR(64)` | sí | — |
 
 Check: `(entity_type = 'tournament' AND tournament_id IS NOT NULL AND event_id IS NULL AND set_id IS NULL AND entrant_id IS NULL)         OR (entity_type = 'event' AND event_id IS NOT NULL AND tournament_id IS NULL AND set_id IS NULL AND entrant_id IS NULL)         OR (entity_type = 'set' AND set_id IS NOT NULL AND tournament_id IS NULL AND event_id IS NULL AND entrant_id IS NULL)         OR (entity_type = 'entrant' AND entrant_id IS NOT NULL AND tournament_id IS NULL AND event_id IS NULL AND set_id IS NULL)`.
@@ -342,7 +379,7 @@ Lado 1 o 2, entrant y resultado.
 | Campo | Tipo | Nullable | Referencia |
 | --- | --- | --- | --- |
 | `set_id` | `CHAR(32)` | no | sets.id |
-| `event_id` | `CHAR(32)` | no | sets.event_id, event_entrants.event_id |
+| `event_id` | `CHAR(32)` | no | event_entrants.event_id, sets.event_id |
 | `entrant_id` | `CHAR(32)` | sí | event_entrants.id |
 | `side` | `INTEGER` | no | — |
 | `score` | `INTEGER` | sí | — |

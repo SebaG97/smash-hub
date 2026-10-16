@@ -1,4 +1,5 @@
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     Column,
     DateTime,
@@ -7,6 +8,7 @@ from sqlalchemy import (
     String,
     UniqueConstraint,
     Uuid,
+    text,
 )
 
 from app.database.base import Base, Record
@@ -14,6 +16,7 @@ from app.database.base import Base, Record
 
 class Player(Record, Base):
     __tablename__ = "players"
+    manual_locked = Column(Boolean, nullable=False, server_default=text("false"))
     tag = Column(String(120), nullable=False, index=True)
     country_id = Column(Uuid, ForeignKey("countries.id"), index=True)
     region_id = Column(Uuid, index=True)

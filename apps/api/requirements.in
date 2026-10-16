@@ -5,3 +5,4 @@ SQLAlchemy==2.0.45
 alembic==1.18.1
 psycopg[binary]==3.3.5
 uvicorn==0.40.0
+httpx==0.28.1

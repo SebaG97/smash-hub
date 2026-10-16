@@ -1,0 +1,279 @@
+{
+  "date": "2026-10-16",
+  "environment": "PostgreSQL local development only",
+  "source": "start.gg authenticated GraphQL, minimal validated snapshots",
+  "tournaments": [
+    {
+      "slug": "gg-fest-x-eon",
+      "id": "936e88fc-26db-42b0-96cb-5c78f96c6e6e",
+      "events": [
+        {
+          "id": "c06656b7-ecdb-455e-96bb-2eb90f1cd9b2",
+          "name": "Ultimate Singles",
+          "team_size": 1,
+          "entrants": 25,
+          "final_placements": 24,
+          "sets": 102,
+          "statuses": {
+            "completed": 48,
+            "bye": 27,
+            "pending": 27
+          },
+          "source_final_states": {
+            "3": 75,
+            "1": 27
+          },
+          "missing_completed_at": 0,
+          "source_negative_score_sets": 0
+        }
+      ],
+      "participants": 25,
+      "entrants": 25,
+      "sets": 102,
+      "statuses": {
+        "completed": 48,
+        "bye": 27,
+        "pending": 27
+      },
+      "jobs": [
+        {
+          "id": "02e3a343-cc18-48db-817e-50cd14319df8",
+          "status": "completed",
+          "counts": {
+            "created": 204,
+            "updated": 0,
+            "skipped": 0
+          },
+          "conflicts": [],
+          "error_code": null
+        },
+        {
+          "id": "cdfb35ca-2772-4c33-a0ea-4e37e61c930e",
+          "status": "completed",
+          "counts": {
+            "created": 0,
+            "updated": 0,
+            "skipped": 154
+          },
+          "conflicts": [],
+          "error_code": null
+        }
+      ]
+    },
+    {
+      "slug": "game-over-sep",
+      "id": "932e160c-4451-4ff2-8524-54d8c2d65cee",
+      "events": [
+        {
+          "id": "828834c1-b259-42d7-ba4a-5b6a56026989",
+          "name": "Ultimate Singles",
+          "team_size": 1,
+          "entrants": 21,
+          "final_placements": 21,
+          "sets": 102,
+          "statuses": {
+            "completed": 40,
+            "bye": 28,
+            "pending": 34
+          },
+          "source_final_states": {
+            "3": 68,
+            "1": 34
+          },
+          "missing_completed_at": 0,
+          "source_negative_score_sets": 0
+        }
+      ],
+      "participants": 21,
+      "entrants": 21,
+      "sets": 102,
+      "statuses": {
+        "completed": 40,
+        "bye": 28,
+        "pending": 34
+      },
+      "jobs": [
+        {
+          "id": "cf7b70d1-f1d0-4c5b-9b45-e356f56fb7c7",
+          "status": "completed",
+          "counts": {
+            "created": 162,
+            "updated": 0,
+            "skipped": 0
+          },
+          "conflicts": [],
+          "error_code": null
+        },
+        {
+          "id": "afab1099-6b2d-4d7c-809e-3b74d525ffdc",
+          "status": "completed",
+          "counts": {
+            "created": 0,
+            "updated": 0,
+            "skipped": 146
+          },
+          "conflicts": [],
+          "error_code": null
+        }
+      ]
+    },
+    {
+      "slug": "super-smash-burgame-7",
+      "id": "611ea58c-dd95-4fbc-a81b-14eb2dc35188",
+      "events": [
+        {
+          "id": "cc9def41-c941-4e78-a383-1151586517dd",
+          "name": "SUPER SMASH BURGAME",
+          "team_size": 1,
+          "entrants": 17,
+          "final_placements": 17,
+          "sets": 103,
+          "statuses": {
+            "completed": 28,
+            "dq": 5,
+            "bye": 28,
+            "pending": 42
+          },
+          "source_final_states": {
+            "3": 61,
+            "1": 42
+          },
+          "missing_completed_at": 0,
+          "source_negative_score_sets": 5
+        }
+      ],
+      "participants": 17,
+      "entrants": 17,
+      "sets": 103,
+      "statuses": {
+        "completed": 28,
+        "dq": 5,
+        "bye": 28,
+        "pending": 42
+      },
+      "jobs": [
+        {
+          "id": "8c4449b2-5a7e-46c1-a61a-745b11cf2f8c",
+          "status": "completed",
+          "counts": {
+            "created": 150,
+            "updated": 1,
+            "skipped": 0
+          },
+          "conflicts": [],
+          "error_code": null
+        },
+        {
+          "id": "cf282183-a882-43b8-ad84-051f8b483723",
+          "status": "completed",
+          "counts": {
+            "created": 0,
+            "updated": 0,
+            "skipped": 139
+          },
+          "conflicts": [],
+          "error_code": null
+        }
+      ]
+    }
+  ],
+  "identities": {
+    "distinct_global_players": 38,
+    "shared_two_or_more_tournaments": 18,
+    "shared_all_three": 7,
+    "pairwise_overlap": {
+      "gg-fest-x-eon / game-over-sep": 13,
+      "gg-fest-x-eon / super-smash-burgame-7": 11,
+      "game-over-sep / super-smash-burgame-7": 8
+    },
+    "distinct_internal_players": 38,
+    "same_external_multiple_internal": 0
+  },
+  "comparison_errors": [],
+  "idempotence": {
+    "logical_state_and_uuids_unchanged": true,
+    "changed_tables": []
+  },
+  "public_checks": {
+    "api_checks": 59,
+    "players": 38,
+    "tournaments": 3,
+    "web_routes": [
+      {
+        "path": "/tournaments",
+        "status": 200,
+        "resolved_path": "/tournaments"
+      },
+      {
+        "path": "/players",
+        "status": 200,
+        "resolved_path": "/players"
+      },
+      {
+        "path": "/torneos",
+        "status": 200,
+        "resolved_path": "/tournaments"
+      },
+      {
+        "path": "/jugadores",
+        "status": 200,
+        "resolved_path": "/players"
+      },
+      {
+        "path": "/tournaments/611ea58c-dd95-4fbc-a81b-14eb2dc35188",
+        "status": 200,
+        "resolved_path": "/tournaments/611ea58c-dd95-4fbc-a81b-14eb2dc35188"
+      },
+      {
+        "path": "/events/cc9def41-c941-4e78-a383-1151586517dd",
+        "status": 200,
+        "resolved_path": "/events/cc9def41-c941-4e78-a383-1151586517dd"
+      },
+      {
+        "path": "/tournaments/932e160c-4451-4ff2-8524-54d8c2d65cee",
+        "status": 200,
+        "resolved_path": "/tournaments/932e160c-4451-4ff2-8524-54d8c2d65cee"
+      },
+      {
+        "path": "/events/828834c1-b259-42d7-ba4a-5b6a56026989",
+        "status": 200,
+        "resolved_path": "/events/828834c1-b259-42d7-ba4a-5b6a56026989"
+      },
+      {
+        "path": "/tournaments/936e88fc-26db-42b0-96cb-5c78f96c6e6e",
+        "status": 200,
+        "resolved_path": "/tournaments/936e88fc-26db-42b0-96cb-5c78f96c6e6e"
+      },
+      {
+        "path": "/events/c06656b7-ecdb-455e-96bb-2eb90f1cd9b2",
+        "status": 200,
+        "resolved_path": "/events/c06656b7-ecdb-455e-96bb-2eb90f1cd9b2"
+      },
+      {
+        "path": "/players/19d1f45f-9814-4442-a96c-ce29d940468c",
+        "status": 200,
+        "resolved_path": "/players/19d1f45f-9814-4442-a96c-ce29d940468c"
+      }
+    ],
+    "api_status": "passed",
+    "web_http_status": "passed",
+    "interactive_browser": "unavailable: no connected browser"
+  },
+  "snapshot_sha256": {
+    "gg-fest-x-eon": "954bf03cc6757d053ae39cfa5c6f39a5423ba6585454bcfdf687aa25c6a9f1ff",
+    "game-over-sep": "1f2f539dab11e71d41190b11f61f874a8fd3026d61e29d9a2064f00986011006",
+    "super-smash-burgame-7": "968a8ee4ef13033fcab3e033a289e7c6d621695dde557237acfbf5f8ef1d8358"
+  },
+  "tests": {
+    "backend": 83,
+    "frontend": 11
+  },
+  "limitations": [
+    "No interactive browser available; HTTP and component tests passed",
+    "Doubles validated only with synthetic fixtures",
+    "One GG Fest standing is explicitly non-final and is not published as final placement"
+  ],
+  "production_touched": false,
+  "digitalocean_touched": false,
+  "committed": false
+}

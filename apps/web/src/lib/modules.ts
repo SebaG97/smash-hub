@@ -1,12 +1,12 @@
 export const modules = [
   {
-    slug: "jugadores",
+    slug: "players",
     title: "Jugadores",
     number: "01",
     description: "Identidades, tags e historia de nuestra comunidad.",
   },
   {
-    slug: "torneos",
+    slug: "tournaments",
     title: "Torneos",
     number: "02",
     description: "Un punto de encuentro para cada competencia.",

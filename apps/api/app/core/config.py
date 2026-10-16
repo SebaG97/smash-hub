@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     db_pool_size: int = Field(default=3, ge=1, le=10)
     db_max_overflow: int = Field(default=2, ge=0, le=5)
     db_ca_cert: str | None = None
+    startgg_api_token: SecretStr | None = None
 
     @model_validator(mode="after")
     def validate_security(self):

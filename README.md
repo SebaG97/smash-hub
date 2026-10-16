@@ -2,7 +2,7 @@
 
 Fundación técnica de una plataforma comunitaria de esports. Primera comunidad: Smash Paraguay; primer juego: Super Smash Bros. Ultimate. El dominio admite otros juegos, países, comunidades y tamaños de equipo.
 
-Misión 01: web pública, API de estado, PostgreSQL, migraciones, bootstrap explícito, CI y configuración de despliegue. Sin importador, autenticación, rankings calculados ni resultados publicados.
+Misión 02: importador administrativo start.gg, identidades históricas, resultados, API pública y vistas de consulta. Conserva la fundación de Misión 01. Sin autenticación ni rankings calculados. Validación con fixtures y tres torneos reales de singles; revisión del responsable pendiente.
 
 ## Inicio local
 
@@ -51,7 +51,7 @@ infra/
   docker/               Imágenes y rol local de aplicación
   digitalocean/         App Spec y fragmento inactivo de migración
 docs/
-  adr/                  Cinco decisiones iniciales
+  adr/                  Nueve decisiones de arquitectura
   architecture/         Arquitectura y responsabilidades
   database/             ER y diccionario de las 19 tablas
   api/                  Contratos y OpenAPI
@@ -86,4 +86,19 @@ No existen rutas públicas de escritura.
 
 DigitalOcean se entrega como plantilla validable, con el repositorio `SebaG97/smash-hub` configurado y pendiente de los datos de la base existente. No se creó ningún recurso ni se conectó a producción. Revisar los datos pendientes antes de cualquier despliegue.
 
-Siguiente misión propuesta, sujeta a aprobación: importación de torneos desde start.gg con fixtures, reconciliación de identidades, reintentos e idempotencia transaccional. No está implementada.
+## Importar un torneo
+
+Después de migrar y hacer bootstrap, configurar `STARTGG_API_TOKEN` solo en el entorno privado de API:
+
+```sh
+docker compose run --rm api python -m app.cli.import_tournament --slug nombre-del-torneo --dry-run
+docker compose run --rm api python -m app.cli.import_tournament --slug nombre-del-torneo
+```
+
+No hay escritura HTTP. Sin token, el sitio sigue funcionando y la CLI informa un error claro. La CLI bloquea producción en esta misión. Ver [integración](docs/integrations/startgg.md), [runbook](docs/operations/tournament-import.md) e [informe Misión 02](docs/operations/mission-02-report.md) y [plan de validación corregido](docs/operations/mission-02-validation-plan.md).
+
+Vistas: `/tournaments`, `/tournaments/[id]`, `/events/[id]`, `/players`, `/players/[id]`. `/torneos` y `/jugadores` redirigen a las nuevas rutas. Listados paginados, búsqueda y resultados persistidos; sin datos ficticios ni rankings. La API añade GET `/api/v1/tournaments`, `/{id}`, `/{id}/events`, `/api/v1/events/{id}`, `/{id}/entrants`, `/{id}/sets`, `/api/v1/players` y `/{id}`. Ver contratos para parámetros.
+
+La revisión incremental 0002 conserva 0001 sin cambios. Consolidación Git y continuación a Misión 03 autorizadas por el responsable; sin autorización de push ni despliegue.
+
+Auditoría Misión 02.1: clasificación de estado/resolución/elegibilidad, migración 0003 y separación de entradas del bracket en API y web. Ver [informe y matrices](docs/operations/mission-02-1-report.md).

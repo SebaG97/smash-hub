@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 import sys,json
 sys.path.insert(0,'apps/api')
 from app.database import models
@@ -7,7 +7,7 @@ from app.main import create_app
 from app.core.config import Settings
 text='''# Modelo de datos
 
-La revisión `0001` crea 19 tablas de dominio. Todas tienen `id UUID` generado por la aplicación, `created_at TIMESTAMPTZ DEFAULT now()` y `updated_at TIMESTAMPTZ DEFAULT now()` (actualizado por SQLAlchemy en cambios ORM). Los IDs externos nunca reemplazan las claves internas. Las FKs restringen borrados de entidades referenciadas para preservar historial.
+La revisión congelada `0001` crea 19 tablas de dominio; `0002` agrega procedencia, publicación, conflictos y resultados incompletos sin nuevas tablas. `0003` separa estado, resolución y elegibilidad de sets (ADR-009). Todas tienen `id UUID` generado por la aplicación, `created_at TIMESTAMPTZ DEFAULT now()` y `updated_at TIMESTAMPTZ DEFAULT now()` (actualizado por SQLAlchemy en cambios ORM). Los IDs externos nunca reemplazan las claves internas. Las FKs restringen borrados de entidades referenciadas para preservar historial.
 
 ## Relaciones
 
@@ -47,13 +47,14 @@ La cardinalidad del roster se comprueba al commit: `team_size=1` singles, `2` do
 
 ## Invariantes competitivas
 
-- `players.tag` está indexado y no es único. `player_aliases` conserva intervalos de tags; `tag_snapshot` en la inscripción evita reescribir la presentación histórica. El futuro servicio de identidad deberá cerrar y abrir aliases en una misma transacción; todavía no hay endpoint de cambio de tag.
+- `players.tag` está indexado y no es único. `player_aliases` conserva intervalos de tags; `tag_snapshot` en la inscripción evita reescribir la presentación histórica. El importador registra aliases observados sin inventar intervalos de exclusividad; el tag actual solo cambia con evidencia de un torneo posterior y sin bloqueo manual.
 - `tournament_participants` tiene una inscripción por jugador/torneo. `entrant_members` apunta a esta inscripción, no directamente a un nombre. FKs compuestas impiden integrar participantes de otro torneo y lados de otro evento.
 - Un participante solo integra un entrant por evento. El roster debe tener exactamente el tamaño del evento, con posiciones únicas entre 1 y ese tamaño. Los triggers validan al commit y bloquean las filas de entrant/evento durante la comprobación.
+- El status de sets es formato legado de Misión 01/02 para sus triggers; el estado público proviene de lifecycle_status y se interpreta junto a resolution. stats_eligible/ranking_eligible excluyen BYE, DQ, placeholders, resets no utilizados y resultados insuficientes.
 - Un set tiene como máximo dos lados distintos y no puede enfrentar un entrant consigo mismo. Los lados pueden estar incompletos mientras el set esté pendiente; no se guardan ganadores ni scores de pendientes.
 - `completed`: dos entrants, un ganador, dos scores no negativos y score ganador mayor. Si existe best_of, debe ser impar positivo y el ganador alcanza `best_of // 2 + 1` victorias.
 - `dq`: dos entrants, un ganador y scores ausentes. `bye`: un entrant, un ganador y scores ausentes. DQ doble y juegos con más de dos lados quedan para una extensión explícita del modelo.
-- Todo resultado final tiene `completed_at`; un pendiente no lo tiene. Los checks por fila se complementan con triggers diferidos por set/lado, que también validan borrados o modificaciones de lados.
+- `completed_at` es nullable cuando la fuente no publica fecha; un pendiente no lo tiene. `incomplete` conserva resultados finales insuficientes o ambiguos. Solo completed con scores válidos y fecha habilita ranking_eligible como candidato futuro; no se calcula ranking. Los checks por fila se complementan con triggers diferidos por set/lado, que también validan borrados o modificaciones de lados.
 - `external_mappings` tiene unicidad fuente/tipo/id externo y fuente/destino interno. Un set externo no puede producir dos sets internos. Cada mapeo apunta a exactamente una FK del tipo declarado; no existen referencias polimórficas sin FK.
 - `import_jobs` usa unicidad fuente/idempotency_key. La futura integración realizará escrituras y mapeos en una transacción y hará upsert sobre estas claves; la fundación no importa datos por sí sola.
 
@@ -63,7 +64,7 @@ Los futuros juegos individuales pueden introducir `set_games(set_id, game_number
 
 Columnas comunes descritas arriba; a continuación se listan los campos específicos y restricciones de cada tabla. Los timestamps usan zona horaria. Los valores de origen/sincronización residen en mappings e identidades externas.
 '''
-descriptions={'countries':'País con ISO de dos letras mayúsculas.','regions':'Subdivisión de un país; código único dentro del país.','communities':'Comunidad con slug global; geografía opcional.','community_games':'Juegos habilitados para una comunidad.','games':'Catálogo global de videojuegos.','characters':'Personajes únicos por slug dentro de cada juego.','players':'Persona/identidad competitiva persistente; el tag no es identificador.','player_aliases':'Historial de tags con inicio y fin opcional.','external_identities':'Cuenta externa vinculada a jugador, con sincronización.','tournaments':'Encuentro organizativo; puede contener varios juegos.','tournament_participants':'Inscripción de jugador a torneo, con tag conservado.','events':'Competencia concreta de un juego y tamaño de equipo.','event_entrants':'Unidad competitiva inscrita al evento, individual o equipo.','entrant_members':'Roster mediante participantes del mismo torneo.','sets':'Enfrentamiento con estado y formato opcional.','set_sides':'Lado 1 o 2, entrant y resultado.','data_sources':'Proveedor externo sin tokens.','import_jobs':'Unidad de importación idempotente con estado y fechas.','external_mappings':'Correspondencia verificable entre proveedor e identidad interna.'}
+descriptions={'countries':'País con ISO de dos letras mayúsculas.','regions':'Subdivisión de un país; código único dentro del país.','communities':'Comunidad con slug global; geografía opcional.','community_games':'Juegos habilitados para una comunidad.','games':'Catálogo global de videojuegos.','characters':'Personajes únicos por slug dentro de cada juego.','players':'Persona/identidad competitiva persistente; el tag no es identificador.','player_aliases':'Tags observados: valid_from es primera evidencia conocida del tag, valid_to no se inventa.','external_identities':'Cuenta externa vinculada a jugador, con sincronización.','tournaments':'Encuentro organizativo; puede contener varios juegos.','tournament_participants':'Inscripción de jugador a torneo, con tag conservado.','events':'Competencia concreta de un juego y tamaño de equipo.','event_entrants':'Unidad competitiva inscrita al evento, individual o equipo.','entrant_members':'Roster mediante participantes del mismo torneo.','sets':'Enfrentamiento con estado y formato opcional.','set_sides':'Lado 1 o 2, entrant y resultado.','data_sources':'Proveedor externo sin tokens.','import_jobs':'Un intento de importación con estado, conteos, conflictos y fechas.','external_mappings':'Correspondencia verificable entre proveedor e identidad interna.'}
 from sqlalchemy import UniqueConstraint,CheckConstraint
 for table in Base.metadata.sorted_tables:
  text+=f'\n### `{table.name}`\n\n{descriptions[table.name]}\n\n| Campo | Tipo | Nullable | Referencia |\n| --- | --- | --- | --- |\n'

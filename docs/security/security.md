@@ -1,6 +1,6 @@
 # Seguridad
 
-La configuración se obtiene del entorno; `DATABASE_URL` es obligatoria y Pydantic la representa como secreto. Producción exige PostgreSQL con `sslmode=verify-full`, CA y orígenes HTTPS explícitos. El launcher de App Platform materializa la CA enlazada en un archivo temporal con permisos restringidos y fuerza verificación de certificado y hostname. No hay credenciales ni tokens de start.gg.
+La configuración se obtiene del entorno; `DATABASE_URL` es obligatoria y Pydantic la representa como secreto. Producción exige PostgreSQL con `sslmode=verify-full`, CA y orígenes HTTPS explícitos. El launcher de App Platform materializa la CA enlazada en un archivo temporal con permisos restringidos y fuerza verificación de certificado y hostname. STARTGG_API_TOKEN es un secreto opcional exclusivo del proceso CLI; nunca forma parte del frontend ni de snapshots.
 
 `.env`, claves privadas, certificados locales, cachés y artefactos se excluyen de Git y del contexto Docker. `.env.example` contiene contraseñas de desarrollo reconocibles y desechables. `NEXT_PUBLIC_*` es público: jamás usarlo para secretos. No volcar configuración, URLs de conexión, parámetros SQL, cuerpos de proveedores ni excepciones completas a logs. El logger de errores HTTP registra solo el tipo de excepción y no se activa el access log de Uvicorn.
 
@@ -19,3 +19,9 @@ Riesgos pendientes para futuras misiones:
 - Backups, restauración verificada y política de retención/privacidad quedan a cargo del plan operativo de producción.
 
 Usar Trusted Sources de DigitalOcean para permitir solo la aplicación y el acceso administrativo necesario. Mantener PostgreSQL fuera de ingress y nunca habilitar `0.0.0.0/0` como solución a fallos de conexión. Ver detalles de TLS y red en el runbook de despliegue.
+
+## Controles de Misión 02
+
+Parser con allowlist start.gg/www.start.gg y HTTPS, puerto 443 opcional, sin userinfo; nunca solicita la URL aportada. Endpoint GraphQL fijo y redirects deshabilitados. No se exponen cuerpos de error externos ni excepciones de almacenamiento en CLI/jobs. Los loggers httpx/httpcore están limitados a WARNING en configuración de aplicación. Los documentos no solicitan email, User ni información de contacto.
+
+Las correcciones manuales requieren locks explícitos; una contradicción de identidad no fusiona por gamerTag. Jobs y resultados originales solo son accesibles al rol administrativo SQL, no a la API pública. No hay endpoints de importación ni claves frontend de autorización. La CLI rechaza production durante esta misión; ENVIRONMENT no sustituye la responsabilidad de verificar que DATABASE_URL apunte al entorno local autorizado.

@@ -1,0 +1,7 @@
+﻿query Event($id: ID!) {
+  event(id: $id) {
+    id name slug state type numEntrants
+    teamRosterSize { minPlayers maxPlayers }
+    videogame { id name slug }
+  }
+}

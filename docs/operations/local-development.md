@@ -28,3 +28,7 @@ docker compose -f compose.test.yaml down -v
 ```
 
 Los wrappers `scripts/dev.ps1 test` y `sh scripts/dev.sh test` hacen la limpieza del entorno de pruebas incluso si falla la suite. No usar `-v` con el compose de desarrollo al limpiar pruebas. CI repite Pytest con PostgreSQL y ejecuta lint, formato, tests, build y TypeScript de frontend.
+
+## Misión 02
+
+Aplicar 0002 en PostgreSQL local y repetir bootstrap. STARTGG_API_TOKEN puede quedar vacío; web y consultas no lo requieren. Configurarlo de manera privada en `.env` para usar la CLI, sin agregarlo a NEXT_PUBLIC_* ni pasarlo como argumento. Procedimiento y preview: [tournament-import](tournament-import.md). Las pruebas HTTP usan MockTransport y fixtures; la suite completa usa PostgreSQL efímero, nunca necesita token real. El contenedor de tests incluye el snapshot OpenAPI para comparar contratos.

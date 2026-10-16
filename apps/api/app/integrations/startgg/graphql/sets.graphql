@@ -1,0 +1,16 @@
+query Sets($id: ID!, $page: Int!, $perPage: Int!, $states: [Int], $showByes: Boolean = true) {
+  event(id: $id) {
+    sets(page: $page, perPage: $perPage, sortType: STANDARD, filters: {showByes: $showByes, hideEmpty: false, state: $states}) {
+      pageInfo { total totalPages }
+      nodes {
+        id state round fullRoundText completedAt startedAt updatedAt winnerId displayScore hasPlaceholder
+        phaseGroup { id bracketType }
+        slots(includeByes: true) {
+          slotIndex prereqId prereqType prereqPlacement
+          entrant { id }
+          standing { stats { score { value } } }
+        }
+      }
+    }
+  }
+}

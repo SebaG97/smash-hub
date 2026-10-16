@@ -4,7 +4,7 @@ Estado: preparación declarativa; no se creó aplicación, base ni ningún otro 
 
 `infra/digitalocean/app.yaml` usa dos servicios del mismo repositorio, con `source_dir` `/apps/web` y `/apps/api`, comandos de build/run explícitos y healthchecks HTTP. Ingress conserva `/api` para FastAPI y dirige `/` a Next. El dominio administrado de App Platform proporciona HTTPS. El frontend compila con `/api/v1`, sin necesitar acceso a la base durante build.
 
-El repositorio `SebaG97/smash-hub` est? configurado en ambos servicios y en el fragmento de migraci?n. Completar la rama si difiere de main, `REPLACE_EXISTING_CLUSTER_NAME`, `REPLACE_EXISTING_DATABASE_NAME` y `REPLACE_LIMITED_APP_USER`. Elegir región, VPC y tamaños de instancia según la base existente y presupuesto. No se inventa un ID de VPC ni un nombre de clúster. `deploy_on_push` permanece desactivado.
+El repositorio `SebaG97/smash-hub` está configurado en ambos servicios y en el fragmento de migración. Completar la rama si difiere de main, `REPLACE_EXISTING_CLUSTER_NAME`, `REPLACE_EXISTING_DATABASE_NAME` y `REPLACE_LIMITED_APP_USER`. Elegir región, VPC y tamaños de instancia según la base existente y presupuesto. No se inventa un ID de VPC ni un nombre de clúster. `deploy_on_push` permanece desactivado.
 
 En el panel, usar **Attach DigitalOcean database** y seleccionar la Managed Database existente; no seleccionar Create dev database. En el spec se usa `production: true` con `cluster_name` explícito. Verificar que el nombre y usuario correspondan a recursos ya existentes antes de enviar cualquier spec.
 
@@ -27,3 +27,9 @@ doctl apps spec validate --schema-only /tmp/app-with-migration.yaml
 La validación de esquema no confirma existencia del repositorio, clúster, usuario, región, permisos ni conectividad. La validación semántica de cuenta y despliegue requiere revisión posterior del propietario; esta misión no la ejecuta. CI valida el esquema, nunca crea ni actualiza aplicaciones.
 
 Fuentes oficiales consultadas el 16 de octubre de 2026: [App Spec](https://docs.digitalocean.com/products/app-platform/reference/app-spec/), [variables enlazadas](https://docs.digitalocean.com/products/app-platform/how-to/use-environment-variables/), [asociación de bases](https://docs.digitalocean.com/products/app-platform/how-to/create-apps/) y [validación doctl](https://docs.digitalocean.com/reference/doctl/reference/apps/spec/validate/).
+
+## Preparación Misión 02
+
+Documentar STARTGG_API_TOKEN como secreto runtime exclusivo del futuro job administrativo; nunca variable pública/build de web. No se modificaron App Specs ni se creó job/worker permanente. La CLI termina con código de salida y libera engine/conexión; su pool se limita a una conexión. Agregar esa conexión al presupuesto si se habilita un job futuro. El secreto no es requisito del servicio público.
+
+La CLI bloquea producción en esta misión. Antes de habilitar jobs futuros, revisar ese control, permisos, target de migración 0002, política de operación y prueba real. El fragmento de migración actual sigue en 0001; no representa aprobación para desplegar 0002. Todo cambio de App Spec requiere doctl apps spec validate --schema-only nuevamente. No se accedió a PostgreSQL Managed ni se crearon recursos.

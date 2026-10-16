@@ -1,0 +1,8 @@
+﻿query Participants($id: ID!, $page: Int!, $perPage: Int!) {
+  tournament(id: $id) {
+    participants(query: {page: $page, perPage: $perPage}) {
+      pageInfo { total totalPages }
+      nodes { id gamerTag player { id } }
+    }
+  }
+}

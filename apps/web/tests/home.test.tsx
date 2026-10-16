@@ -8,7 +8,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 describe("public foundation", () => {
-  it("exposes all four modules and declares the absence of results", () => {
+  it("exposes all four modules and links to imported results", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(() => new Promise(() => {})),
@@ -22,7 +22,7 @@ describe("public foundation", () => {
         screen.getByRole("link", { name: new RegExp(title) }),
       ).toBeInTheDocument();
     expect(
-      screen.getByText(/Sin resultados cargados todavía/),
+      screen.getByText(/Resultados disponibles después de cada importación/),
     ).toBeInTheDocument();
   });
   it("reports readiness", async () => {

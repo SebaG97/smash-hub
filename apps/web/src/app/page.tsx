@@ -56,9 +56,9 @@ export default function Home() {
             <h2>Todo empieza por conectar.</h2>
           </div>
           <p>
-            Una base para lo que viene.
+            Torneos, jugadores e historias.
             <br />
-            Sin resultados cargados todavía.
+            Resultados disponibles después de cada importación.
           </p>
         </div>
         <div className="module-grid">
@@ -70,7 +70,11 @@ export default function Home() {
               </div>
               <h3>{m.title}</h3>
               <p>{m.description}</p>
-              <span className="coming-soon">PRÓXIMAMENTE</span>
+              <span className="coming-soon">
+                {m.slug === "players" || m.slug === "tournaments"
+                  ? "EXPLORAR"
+                  : "PRÓXIMAMENTE"}
+              </span>
             </Link>
           ))}
         </div>
@@ -84,9 +88,9 @@ export default function Home() {
             Después, cada posibilidad.
           </h2>
           <p>
-            La primera etapa prepara la plataforma para conectar jugadores,
-            torneos y resultados verificables. Los módulos competitivos llegarán
-            en futuras etapas.
+            Explorá jugadores, torneos y resultados importados con su contexto
+            histórico. Cada registro conserva su procedencia; los rankings
+            llegarán en una etapa posterior.
           </p>
         </div>
         <aside>

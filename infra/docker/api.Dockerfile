@@ -11,6 +11,7 @@ CMD ["uvicorn", "app.main:create_app", "--factory", "--host", "0.0.0.0", "--port
 FROM base AS test
 USER root
 COPY apps/api/requirements-dev.txt ./requirements-dev.txt
+COPY docs/api/openapi.json /docs/api/openapi.json
 RUN pip install --no-cache-dir -r requirements-dev.txt
 USER app
 CMD ["pytest", "-q"]

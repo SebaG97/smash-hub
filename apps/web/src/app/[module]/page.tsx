@@ -2,7 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { modules } from "../../lib/modules";
 export function generateStaticParams() {
-  return modules.map((m) => ({ module: m.slug }));
+  return modules
+    .filter((m) => m.slug !== "players" && m.slug !== "tournaments")
+    .map((m) => ({ module: m.slug }));
 }
 export default async function ModulePage({
   params,

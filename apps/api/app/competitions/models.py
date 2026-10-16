@@ -1,4 +1,5 @@
 from sqlalchemy import (
+    JSON,
     Boolean,
     CheckConstraint,
     Column,
@@ -20,6 +21,10 @@ class Tournament(Record, Base):
     community_id = Column(Uuid, ForeignKey("communities.id"), nullable=False, index=True)
     slug = Column(String(160), nullable=False)
     name = Column(String(200), nullable=False)
+    published = Column(Boolean, nullable=False, server_default=text("false"))
+    status = Column(String(30))
+    location = Column(JSON)
+    synced_at = Column(DateTime(timezone=True))
     starts_at = Column(DateTime(timezone=True))
     ends_at = Column(DateTime(timezone=True))
     __table_args__ = (
@@ -34,6 +39,8 @@ class TournamentParticipant(Record, Base):
     __tablename__ = "tournament_participants"
     tournament_id = Column(Uuid, ForeignKey("tournaments.id"), nullable=False, index=True)
     player_id = Column(Uuid, ForeignKey("players.id"), nullable=False, index=True)
+    external_id = Column(String(200), unique=True)
+    manual_locked = Column(Boolean, nullable=False, server_default=text("false"))
     tag_snapshot = Column(String(120), nullable=False)
     __table_args__ = (
         UniqueConstraint("tournament_id", "player_id"),
@@ -47,6 +54,9 @@ class Event(Record, Base):
     game_id = Column(Uuid, ForeignKey("games.id"), nullable=False, index=True)
     slug = Column(String(120), nullable=False)
     name = Column(String(200), nullable=False)
+    status = Column(String(30))
+    competition_type = Column(Integer)
+    num_entrants = Column(Integer)
     team_size = Column(Integer, nullable=False, server_default="1")
     __table_args__ = (
         UniqueConstraint("tournament_id", "slug"),
@@ -60,6 +70,7 @@ class EventEntrant(Record, Base):
     event_id = Column(Uuid, nullable=False, index=True)
     tournament_id = Column(Uuid, nullable=False, index=True)
     name = Column(String(200), nullable=False)
+    placement = Column(Integer)
     seed = Column(Integer)
     __table_args__ = (
         ForeignKeyConstraint(["event_id", "tournament_id"], ["events.id", "events.tournament_id"]),
@@ -96,15 +107,46 @@ class Set(Record, Base):
     __tablename__ = "sets"
     event_id = Column(Uuid, ForeignKey("events.id"), nullable=False, index=True)
     status = Column(String(20), nullable=False, server_default="pending")
+    # Legacy result shape remains for frozen 0001/0002 integrity triggers.
+    # Public state and classification use lifecycle_status/resolution below.
+    lifecycle_status = Column(String(20), nullable=False, server_default="unknown")
+    resolution = Column(String(24), nullable=False, server_default="unresolved")
+    classification_reason = Column(String(80), nullable=False, server_default="legacy_unverified")
+    normalization_version = Column(Integer, nullable=False, server_default="0")
+    round_number = Column(Integer)
+    stats_eligible = Column(Boolean, nullable=False, server_default=text("false"))
+    manual_locked = Column(Boolean, nullable=False, server_default=text("false"))
+    ranking_eligible = Column(Boolean, nullable=False, server_default=text("false"))
+    source_result = Column(JSON)
+    result_history = Column(JSON, nullable=False, server_default=text("'[]'"))
     round_label = Column(String(100))
     best_of = Column(Integer)
     completed_at = Column(DateTime(timezone=True))
     __table_args__ = (
         UniqueConstraint("id", "event_id"),
-        CheckConstraint("status IN ('pending','completed','dq','bye')", name="set_status"),
+        CheckConstraint(
+            "status IN ('pending','completed','dq','bye','incomplete')", name="set_status"
+        ),
         CheckConstraint("best_of IS NULL OR (best_of > 0 AND best_of % 2 = 1)", name="best_of"),
         CheckConstraint(
-            "(status = 'pending' AND completed_at IS NULL) OR (status <> 'pending' AND completed_at IS NOT NULL)",
+            "lifecycle_status IN ('pending','in_progress','completed','not_played','unknown')",
+            name="set_lifecycle",
+        ),
+        CheckConstraint(
+            "resolution IN ('unresolved','played','dq','bye','placeholder','conditional_unused')",
+            name="set_resolution",
+        ),
+        CheckConstraint(
+            "NOT stats_eligible OR (lifecycle_status = 'completed' AND resolution = 'played' AND status = 'completed')",
+            name="played_stats",
+        ),
+        CheckConstraint("NOT ranking_eligible OR stats_eligible", name="ranking_requires_played"),
+        CheckConstraint(
+            "NOT ranking_eligible OR (status = 'completed' AND completed_at IS NOT NULL)",
+            name="ranking_candidate",
+        ),
+        CheckConstraint(
+            "status <> 'pending' OR completed_at IS NULL",
             name="completion_time",
         ),
     )
