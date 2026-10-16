@@ -1,0 +1,29 @@
+# Inactive fragment. Merge jobs into app.yaml ONLY for an approved migration deployment.
+jobs:
+  - name: migrate
+    kind: PRE_DEPLOY
+    github:
+      repo: SebaG97/smash-hub
+      branch: main
+      deploy_on_push: false
+    source_dir: /apps/api
+    environment_slug: python
+    build_command: pip install -r requirements.txt
+    run_command: python -m app.runtime migrate
+    instance_count: 1
+    envs:
+      - key: ENVIRONMENT
+        scope: RUN_TIME
+        value: production
+      - key: DATABASE_URL
+        scope: RUN_TIME
+        type: SECRET
+        value: ${hub-db.DATABASE_URL}
+      - key: DATABASE_CA_CERT
+        scope: RUN_TIME
+        value: ${hub-db.CA_CERT}
+      - key: CORS_ORIGINS
+        scope: RUN_TIME
+        value: '["${APP_URL}"]'
+# Add MIGRATION_DATABASE_URL as encrypted RUN_TIME variable in the private spec/control panel.
+# Set APPROVED_MIGRATION=0001 after reviewing SQL and backup. There is no default approval.

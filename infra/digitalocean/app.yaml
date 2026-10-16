@@ -1,0 +1,77 @@
+# TEMPLATE: replace REPLACE_* fields after confirming existing resources.
+# Never submit this template to create/update an app without review.
+name: smash-py-hub
+services:
+  - name: web
+    github:
+      repo: SebaG97/smash-hub
+      branch: main
+      deploy_on_push: false
+    source_dir: /apps/web
+    environment_slug: node-js
+    build_command: npm ci && npm run build
+    run_command: npm run start -- --port 3000
+    http_port: 3000
+    instance_count: 1
+    health_check:
+      http_path: /
+    envs:
+      - key: NEXT_PUBLIC_API_URL
+        scope: RUN_AND_BUILD_TIME
+        value: /api/v1
+      - key: NEXT_TELEMETRY_DISABLED
+        scope: RUN_AND_BUILD_TIME
+        value: "1"
+  - name: api
+    github:
+      repo: SebaG97/smash-hub
+      branch: main
+      deploy_on_push: false
+    source_dir: /apps/api
+    environment_slug: python
+    build_command: pip install -r requirements.txt
+    run_command: python -m app.runtime
+    http_port: 8000
+    instance_count: 1
+    health_check:
+      http_path: /api/v1/health/ready
+    envs:
+      - key: ENVIRONMENT
+        scope: RUN_TIME
+        value: production
+      - key: DATABASE_URL
+        scope: RUN_TIME
+        type: SECRET
+        value: ${hub-db.DATABASE_URL}
+      - key: DATABASE_CA_CERT
+        scope: RUN_TIME
+        value: ${hub-db.CA_CERT}
+      - key: CORS_ORIGINS
+        scope: RUN_TIME
+        value: '["${APP_URL}"]'
+      - key: DB_POOL_SIZE
+        scope: RUN_TIME
+        value: "3"
+      - key: DB_MAX_OVERFLOW
+        scope: RUN_TIME
+        value: "2"
+databases:
+  - name: hub-db
+    engine: PG
+    production: true
+    cluster_name: REPLACE_EXISTING_CLUSTER_NAME
+    db_name: REPLACE_EXISTING_DATABASE_NAME
+    db_user: REPLACE_LIMITED_APP_USER
+ingress:
+  rules:
+    - match:
+        path:
+          prefix: /api
+      component:
+        name: api
+        preserve_path_prefix: true
+    - match:
+        path:
+          prefix: /
+      component:
+        name: web

@@ -1,0 +1,133 @@
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    Column,
+    DateTime,
+    ForeignKey,
+    ForeignKeyConstraint,
+    Integer,
+    String,
+    UniqueConstraint,
+    Uuid,
+    text,
+)
+
+from app.database.base import Base, Record
+
+
+class Tournament(Record, Base):
+    __tablename__ = "tournaments"
+    community_id = Column(Uuid, ForeignKey("communities.id"), nullable=False, index=True)
+    slug = Column(String(160), nullable=False)
+    name = Column(String(200), nullable=False)
+    starts_at = Column(DateTime(timezone=True))
+    ends_at = Column(DateTime(timezone=True))
+    __table_args__ = (
+        UniqueConstraint("community_id", "slug"),
+        CheckConstraint(
+            "ends_at IS NULL OR starts_at IS NULL OR ends_at >= starts_at", name="tournament_dates"
+        ),
+    )
+
+
+class TournamentParticipant(Record, Base):
+    __tablename__ = "tournament_participants"
+    tournament_id = Column(Uuid, ForeignKey("tournaments.id"), nullable=False, index=True)
+    player_id = Column(Uuid, ForeignKey("players.id"), nullable=False, index=True)
+    tag_snapshot = Column(String(120), nullable=False)
+    __table_args__ = (
+        UniqueConstraint("tournament_id", "player_id"),
+        UniqueConstraint("id", "tournament_id"),
+    )
+
+
+class Event(Record, Base):
+    __tablename__ = "events"
+    tournament_id = Column(Uuid, ForeignKey("tournaments.id"), nullable=False, index=True)
+    game_id = Column(Uuid, ForeignKey("games.id"), nullable=False, index=True)
+    slug = Column(String(120), nullable=False)
+    name = Column(String(200), nullable=False)
+    team_size = Column(Integer, nullable=False, server_default="1")
+    __table_args__ = (
+        UniqueConstraint("tournament_id", "slug"),
+        UniqueConstraint("id", "tournament_id"),
+        CheckConstraint("team_size >= 1", name="team_size"),
+    )
+
+
+class EventEntrant(Record, Base):
+    __tablename__ = "event_entrants"
+    event_id = Column(Uuid, nullable=False, index=True)
+    tournament_id = Column(Uuid, nullable=False, index=True)
+    name = Column(String(200), nullable=False)
+    seed = Column(Integer)
+    __table_args__ = (
+        ForeignKeyConstraint(["event_id", "tournament_id"], ["events.id", "events.tournament_id"]),
+        UniqueConstraint("id", "event_id"),
+        UniqueConstraint("id", "event_id", "tournament_id"),
+        UniqueConstraint("event_id", "seed"),
+        CheckConstraint("seed IS NULL OR seed > 0", name="positive_seed"),
+    )
+
+
+class EntrantMember(Record, Base):
+    __tablename__ = "entrant_members"
+    entrant_id = Column(Uuid, nullable=False, index=True)
+    event_id = Column(Uuid, nullable=False, index=True)
+    tournament_id = Column(Uuid, nullable=False, index=True)
+    participant_id = Column(Uuid, nullable=False, index=True)
+    position = Column(Integer, nullable=False)
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["entrant_id", "event_id", "tournament_id"],
+            ["event_entrants.id", "event_entrants.event_id", "event_entrants.tournament_id"],
+        ),
+        ForeignKeyConstraint(
+            ["participant_id", "tournament_id"],
+            ["tournament_participants.id", "tournament_participants.tournament_id"],
+        ),
+        UniqueConstraint("event_id", "participant_id"),
+        UniqueConstraint("entrant_id", "position"),
+        CheckConstraint("position > 0", name="member_position"),
+    )
+
+
+class Set(Record, Base):
+    __tablename__ = "sets"
+    event_id = Column(Uuid, ForeignKey("events.id"), nullable=False, index=True)
+    status = Column(String(20), nullable=False, server_default="pending")
+    round_label = Column(String(100))
+    best_of = Column(Integer)
+    completed_at = Column(DateTime(timezone=True))
+    __table_args__ = (
+        UniqueConstraint("id", "event_id"),
+        CheckConstraint("status IN ('pending','completed','dq','bye')", name="set_status"),
+        CheckConstraint("best_of IS NULL OR (best_of > 0 AND best_of % 2 = 1)", name="best_of"),
+        CheckConstraint(
+            "(status = 'pending' AND completed_at IS NULL) OR (status <> 'pending' AND completed_at IS NOT NULL)",
+            name="completion_time",
+        ),
+    )
+
+
+class SetSide(Record, Base):
+    __tablename__ = "set_sides"
+    set_id = Column(Uuid, nullable=False, index=True)
+    event_id = Column(Uuid, nullable=False, index=True)
+    entrant_id = Column(Uuid, index=True)
+    side = Column(Integer, nullable=False)
+    score = Column(Integer)
+    is_winner = Column(Boolean, nullable=False, server_default=text("false"))
+    __table_args__ = (
+        ForeignKeyConstraint(["set_id", "event_id"], ["sets.id", "sets.event_id"]),
+        ForeignKeyConstraint(
+            ["entrant_id", "event_id"], ["event_entrants.id", "event_entrants.event_id"]
+        ),
+        UniqueConstraint("set_id", "side"),
+        UniqueConstraint("set_id", "entrant_id"),
+        CheckConstraint("side IN (1,2)", name="side_number"),
+        CheckConstraint("score IS NULL OR score >= 0", name="nonnegative_score"),
+        CheckConstraint(
+            "entrant_id IS NOT NULL OR (score IS NULL AND NOT is_winner)", name="empty_side"
+        ),
+    )

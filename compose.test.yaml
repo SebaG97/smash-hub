@@ -1,0 +1,26 @@
+name: smash-py-hub-test
+services:
+  postgres:
+    image: postgres:17.7-alpine
+    environment:
+      POSTGRES_DB: smashhub_test
+      POSTGRES_USER: test_owner
+      POSTGRES_PASSWORD: isolated_test_only
+    tmpfs: [/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_owner -d smashhub_test"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+  api:
+    build:
+      context: .
+      dockerfile: infra/docker/api.Dockerfile
+      target: test
+    environment:
+      ENVIRONMENT: test
+      DATABASE_URL: postgresql+psycopg://test_owner:isolated_test_only@postgres:5432/smashhub_test
+      MIGRATION_DATABASE_URL: postgresql+psycopg://test_owner:isolated_test_only@postgres:5432/smashhub_test
+      TEST_DATABASE_URL: postgresql+psycopg://test_owner:isolated_test_only@postgres:5432/smashhub_test
+    depends_on:
+      postgres: {condition: service_healthy}
