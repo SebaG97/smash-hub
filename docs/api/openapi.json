@@ -708,6 +708,798 @@
           }
         }
       }
+    },
+    "/api/v1/players/{id}/statistics": {
+      "get": {
+        "tags": [
+          "statistics"
+        ],
+        "summary": "Statistics",
+        "operationId": "statistics_api_v1_players__id__statistics_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "game_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Game Id"
+            }
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "singles",
+                "doubles"
+              ],
+              "type": "string",
+              "default": "singles",
+              "title": "Mode"
+            }
+          },
+          {
+            "name": "tournament_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tournament Id"
+            }
+          },
+          {
+            "name": "community_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Community Id"
+            }
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatisticsView"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Player not found or unpublished"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/players/{id}/matches": {
+      "get": {
+        "tags": [
+          "statistics"
+        ],
+        "summary": "Matches",
+        "operationId": "matches_api_v1_players__id__matches_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "game_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Game Id"
+            }
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "singles",
+                "doubles"
+              ],
+              "type": "string",
+              "default": "singles",
+              "title": "Mode"
+            }
+          },
+          {
+            "name": "tournament_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tournament Id"
+            }
+          },
+          {
+            "name": "community_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Community Id"
+            }
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchPage"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Player not found or unpublished"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/players/{id}/opponents": {
+      "get": {
+        "tags": [
+          "statistics"
+        ],
+        "summary": "Opponents",
+        "operationId": "opponents_api_v1_players__id__opponents_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "game_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Game Id"
+            }
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "singles",
+                "doubles"
+              ],
+              "type": "string",
+              "default": "singles",
+              "title": "Mode"
+            }
+          },
+          {
+            "name": "tournament_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tournament Id"
+            }
+          },
+          {
+            "name": "community_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Community Id"
+            }
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpponentPage"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Player not found or unpublished"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/players/{id}/placements": {
+      "get": {
+        "tags": [
+          "statistics"
+        ],
+        "summary": "Placements",
+        "operationId": "placements_api_v1_players__id__placements_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "game_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Game Id"
+            }
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "singles",
+                "doubles"
+              ],
+              "type": "string",
+              "default": "singles",
+              "title": "Mode"
+            }
+          },
+          {
+            "name": "tournament_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tournament Id"
+            }
+          },
+          {
+            "name": "community_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Community Id"
+            }
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlacementPage"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Player not found or unpublished"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/players/{id}/head-to-head/{opponent_id}": {
+      "get": {
+        "tags": [
+          "statistics"
+        ],
+        "summary": "Head To Head",
+        "operationId": "head_to_head_api_v1_players__id__head_to_head__opponent_id__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "opponent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Opponent Id"
+            }
+          },
+          {
+            "name": "game_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Game Id"
+            }
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "singles",
+                "doubles"
+              ],
+              "type": "string",
+              "default": "singles",
+              "title": "Mode"
+            }
+          },
+          {
+            "name": "tournament_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tournament Id"
+            }
+          },
+          {
+            "name": "community_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Community Id"
+            }
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HeadToHeadView"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Player not found or unpublished"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -827,6 +1619,78 @@
         ],
         "title": "EventView"
       },
+      "Filters": {
+        "properties": {
+          "game_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Game Id"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "singles",
+              "doubles"
+            ],
+            "title": "Mode",
+            "default": "singles"
+          },
+          "tournament_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tournament Id"
+          },
+          "community_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Community Id"
+          },
+          "date_from": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date From"
+          },
+          "date_to": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date To"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "game_id"
+        ],
+        "title": "Filters"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -840,6 +1704,95 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "HeadToHeadView": {
+        "properties": {
+          "player_a": {
+            "$ref": "#/components/schemas/PlayerView"
+          },
+          "player_b": {
+            "$ref": "#/components/schemas/PlayerView"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/Filters"
+          },
+          "encounters": {
+            "type": "integer",
+            "title": "Encounters"
+          },
+          "wins_a": {
+            "type": "integer",
+            "title": "Wins A"
+          },
+          "wins_b": {
+            "type": "integer",
+            "title": "Wins B"
+          },
+          "win_rate_a": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Win Rate A"
+          },
+          "win_rate_b": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Win Rate B"
+          },
+          "first_encounter_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Encounter At"
+          },
+          "last_encounter_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Encounter At"
+          },
+          "history": {
+            "$ref": "#/components/schemas/MatchPage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_a",
+          "player_b",
+          "filters",
+          "encounters",
+          "wins_a",
+          "wins_b",
+          "win_rate_a",
+          "win_rate_b",
+          "first_encounter_at",
+          "last_encounter_at",
+          "history"
+        ],
+        "title": "HeadToHeadView"
+      },
       "HealthResponse": {
         "properties": {
           "status": {
@@ -852,6 +1805,196 @@
           "status"
         ],
         "title": "HealthResponse"
+      },
+      "MatchPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MatchView"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/Filters"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size",
+          "filters"
+        ],
+        "title": "MatchPage"
+      },
+      "MatchView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "tournament_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Tournament Id"
+          },
+          "tournament_name": {
+            "type": "string",
+            "title": "Tournament Name"
+          },
+          "event_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Event Id"
+          },
+          "event_name": {
+            "type": "string",
+            "title": "Event Name"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "opponents": {
+            "items": {
+              "$ref": "#/components/schemas/PlayerView"
+            },
+            "type": "array",
+            "title": "Opponents"
+          },
+          "result": {
+            "type": "string",
+            "enum": [
+              "W",
+              "L"
+            ],
+            "title": "Result"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "opponent_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opponent Score"
+          },
+          "round_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Round Number"
+          },
+          "round_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Round Label"
+          },
+          "winner_entrant_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Winner Entrant Id"
+          },
+          "stats_eligible": {
+            "type": "boolean",
+            "const": true,
+            "title": "Stats Eligible",
+            "default": true
+          },
+          "eligibility_reason": {
+            "type": "string",
+            "title": "Eligibility Reason"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "tournament_id",
+          "tournament_name",
+          "event_id",
+          "event_name",
+          "completed_at",
+          "opponents",
+          "result",
+          "score",
+          "opponent_score",
+          "round_number",
+          "round_label",
+          "winner_entrant_id",
+          "eligibility_reason",
+          "source",
+          "source_url"
+        ],
+        "title": "MatchView"
       },
       "MemberView": {
         "properties": {
@@ -902,6 +2045,93 @@
           "capabilities"
         ],
         "title": "MetaResponse"
+      },
+      "OpponentPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OpponentView"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/Filters"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size",
+          "filters"
+        ],
+        "title": "OpponentPage"
+      },
+      "OpponentView": {
+        "properties": {
+          "opponent": {
+            "$ref": "#/components/schemas/PlayerView"
+          },
+          "sets_played": {
+            "type": "integer",
+            "title": "Sets Played"
+          },
+          "wins": {
+            "type": "integer",
+            "title": "Wins"
+          },
+          "losses": {
+            "type": "integer",
+            "title": "Losses"
+          },
+          "win_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Win Rate"
+          },
+          "last_encounter_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Encounter At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "opponent",
+          "sets_played",
+          "wins",
+          "losses",
+          "win_rate",
+          "last_encounter_at"
+        ],
+        "title": "OpponentView"
       },
       "Page_EntrantView_": {
         "properties": {
@@ -1141,6 +2371,101 @@
         ],
         "title": "ParticipationView"
       },
+      "PlacementPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PlacementView"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/Filters"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size",
+          "filters"
+        ],
+        "title": "PlacementPage"
+      },
+      "PlacementView": {
+        "properties": {
+          "entrant_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Entrant Id"
+          },
+          "tournament_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Tournament Id"
+          },
+          "tournament_name": {
+            "type": "string",
+            "title": "Tournament Name"
+          },
+          "event_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Event Id"
+          },
+          "event_name": {
+            "type": "string",
+            "title": "Event Name"
+          },
+          "tournament_starts_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tournament Starts At"
+          },
+          "placement": {
+            "type": "integer",
+            "title": "Placement"
+          },
+          "confirmed": {
+            "type": "boolean",
+            "const": true,
+            "title": "Confirmed",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "entrant_id",
+          "tournament_id",
+          "tournament_name",
+          "event_id",
+          "event_name",
+          "tournament_starts_at",
+          "placement"
+        ],
+        "title": "PlacementView"
+      },
       "PlayerDetail": {
         "properties": {
           "id": {
@@ -1161,6 +2486,13 @@
           },
           "history": {
             "$ref": "#/components/schemas/Page_ParticipationView_"
+          },
+          "scopes": {
+            "items": {
+              "$ref": "#/components/schemas/PlayerScope"
+            },
+            "type": "array",
+            "title": "Scopes"
           }
         },
         "type": "object",
@@ -1168,9 +2500,38 @@
           "id",
           "tag",
           "aliases",
-          "history"
+          "history",
+          "scopes"
         ],
         "title": "PlayerDetail"
+      },
+      "PlayerScope": {
+        "properties": {
+          "game_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Game Id"
+          },
+          "game_name": {
+            "type": "string",
+            "title": "Game Name"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "singles",
+              "doubles"
+            ],
+            "title": "Mode"
+          }
+        },
+        "type": "object",
+        "required": [
+          "game_id",
+          "game_name",
+          "mode"
+        ],
+        "title": "PlayerScope"
       },
       "PlayerView": {
         "properties": {
@@ -1351,6 +2712,132 @@
           "is_winner"
         ],
         "title": "SideView"
+      },
+      "StatisticsView": {
+        "properties": {
+          "player": {
+            "$ref": "#/components/schemas/PlayerView"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/Filters"
+          },
+          "sets_played": {
+            "type": "integer",
+            "title": "Sets Played"
+          },
+          "wins": {
+            "type": "integer",
+            "title": "Wins"
+          },
+          "losses": {
+            "type": "integer",
+            "title": "Losses"
+          },
+          "win_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Win Rate"
+          },
+          "tournaments_played": {
+            "type": "integer",
+            "title": "Tournaments Played"
+          },
+          "tournaments_registered": {
+            "type": "integer",
+            "title": "Tournaments Registered"
+          },
+          "first_set_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Set At"
+          },
+          "last_set_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Set At"
+          },
+          "latest_tournament": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TournamentSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "best_final_placement": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Best Final Placement"
+          },
+          "unique_opponents": {
+            "type": "integer",
+            "title": "Unique Opponents"
+          }
+        },
+        "type": "object",
+        "required": [
+          "player",
+          "filters",
+          "sets_played",
+          "wins",
+          "losses",
+          "win_rate",
+          "tournaments_played",
+          "tournaments_registered",
+          "first_set_at",
+          "last_set_at",
+          "latest_tournament",
+          "best_final_placement",
+          "unique_opponents"
+        ],
+        "title": "StatisticsView"
+      },
+      "TournamentSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "TournamentSummary"
       },
       "TournamentView": {
         "properties": {

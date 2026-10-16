@@ -2,7 +2,7 @@
 
 Fundación técnica de una plataforma comunitaria de esports. Primera comunidad: Smash Paraguay; primer juego: Super Smash Bros. Ultimate. El dominio admite otros juegos, países, comunidades y tamaños de equipo.
 
-Misión 02: importador administrativo start.gg, identidades históricas, resultados, API pública y vistas de consulta. Conserva la fundación de Misión 01. Sin autenticación ni rankings calculados. Validación con fixtures y tres torneos reales de singles; revisión del responsable pendiente.
+Misión 03: estadísticas competitivas e historial Head-to-Head sobre resultados locales elegibles, con filtros por juego, modalidad, torneo, comunidad y período. Conserva el importador start.gg y la clasificación de Misiones 02/02.1. Sin ratings, seeding ni rankings calculados; revisión del responsable pendiente.
 
 ## Inicio local
 
@@ -51,7 +51,7 @@ infra/
   docker/               Imágenes y rol local de aplicación
   digitalocean/         App Spec y fragmento inactivo de migración
 docs/
-  adr/                  Nueve decisiones de arquitectura
+  adr/                  Diez decisiones de arquitectura
   architecture/         Arquitectura y responsabilidades
   database/             ER y diccionario de las 19 tablas
   api/                  Contratos y OpenAPI
@@ -102,3 +102,17 @@ Vistas: `/tournaments`, `/tournaments/[id]`, `/events/[id]`, `/players`, `/playe
 La revisión incremental 0002 conserva 0001 sin cambios. Consolidación Git y continuación a Misión 03 autorizadas por el responsable; sin autorización de push ni despliegue.
 
 Auditoría Misión 02.1: clasificación de estado/resolución/elegibilidad, migración 0003 y separación de entradas del bracket en API y web. Ver [informe y matrices](docs/operations/mission-02-1-report.md).
+
+## Estadísticas y Head-to-Head — Misión 03
+
+Desde `/players`, abrir un perfil para consultar estadísticas, rivales frecuentes y últimos resultados; un rival enlaza a `/players/[id]/vs/[opponentId]`. `/estadisticas` dirige al selector de jugadores. La web ofrece filtros de juego/modalidad y período, carga, errores, vacío y paginación. No calcula métricas competitivas.
+
+Nuevos GET bajo `/api/v1/players/{id}`: `/statistics`, `/matches`, `/opponents`, `/placements`, `/head-to-head/{opponent_id}`. Requieren `game_id`; `mode=singles|doubles`, torneo, comunidad y timestamps con offset opcionales. `PlayerDetail.scopes` proporciona los ámbitos disponibles. Win rate sin sets es `null`; DQ/BYE/bracket no generan victorias jugadas. Sin nuevas migraciones ni servicios.
+
+Ver [definiciones y reglas](docs/statistics.md), [ADR-010](docs/adr/ADR-010.md), [contratos](docs/api/contracts.md) e [informe de Misión 03](docs/operations/mission-03-report.md). Validación local reproducible en solo lectura:
+
+```powershell
+docker compose run --rm --no-deps -T api python -m app.cli.validate_statistics --slugs gg-fest-x-eon game-over-sep super-smash-burgame-7
+```
+
+Misiones 02/02.1 consolidadas en `d402e64`. Misión 03 queda sin commit, push ni despliegue para revisión. No se inicia Misión 04.

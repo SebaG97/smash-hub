@@ -163,7 +163,7 @@ Persona/identidad competitiva persistente; el tag no es identificador.
 | --- | --- | --- | --- |
 | `manual_locked` | `BOOLEAN` | no | — |
 | `tag` | `VARCHAR(120)` | no | — |
-| `country_id` | `CHAR(32)` | sí | regions.country_id, countries.id |
+| `country_id` | `CHAR(32)` | sí | countries.id, regions.country_id |
 | `region_id` | `CHAR(32)` | sí | regions.id |
 
 Check: `region_id IS NULL OR country_id IS NOT NULL`.

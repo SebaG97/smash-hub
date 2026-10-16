@@ -41,5 +41,14 @@ def meta():
         "name": "Smash PY Hub",
         "version": "0.1.0",
         "api_version": "v1",
-        "capabilities": ["health", "metadata", "tournaments", "events", "players", "results"],
+        "capabilities": [
+            "health",
+            "metadata",
+            "tournaments",
+            "events",
+            "players",
+            "results",
+            "statistics",
+            "head-to-head",
+        ],
     }

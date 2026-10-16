@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { modules } from "../../lib/modules";
 export function generateStaticParams() {
   return modules
-    .filter((m) => m.slug !== "players" && m.slug !== "tournaments")
+    .filter((m) => !["players", "tournaments", "estadisticas"].includes(m.slug))
     .map((m) => ({ module: m.slug }));
 }
 export default async function ModulePage({

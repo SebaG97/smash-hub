@@ -71,7 +71,9 @@ export default function Home() {
               <h3>{m.title}</h3>
               <p>{m.description}</p>
               <span className="coming-soon">
-                {m.slug === "players" || m.slug === "tournaments"
+                {m.slug === "players" ||
+                m.slug === "tournaments" ||
+                m.slug === "estadisticas"
                   ? "EXPLORAR"
                   : "PRÓXIMAMENTE"}
               </span>

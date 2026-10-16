@@ -31,3 +31,7 @@ La revisión 0002 agrega publicación, metadata, locks manuales, conflictos, con
 ## Misión 02.1
 
 La clasificación de sets distingue lifecycle_status, resolution y elegibilidad; conserva status legado para compatibilidad con triggers congelados. El cliente recupera explícitamente state=5, y la API/web separan entradas de bracket de encuentros. ADR-009 documenta la decisión y la migración incremental 0003. No se agrega servicio, worker ni cálculo estadístico.
+
+## Misión 03
+
+Las estadísticas se calculan al consultar PostgreSQL, sin nuevas tablas, servicio o caché. Un CTE de sets elegibles y perspectivas internas alimenta agregados SQL, rivales e historiales. Cada respuesta conserva un snapshot REPEATABLE READ; los resultados se filtran antes de agregarse o paginarse. La web consume exclusivamente cinco nuevas rutas GET. Se mantienen modelos, importación e identidades de 02/02.1. ADR-010 explica ámbito obligatorio, excepción sin score y fecha por tipo de métrica. No hay Glicko-2, rankings ni seeding.

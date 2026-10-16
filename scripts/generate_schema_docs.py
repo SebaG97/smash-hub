@@ -70,7 +70,7 @@ for table in Base.metadata.sorted_tables:
  text+=f'\n### `{table.name}`\n\n{descriptions[table.name]}\n\n| Campo | Tipo | Nullable | Referencia |\n| --- | --- | --- | --- |\n'
  for c in table.columns:
   if c.name in {'id','created_at','updated_at'}:continue
-  refs=', '.join(f.target_fullname for f in c.foreign_keys) or '—'
+  refs=', '.join(sorted(f.target_fullname for f in c.foreign_keys)) or '—'
   text+=f'| `{c.name}` | `{c.type}` | {"sí" if c.nullable else "no"} | {refs} |\n'
  for constraint in sorted(table.constraints,key=lambda c:str(c.name)):
   if isinstance(constraint,UniqueConstraint):text+='\nÚnica: `'+', '.join(c.name for c in constraint.columns)+'`.\n'

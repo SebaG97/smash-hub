@@ -3,6 +3,37 @@
 NORMALIZATION_VERSION = 2
 
 
+def scoreless_statistics_evidence(source):
+    """M03 set-only exception; does not change import or ranking eligibility.
+
+    An explicit final winner with two real opponents can establish W/L without
+    scores. Administrative hints, partial/invalid scores and placeholders cannot.
+    """
+    from pydantic import ValidationError
+
+    from app.integrations.startgg.snapshot import Result
+
+    try:
+        result = Result.model_validate(source)
+        classification = classify(result, "incomplete", {})
+        ids = [slot.entrant.id for slot in result.slots if slot.entrant]
+        label = (result.displayScore or "").upper()
+        return (
+            classification["lifecycle_status"] == "completed"
+            and classification["resolution"] == "unresolved"
+            and result.hasPlaceholder is not True
+            and len(ids) == 2
+            and len(set(ids)) == 2
+            and result.winnerId is not None
+            and str(result.winnerId) in ids
+            and all(value is None for value in score_values(result))
+            and "DQ" not in label
+            and "BYE" not in label
+        )
+    except (ValidationError, TypeError, AttributeError):
+        return False
+
+
 def score_values(result):
     return [
         (((slot.standing or {}).get("stats") or {}).get("score") or {}).get("value")

@@ -10,6 +10,7 @@ from app.core.errors import install_error_handling
 from app.core.logging import configure_logging
 from app.database.session import build_engine
 from app.health.router import router
+from app.statistics.router import router as statistics_router
 
 
 def create_app(settings: Settings | None = None, engine=None) -> FastAPI:
@@ -46,5 +47,6 @@ def create_app(settings: Settings | None = None, engine=None) -> FastAPI:
     )
     app.include_router(router)
     app.include_router(competitions_router)
+    app.include_router(statistics_router)
 
     return app

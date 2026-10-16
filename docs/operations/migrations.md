@@ -35,3 +35,7 @@ Agrega seis columnas: lifecycle_status, resolution, classification_reason, norma
 Antes de aplicar, guardar evidencia/backup local. Ejecutar `alembic upgrade 0003`, `alembic check` y reimportar los torneos existentes para enriquecer la evidencia de bracket. El backfill no habilita estadísticas/ranking sin revalidación. Se valida la cola de triggers con SET CONSTRAINTS ALL IMMEDIATE antes del DDL posterior al UPDATE y se devuelve a DEFERRED; no se deshabilitan triggers. Este paso es necesario con datos existentes y está cubierto por test de downgrade 0002/upgrade 0003 y reimportación conservando resultados/UUID de lados.
 
 No se cambian 0001 ni 0002. Downgrade de 0003 elimina metadatos de clasificación, no resultados; conservar backup/historial y preferir una corrección hacia adelante. No se modifica el fragmento de migración DigitalOcean ni se ejecuta producción.
+
+## Misión 03
+
+No introduce revisión 0004: el esquema y las migraciones 0001–0003 permanecen intactos. Estadísticas usa consultas sobre resultados clasificados por 0003 y no requiere reimportar ni modificar datos para consultar. La excepción de lectura sin score está documentada en ADR-010; no cambia los flags persistidos. Los planes locales no justificaron índices nuevos al volumen actual.

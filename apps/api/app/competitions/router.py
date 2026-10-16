@@ -114,6 +114,13 @@ class ParticipationView(BaseModel):
 class PlayerDetail(PlayerView):
     aliases: list[str]
     history: Page[ParticipationView]
+    scopes: list["PlayerScope"]
+
+
+class PlayerScope(BaseModel):
+    game_id: UUID
+    game_name: str
+    mode: Literal["singles", "doubles"]
 
 
 def paginate(s, stmt, page, page_size):
@@ -485,4 +492,28 @@ def player(
             "tag": row.tag,
             "aliases": aliases,
             "history": page_result(history, total, page, page_size),
+            "scopes": player_scopes(s, id),
         }
+
+
+def player_scopes(session, player_id):
+    rows = session.execute(
+        select(Game.id, Game.name, Event.team_size)
+        .select_from(EntrantMember)
+        .join(TournamentParticipant, TournamentParticipant.id == EntrantMember.participant_id)
+        .join(Event, Event.id == EntrantMember.event_id)
+        .join(Tournament, Tournament.id == Event.tournament_id)
+        .join(Game, Game.id == Event.game_id)
+        .where(
+            TournamentParticipant.player_id == player_id,
+            Tournament.published.is_(True),
+            Event.team_size.in_([1, 2]),
+            Event.competition_type == Event.team_size,
+        )
+        .distinct()
+        .order_by(Game.name, Game.id, Event.team_size)
+    ).all()
+    return [
+        {"game_id": id, "game_name": name, "mode": "singles" if size == 1 else "doubles"}
+        for id, name, size in rows
+    ]

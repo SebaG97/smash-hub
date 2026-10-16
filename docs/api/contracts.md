@@ -9,7 +9,7 @@ Base: `/api/v1`. JSON UTF-8. Versión de aplicación `0.1.0`. Sin autenticación
 | GET /meta | 200, estructura debajo | 500 genérico ante fallo inesperado |
 
 ```json
-{"name":"Smash PY Hub","version":"0.1.0","api_version":"v1","capabilities":["health","metadata","tournaments","events","players","results"]}
+{"name":"Smash PY Hub","version":"0.1.0","api_version":"v1","capabilities":["health","metadata","tournaments","events","players","results","statistics","head-to-head"]}
 ```
 
 Readiness ejecuta `SELECT 1` con timeout de conexión de 3 segundos y statement timeout de 5 segundos. Confirma conectividad, no estado de migración ni disponibilidad de proveedores. Consultar Alembic para comprobar revisión instalada. Liveness no usa ningún servicio externo.
@@ -52,3 +52,19 @@ Filtros tipados: status, resolution y view=matches|bracket|all. Default matches 
 completed no significa victoria/derrota jugada: BYE y DQ tienen lifecycle completed pero su resolución propia y ambas elegibilidades false. Un final sin scores suficientes tiene status=completed, resolution=unresolved y no es elegible. El campo status interno legado de PostgreSQL no se publica. Este cambio de semántica del contrato inicial de Misión 02 se coordina con la web en la misma entrega; no hay clientes publicados ni despliegue automático.
 
 La vista de evento separa «Sets y resultados» de «Posiciones del bracket y rondas no disputadas». BYE se muestra como pase libre sin partido jugado; DQ como descalificación excluida de victorias/derrotas jugadas; el avance por BYE/DQ no se etiqueta como victoria jugada. Un placeholder/reset no utilizado no muestra un oponente ficticio ni la etiqueta Pendiente.
+
+## Estadísticas Misión 03
+
+| GET bajo `/api/v1/players/{id}` | Respuesta |
+| --- | --- |
+| `/statistics` | StatisticsView: jugador, filtros y agregados competitivos |
+| `/matches` | MatchPage: historial descendente de sets elegibles |
+| `/opponents` | OpponentPage: rivales por cantidad descendente y UUID ascendente |
+| `/placements` | PlacementPage: placements finales confirmados por evento |
+| `/head-to-head/{opponent_id}` | HeadToHeadView: identidades, totales simétricos e history ascendente paginado |
+
+Todos requieren `game_id: UUID`; opcionales `mode=singles|doubles` (default singles), `tournament_id`, `community_id`, `date_from`, `date_to`. El juego es obligatorio para impedir agregados multijuego. Los listados y H2H aceptan page>=1 y page_size 1..100 (default 20); statistics no acepta parámetros de paginación. País/región pendientes: se rechazan, al igual que cualquier parámetro no admitido. Los timestamps requieren offset, usan `[desde,hasta)` y desde<hasta. Sets se filtran por completed_at; inscripciones/placements por inicio de torneo porque no tienen otra fecha propia. Fechas desconocidas se excluyen de ventanas fechadas y quedan null en consultas históricas sin fecha.
+
+`filters` aparece en todas las respuestas; las páginas contienen items,total,page,page_size,filters. El total se calcula antes de paginar; history H2H tiene esa misma forma y sus totales globales no dependen de la página. Todos los órdenes se desempatan con UUID; fechas null al final. Sin sets: W/L y cantidades son 0, porcentajes/fechas/último torneo/mejor placement ausentes son null. A/B y B/A conservan sets, invirtiendo W/L y scores. Comparación consigo mismo: 422. Jugador inexistente o sin participación publicada: 404; juego/torneo/comunidad sin coincidencias: 200 vacío. Filtros inválidos/desconocidos: 422. No se exponen resultados administrativos en estas rutas.
+
+`PlayerDetail` añade `scopes: [{game_id,game_name,mode}]`, con ámbitos confirmados de inscripciones públicas, sin afirmar sets jugados. Un registro sin puntuaciones puede ser elegible exclusivamente para W/L bajo la excepción de evidencia del clasificador compartido; su motivo se devuelve explícitamente sin cambiar flags persistidos de auditoría. Ver [reglas, fórmulas y dobles](../statistics.md) y ADR-010. El snapshot OpenAPI incluye modelos tipados y validación; la suite comprueba igualdad con la factory.

@@ -32,3 +32,9 @@ Los wrappers `scripts/dev.ps1 test` y `sh scripts/dev.sh test` hacen la limpieza
 ## Misión 02
 
 Aplicar 0002 en PostgreSQL local y repetir bootstrap. STARTGG_API_TOKEN puede quedar vacío; web y consultas no lo requieren. Configurarlo de manera privada en `.env` para usar la CLI, sin agregarlo a NEXT_PUBLIC_* ni pasarlo como argumento. Procedimiento y preview: [tournament-import](tournament-import.md). Las pruebas HTTP usan MockTransport y fixtures; la suite completa usa PostgreSQL efímero, nunca necesita token real. El contenedor de tests incluye el snapshot OpenAPI para comparar contratos.
+
+## Misión 03
+
+No requiere migración 0004, token del proveedor, dependencias nuevas ni servicios adicionales. Con la base local en 0003 y los torneos existentes, ejecutar `docker compose run --rm --no-deps -T api python -m app.cli.validate_statistics --slugs gg-fest-x-eon game-over-sep super-smash-burgame-7`. Iniciar PostgreSQL local si estaba detenido: `docker compose up -d postgres`. La validación exige environment=development, host local y base smashhub; usa READ ONLY y no importa resultados.
+
+La salida JSON incluye conteos, reconciliación W=L, ejemplos reales y EXPLAIN ANALYZE BUFFERS. Ver [informe](mission-03-report.md) y [semántica temporal](../statistics.md). Con `docker compose up -d --build --wait`, consultar `/players`, un perfil y la comparación desde un rival. En ejecución nativa configurar `NEXT_PUBLIC_API_URL` hacia la API local antes de construir web. La suite de estadísticas usa exclusivamente compose.test con fixtures y sin start.gg. No ejecutar tests destructivos en la base de desarrollo.

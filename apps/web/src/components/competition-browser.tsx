@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
+import { PlayerStatistics } from "./player-statistics";
 import type {
   Page,
   Tournament,
@@ -138,7 +139,7 @@ export function Collection<T>({
         </label>
       )}
       <Resource<Page<T>>
-        path={`${path}${path.includes("?") ? "&" : "?"}page=${page}&page_size=20&q=${encodeURIComponent(q)}`}
+        path={`${path}${path.includes("?") ? "&" : "?"}page=${page}&page_size=20${search ? `&q=${encodeURIComponent(q)}` : ""}`}
       >
         {(data) => (
           <>
@@ -330,6 +331,7 @@ export function PlayerPage({ id }: { id: string }) {
         {(p) => (
           <>
             <h1>{p.tag}</h1>
+            <PlayerStatistics key={id} id={id} scopes={p.scopes || []} />
             <h2>Tags conocidos</h2>
             <p>{p.aliases.join(" · ") || "Sin tags adicionales"}</p>
             <h2>Historial competitivo</h2>
