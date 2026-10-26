@@ -408,3 +408,7 @@ Tablas aisladas del modelo competitivo: usan IDs de start.gg y no tienen FKs hac
 | `seeding_results` | Resultado por jugador y cálculo: seed del método, métricas, explicaciones y alertas. Únicos por cálculo y jugador, y por cálculo y seed. |
 | `seeding_overrides` | Seed fijado a mano por jugador, con motivo y autor. |
 | `seeding_audit_entries` | Registro de cambios; la aplicación solo inserta. |
+
+### Migración 0006 (ADR-012)
+
+`seeding_projects` agrega `kind` (`seeding` por defecto o `ranking`) y `country_code`; `startgg_event_id` pasa a ser opcional. Check `project_kind`: un seeding necesita evento de start.gg y un ranking necesita país. El downgrade borra los proyectos de tipo ranking.

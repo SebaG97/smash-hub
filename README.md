@@ -6,6 +6,8 @@ Misión 03: estadísticas competitivas e historial Head-to-Head sobre resultados
 
 Misión 05: página de seeding por evento (`/seeding`) con propuesta explicada (Glicko-2 de la Misión 04 + posiciones), ajustes manuales auditados, recálculo, descarga de datos de start.gg, exportación CSV y subida a start.gg por comando (ADR-011).
 
+Misión 05.1: seis métodos de cálculo comparables en la misma página (combinado, Glicko-2, Elo, Bradley-Terry, puntos por posición y % de victorias Wilson), con vista previa y método oficial; ranking del circuito paraguayo en `/rankings` con los torneos presenciales de start.gg (ADR-012).
+
 ## Inicio local
 
 Requisitos: Git, Docker Desktop con motor Linux y Docker Compose v2. Puertos predeterminados: web 3000 y API 8000. PostgreSQL no publica puertos.

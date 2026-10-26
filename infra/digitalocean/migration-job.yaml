@@ -26,5 +26,5 @@ jobs:
         scope: RUN_TIME
         value: '["${APP_URL}"]'
 # Add MIGRATION_DATABASE_URL as encrypted RUN_TIME variable in the private spec/control panel.
-# Set APPROVED_MIGRATION to the exact target revision (e.g. 0005) after reviewing SQL and
+# Set APPROVED_MIGRATION to the exact target revision (e.g. 0006) after reviewing SQL and
 # backup. There is no default approval and "head" is never used implicitly.

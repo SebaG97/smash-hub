@@ -1,0 +1,10 @@
+query SeedingCountryTournaments($page: Int!, $perPage: Int!, $country: String!, $videogame: ID!, $after: Timestamp!, $before: Timestamp!) {
+  tournaments(query: {page: $page, perPage: $perPage, sortBy: "startAt asc",
+                      filter: {countryCode: $country, videogameIds: [$videogame], afterDate: $after, beforeDate: $before}}) {
+    pageInfo { total totalPages }
+    nodes {
+      id name slug countryCode startAt isOnline
+      events { id name numEntrants isOnline type startAt state videogame { id } teamRosterSize { maxPlayers } }
+    }
+  }
+}

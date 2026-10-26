@@ -57,3 +57,19 @@ Sin `--confirm` solo simula: muestra la fase (por defecto la primera, por ejempl
 ## Producción
 
 La guía completa está en [digitalocean-first-deploy.md](digitalocean-first-deploy.md). En resumen: `ADMIN_TOKEN` y `STARTGG_API_TOKEN` son secretos del servicio API (sin `ADMIN_TOKEN` la página es de solo lectura), el job de migraciones aplica exactamente la revisión aprobada (`APPROVED_MIGRATION=0005`), y los comandos se corren desde la consola de la app con `python -m app.runtime seeding --allow-production ...`. Sin `--allow-production` la CLI rechaza escrituras en producción.
+
+## Métodos de cálculo
+
+Cada cálculo puntúa a todos con seis métodos: combinado (el de siempre), Glicko-2, Elo, Bradley-Terry, puntos por posición y % de victorias (Wilson). En la página, **Ver con el método** muestra cómo quedaría el orden con cualquiera de ellos, con la explicación de cada puesto; es solo una vista previa. Con la clave, **Usar como método oficial** lo fija: el seeding oficial, la exportación y los ajustes manuales pasan a usar ese método, y se mantiene al bajar datos nuevos.
+
+## Ranking paraguayo
+
+Un ranking usa el mismo motor con todos los sets de los torneos presenciales de Ultimate Singles jugados en un país:
+
+```powershell
+docker compose run --rm api python -m app.cli.seeding create-ranking --slug ranking-py-2026 --name "Ranking Paraguay 2026" --country PY --start 2025-11-14T00:00:00-03:00 --end 2026-11-14T00:00:00-03:00
+```
+
+Después, en `/rankings/ranking-py-2026`, entrar con la clave y **Recalcular** con «Bajar datos nuevos de start.gg». Para aparecer hacen falta al menos 10 sets en el período (los demás se pueden mostrar con un botón al final). Los rankings no admiten ajustes manuales.
+
+En producción, desde la consola de `api`: `python -m app.runtime seeding --allow-production create-ranking ...` con los mismos argumentos.

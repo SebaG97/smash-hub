@@ -1,4 +1,7 @@
-"""start.gg access for seeding: read the entrants' set history and write a phase's seeds.
+"""start.gg access for seeding and rankings.
+
+Seeding reads the entrants' set history; rankings read every set of a country's offline
+events. The single write (updatePhaseSeeding) is only reachable from the operator CLI.
 
 Reads run from the API's background refresh; the single write (updatePhaseSeeding) is only
 reachable from the operator CLI, never from HTTP.
@@ -14,7 +17,15 @@ MAX_PAGES = 80
 
 
 async def paged(
-    client, document, root, connection, variables, *, per_page=PER_PAGE, max_pages=MAX_PAGES
+    client,
+    document,
+    root,
+    connection,
+    variables,
+    *,
+    per_page=PER_PAGE,
+    max_pages=MAX_PAGES,
+    connection_is_root=False,
 ):
     nodes, seen, expected = [], set(), None
     for page in range(1, max_pages + 1):
@@ -23,7 +34,7 @@ async def paged(
             holder = data[root]
             if holder is None:
                 raise ImportFailure(f"startgg_{root}_not_found")
-            conn = holder[connection]
+            conn = holder if connection_is_root else holder[connection]
             info = conn["pageInfo"]
             total, pages = info["total"], info["totalPages"]
             if expected is None:
@@ -88,6 +99,7 @@ def _side(slot):
         player_ids=[
             str((p.get("player") or {}).get("id")) for p in entrant.get("participants") or []
         ],
+        tags=[p.get("gamerTag") for p in entrant.get("participants") or []],
         placement=(entrant.get("standing") or {}).get("placement"),
         score=score,
     )
@@ -173,6 +185,64 @@ def normalize(nodes, *, videogame_id, own_event_id, start, end):
             counted=cls in COUNTED,
         )
     return list(rows.values()), excluded
+
+
+def _is_offline_singles(event, videogame_id):
+    return (
+        str((event.get("videogame") or {}).get("id")) == str(videogame_id)
+        and not event.get("isOnline")
+        and event.get("type") == 1
+        and ((event.get("teamRosterSize") or {}).get("maxPlayers") in (None, 1))
+    )
+
+
+async def fetch_country_sets(client, *, country, videogame_id, start, end, progress=None):
+    """All sets of offline singles events held in ``country`` between start and end.
+
+    Returns (set nodes with their event attached, {player_id: latest gamerTag}, events).
+    """
+    tournaments = await paged(
+        client,
+        "seeding_country_tournaments",
+        "tournaments",
+        "nodes",
+        {
+            "country": country,
+            "videogame": str(videogame_id),
+            "after": int(start.timestamp()),
+            "before": int(end.timestamp()),
+        },
+        per_page=20,
+        connection_is_root=True,
+    )
+    events = [
+        (tour, event)
+        for tour in tournaments
+        if not tour.get("isOnline") and (tour.get("countryCode") or "").upper() == country.upper()
+        for event in tour.get("events") or []
+        if _is_offline_singles(event, videogame_id)
+    ]
+    nodes, tags = [], {}
+    for i, (tour, event) in enumerate(events):
+        if progress:
+            progress(i, len(events))
+        context = dict(
+            id=event["id"],
+            numEntrants=event.get("numEntrants"),
+            isOnline=False,
+            startAt=event.get("startAt"),
+            videogame={"id": str(videogame_id)},
+            tournament=dict(name=tour.get("name"), slug=tour.get("slug"), countryCode=country),
+        )
+        for node in await paged(client, "seeding_event_sets", "event", "sets", {"id": event["id"]}):
+            nodes.append(dict(node, event=context))
+            stamp = node.get("completedAt") or node.get("startedAt") or 0
+            for slot in node.get("slots") or []:
+                for part in ((slot.get("entrant") or {}).get("participants")) or []:
+                    pid = str((part.get("player") or {}).get("id") or "")
+                    if pid and part.get("gamerTag") and stamp >= tags.get(pid, (0, ""))[0]:
+                        tags[pid] = (stamp, part["gamerTag"])
+    return nodes, {pid: tag for pid, (_, tag) in tags.items()}, events
 
 
 async def fetch_phase_seeds(client, phase_id):

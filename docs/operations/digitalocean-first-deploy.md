@@ -160,3 +160,19 @@ Después, en `https://<app>/seeding/center-stage-2026`:
 - **Actualizar el código:** `deploy_on_push` está desactivado. Tras hacer push a `main`, desplegar con **Deploy** en el panel o `doctl apps create-deployment <app-id>`.
 - **Rotar la clave de organizadores:** cambiar `ADMIN_TOKEN` en el componente `api`; la app se redespliega sola.
 - **Subir seeds a start.gg:** no está habilitado desde la web. Se decidió hacerlo todo en el hub.
+
+## Actualización a la Misión 05.1 (métodos y ranking)
+
+Este código necesita la migración **0006** antes de arrancar. Antes de desplegarlo:
+
+1. En la app, componente **`migrate`** → **Settings → Environment Variables**: cambiar `APPROVED_MIGRATION` de `0005` a `0006` y guardar.
+2. Desplegar (**Actions → Deploy**). El job aplica 0006 y luego arrancan `web` y `api`.
+3. Crear el ranking desde la consola de `api`:
+
+```sh
+python -m app.runtime seeding --allow-production create-ranking --slug ranking-py-2026 \
+  --name "Ranking Paraguay 2026" --country PY \
+  --start 2025-11-14T00:00:00-03:00 --end 2026-11-14T00:00:00-03:00
+```
+
+4. En `/rankings/ranking-py-2026`, entrar con la clave y recalcular con «Bajar datos nuevos de start.gg».

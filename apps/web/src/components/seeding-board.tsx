@@ -2,7 +2,11 @@
 
 import Link from "next/link";
 import { Fragment, useCallback, useEffect, useState } from "react";
-import type { SeedingRow, SeedingView } from "../lib/api";
+import type {
+  SeedingProjectSummary,
+  SeedingRow,
+  SeedingView,
+} from "../lib/api";
 
 const api = (process.env.NEXT_PUBLIC_API_URL || "/api/v1").replace(/\/$/, "");
 const KEY_STORE = "seeding-admin";
@@ -19,8 +23,9 @@ const classLabels: Record<string, string> = {
   excluded_test_event: "Evento de prueba",
 };
 const actionLabels: Record<string, string> = {
-  sets: "Descargando sets",
+  sets: "Descargando sets de los inscritos",
   inscritos: "Descargando inscritos",
+  torneos: "Descargando torneos",
 };
 
 function day(value: string | null) {
@@ -183,7 +188,9 @@ function Recalculate({
         if (
           refresh &&
           !window.confirm(
-            "Se van a descargar de start.gg los sets de todos los inscritos. Tarda varios minutos y reemplaza los datos actuales. ¿Continuar?",
+            view.kind === "ranking"
+              ? "Se van a descargar de start.gg todos los torneos presenciales del período. Tarda varios minutos y reemplaza los datos actuales. ¿Continuar?"
+              : "Se van a descargar de start.gg los sets de todos los inscritos. Tarda varios minutos y reemplaza los datos actuales. ¿Continuar?",
           )
         )
           return;
@@ -199,7 +206,9 @@ function Recalculate({
         onDone(
           r.status === 202
             ? "Descarga de start.gg iniciada. La tabla se actualiza sola al terminar."
-            : "Seeding recalculado. Los ajustes manuales se conservaron.",
+            : view.kind === "ranking"
+              ? "Ranking recalculado."
+              : "Seeding recalculado. Los ajustes manuales se conservaron.",
         );
       }}
     >
@@ -283,10 +292,25 @@ function MoveForm({
   );
 }
 
-function Details({ row }: { row: SeedingRow }) {
+function scoreText(row: SeedingRow, method: string) {
+  const score = row.scores?.[method] ?? null;
+  if (score === null) return "—";
+  if (method === "combined") return num(score, 3);
+  if (method === "points") return num(score, 1);
+  if (method === "wilson") return `${num(score, 1)} %`;
+  return num(score);
+}
+
+function Details({ row, method }: { row: SeedingRow; method: string }) {
+  const reasons = row.reasons_by_method?.[method] || row.reasons;
+  const place = row.ranks?.[method];
   return (
     <div className="seeding-details">
-      <h4>¿Por qué está en el seed {row.seed}?</h4>
+      <h4>
+        {place
+          ? `¿Por qué queda ${place}.º con este método?`
+          : "¿Por qué está en este puesto?"}
+      </h4>
       <ul>
         {row.override && (
           <li>
@@ -294,7 +318,7 @@ function Details({ row }: { row: SeedingRow }) {
             dejaba {row.seed_algorithm}.º): {row.override.reason}
           </li>
         )}
-        {row.reasons.map((reason) => (
+        {reasons.map((reason) => (
           <li key={reason}>{reason}</li>
         ))}
       </ul>
@@ -313,6 +337,7 @@ function Details({ row }: { row: SeedingRow }) {
 
 function DataPanel({ view }: { view: SeedingView }) {
   const run = view.run;
+  const ranking = view.kind === "ranking";
   return (
     <section className="seeding-data" aria-label="Datos analizados">
       <h2>Datos analizados</h2>
@@ -322,7 +347,7 @@ function DataPanel({ view }: { view: SeedingView }) {
           <dd>
             {run
               ? `${day(run.window_start)} al ${day(run.window_end)} (exclusivo)`
-              : "—"}
+              : `${day(view.window_start)} al ${day(view.event_date)}`}
           </dd>
         </div>
         <div>
@@ -330,8 +355,8 @@ function DataPanel({ view }: { view: SeedingView }) {
           <dd>{moment(view.data_cutoff)}</dd>
         </div>
         <div>
-          <dt>Inscritos</dt>
-          <dd>{view.dataset.entrants}</dd>
+          <dt>{ranking ? "Jugadores con sets" : "Inscritos"}</dt>
+          <dd>{num(view.dataset.entrants)}</dd>
         </div>
         <div>
           <dt>Sets usados en el cálculo</dt>
@@ -341,17 +366,21 @@ function DataPanel({ view }: { view: SeedingView }) {
           </dd>
         </div>
         <div>
-          <dt>Eventos con sets usados</dt>
+          <dt>{ranking ? "Torneos" : "Eventos con sets usados"}</dt>
           <dd>
             {run
-              ? `${run.event_count} (${run.offline_event_count} offline)`
+              ? ranking
+                ? `${run.event_count} presenciales`
+                : `${run.event_count} (${run.offline_event_count} offline)`
               : "—"}
           </dd>
         </div>
-        <div>
-          <dt>Jugadores en el rating</dt>
-          <dd>{run ? num(run.player_count) : "—"} (inscritos y rivales)</dd>
-        </div>
+        {!ranking && (
+          <div>
+            <dt>Jugadores en el rating</dt>
+            <dd>{run ? num(run.player_count) : "—"} (inscritos y rivales)</dd>
+          </div>
+        )}
         <div>
           <dt>Último cálculo</dt>
           <dd>{run ? `${moment(run.created_at)} · ${run.actor}` : "—"}</dd>
@@ -361,8 +390,9 @@ function DataPanel({ view }: { view: SeedingView }) {
         <summary>Cómo se calcula y qué se excluye</summary>
         <ul>
           <li>
-            Se analizan los sets de Ultimate Singles de cada inscrito en
-            start.gg dentro del período. No se cuenta el propio evento.
+            {ranking
+              ? `Se analizan todos los sets de Ultimate Singles de los torneos presenciales jugados en ${view.country_code === "PY" ? "Paraguay" : view.country_code} dentro del período.`
+              : "Se analizan los sets de Ultimate Singles de cada inscrito en start.gg dentro del período. No se cuenta el propio evento."}
           </li>
           <li>
             Solo cuentan los sets jugados con un ganador válido. Clasificación
@@ -372,24 +402,18 @@ function DataPanel({ view }: { view: SeedingView }) {
               .join(" · ")}
             .
           </li>
-          <li>
-            <strong>Glicko-2</strong> (períodos semanales) mide la fuerza por
-            enfrentamientos directos. Se usa el valor conservador, rating −
-            {run?.parameters.conservative_k ?? 2}·RD, para que una muestra chica
-            no quede arriba por suerte.
-          </li>
-          <li>
-            <strong>Posiciones</strong>: promedio de los{" "}
-            {run?.parameters.placement_top_events ?? 3} mejores eventos offline
-            de ≥{run?.parameters.placement_min_field ?? 8} inscritos, medido en
-            rondas superadas (log2 inscritos/posición). Permite comparar
-            circuitos que no juegan entre sí.
-          </li>
-          <li>
-            El seed del método promedia los dos puestos (
-            {num((run?.parameters.rating_weight ?? 0.5) * 100)} % rating). Los
-            jugadores sin sets van al final en orden alfabético.
-          </li>
+          {ranking && (run?.parameters.min_sets ?? 0) > 0 && (
+            <li>
+              Para entrar al ranking hacen falta al menos{" "}
+              {run?.parameters.min_sets} sets en el período.
+            </li>
+          )}
+          {view.methods.map((m) => (
+            <li key={m.id}>
+              <strong>{m.label}</strong>
+              {m.id === view.method ? " (método oficial)" : ""}: {m.description}
+            </li>
+          ))}
         </ul>
         {view.merges.length > 0 && (
           <p>
@@ -415,7 +439,63 @@ function DataPanel({ view }: { view: SeedingView }) {
   );
 }
 
-export function SeedingBoard({ slug }: { slug: string }) {
+function MethodPicker({
+  view,
+  value,
+  onChange,
+  admin,
+  onAdopt,
+}: {
+  view: SeedingView;
+  value: string;
+  onChange: (method: string) => void;
+  admin: Admin | null;
+  onAdopt: (method: string) => void;
+}) {
+  const selected = view.methods.find((m) => m.id === value);
+  const official = view.methods.find((m) => m.id === view.method);
+  const preview = value !== view.method;
+  return (
+    <section className="seeding-methods" aria-label="Método de cálculo">
+      <label>
+        Ver con el método
+        <select value={value} onChange={(e) => onChange(e.target.value)}>
+          {view.methods.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.label}
+              {m.id === view.method ? " · oficial" : ""}
+            </option>
+          ))}
+        </select>
+      </label>
+      {selected && <p>{selected.description}</p>}
+      {preview && (
+        <p className="seeding-preview">
+          <strong>Vista previa:</strong> así quedaría el orden con{" "}
+          {selected?.label}. El orden oficial sigue siendo {official?.label}
+          {view.kind === "seeding" ? ", con sus ajustes manuales" : ""}.{" "}
+          {admin && (
+            <button
+              className="primary-button"
+              onClick={() => onAdopt(value)}
+              type="button"
+            >
+              Usar como método oficial
+            </button>
+          )}
+        </p>
+      )}
+    </section>
+  );
+}
+
+export function SeedingBoard({
+  slug,
+  base = "seeding",
+}: {
+  slug: string;
+  base?: "seeding" | "rankings";
+}) {
   const [view, setView] = useState<SeedingView | null>(null);
   const [error, setError] = useState("");
   // The first render is always the loading state, so reading storage here cannot
@@ -425,6 +505,8 @@ export function SeedingBoard({ slug }: { slug: string }) {
   );
   const [open, setOpen] = useState<string | null>(null);
   const [message, setMessage] = useState("");
+  const [preview, setPreview] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
 
   const [version, setVersion] = useState(0);
   const load = useCallback(() => setVersion((v) => v + 1), []);
@@ -435,7 +517,7 @@ export function SeedingBoard({ slug }: { slug: string }) {
       .then(async (r) => {
         if (!r.ok)
           throw new Error(
-            r.status === 404 ? "No existe este seeding." : "No se pudo cargar.",
+            r.status === 404 ? "No existe esta página." : "No se pudo cargar.",
           );
         const data = (await r.json()) as SeedingView;
         if (active) {
@@ -460,9 +542,12 @@ export function SeedingBoard({ slug }: { slug: string }) {
   }, [running, load]);
 
   async function act(method: string, path: string, body?: unknown) {
-    if (!admin) return;
+    if (!admin) return false;
     const r = await send(admin, method, path, body).catch(() => null);
-    if (!r) return setMessage("No se pudo contactar a la API.");
+    if (!r) {
+      setMessage("No se pudo contactar a la API.");
+      return false;
+    }
     if (r.status === 401) {
       setAdmin(null);
       try {
@@ -471,16 +556,20 @@ export function SeedingBoard({ slug }: { slug: string }) {
         /* ignore */
       }
     }
-    if (!r.ok) return setMessage(await problem(r));
+    if (!r.ok) {
+      setMessage(await problem(r));
+      return false;
+    }
     setMessage("");
     load();
+    return true;
   }
 
   if (error)
     return (
       <div role="alert" className="competition-page">
         <p>{error}</p>
-        <Link className="primary-button" href="/seeding">
+        <Link className="primary-button" href={`/${base}`}>
           Volver
         </Link>
       </div>
@@ -488,19 +577,50 @@ export function SeedingBoard({ slug }: { slug: string }) {
   if (!view)
     return (
       <p role="status" className="competition-page">
-        Cargando seeding…
+        Cargando…
       </p>
     );
 
+  const ranking = view.kind === "ranking";
+  const official = view.method || "combined";
+  const method = preview || official;
+  const previewing = method !== official;
+  const canMove = !ranking && !!admin && !previewing;
+  let rows = view.seeds;
+  if (previewing)
+    rows = [...rows].sort(
+      (a, b) =>
+        (a.ranks?.[method] ?? Infinity) - (b.ranks?.[method] ?? Infinity) ||
+        b.sets - a.sets,
+    );
+  const hidden = ranking && !showAll ? rows.filter((r) => !r.eligible) : [];
+  if (hidden.length) rows = rows.filter((r) => r.eligible);
   const total = view.seeds.length;
   const manual = view.seeds.filter((s) => s.override).length;
+  const methodLabel =
+    view.methods.find((m) => m.id === method)?.label || method;
+  const columns = canMove ? 9 : 8;
   return (
     <div className="competition-page seeding-page">
-      <p className="eyebrow">SEEDING · PROPUESTA PARA LA ORGANIZACIÓN</p>
+      <p className="eyebrow">
+        {ranking
+          ? `RANKING · ${view.country_code === "PY" ? "PARAGUAY" : view.country_code}`
+          : "SEEDING · PROPUESTA PARA LA ORGANIZACIÓN"}
+      </p>
       <h1>{view.name}</h1>
       <p className="seeding-lead">
-        Evento el {day(view.event_date)} · {total} jugadores · {manual}{" "}
-        {manual === 1 ? "ajuste manual" : "ajustes manuales"}
+        {ranking ? (
+          <>
+            Período del {day(view.window_start)} al {day(view.event_date)} ·{" "}
+            {num(view.seeds.filter((s) => s.eligible).length)} jugadores en el
+            ranking
+          </>
+        ) : (
+          <>
+            Evento el {day(view.event_date)} · {total} jugadores · {manual}{" "}
+            {manual === 1 ? "ajuste manual" : "ajustes manuales"}
+          </>
+        )}
         {view.startgg_event_slug && (
           <>
             {" · "}
@@ -522,28 +642,13 @@ export function SeedingBoard({ slug }: { slug: string }) {
         >
           Exportar CSV
         </a>
-        <details className="seeding-push">
-          <summary>Subir a start.gg</summary>
-          <p>
-            Por seguridad, la API no escribe en start.gg. Con la clave de la
-            cuenta organizadora, desde la carpeta del proyecto:
-          </p>
-          <pre>
-            {`docker compose run --rm api python -m app.cli.seeding push --slug ${view.slug}`}
-          </pre>
-          <p>
-            Eso solo simula y muestra el resultado. Para escribir, repetirlo con{" "}
-            <code>--confirm</code>. El token de start.gg tiene que ser de un
-            administrador del torneo.
-          </p>
-        </details>
       </div>
 
       {running && (
         <p role="status" className="seeding-banner">
           {actionLabels[view.refresh.progress?.step || ""] || "Procesando"}
           {view.refresh.progress?.total
-            ? `: ${view.refresh.progress.done} de ${view.refresh.progress.total} jugadores`
+            ? `: ${view.refresh.progress.done} de ${view.refresh.progress.total}`
             : "…"}
         </p>
       )}
@@ -590,168 +695,228 @@ export function SeedingBoard({ slug }: { slug: string }) {
         </p>
       )}
 
+      {view.methods?.length > 0 && view.run && (
+        <MethodPicker
+          view={view}
+          value={method}
+          onChange={(m) => setPreview(m === official ? null : m)}
+          admin={admin}
+          onAdopt={async (m) => {
+            if (
+              await act("POST", `${slug}/recalculate`, {
+                method: m,
+              })
+            ) {
+              setPreview(null);
+              setMessage(
+                `${view.methods.find((x) => x.id === m)?.label} es ahora el método oficial.`,
+              );
+            }
+          }}
+        />
+      )}
+
       <DataPanel view={view} />
 
-      <section aria-label="Seeds" className="data-section">
-        <h2>Seeds</h2>
+      <section
+        aria-label={ranking ? "Ranking" : "Seeds"}
+        className="data-section"
+      >
+        <h2>{ranking ? "Ranking" : "Seeds"}</h2>
         <div className="seeding-table-wrap">
           <table className="seeding-table">
             <thead>
               <tr>
-                <th scope="col">Seed</th>
+                <th scope="col">{ranking ? "Puesto" : "Seed"}</th>
                 <th scope="col">Jugador</th>
                 <th scope="col">Circuito</th>
-                <th scope="col">Rating ± RD</th>
-                <th scope="col">Posiciones</th>
+                <th scope="col">{methodLabel}</th>
+                <th scope="col">Glicko-2 ± RD</th>
                 <th scope="col">W-L</th>
                 <th scope="col">Confianza</th>
                 <th scope="col">Alertas</th>
-                {admin && <th scope="col">Mover</th>}
+                {canMove && <th scope="col">Mover</th>}
               </tr>
             </thead>
             <tbody>
-              {view.seeds.map((row) => (
-                <Fragment key={row.player_id}>
-                  <tr className={row.override ? "is-manual" : undefined}>
-                    <td>
-                      <strong>{row.seed}</strong>
-                      {row.seed !== row.seed_algorithm && (
-                        <small> (método {row.seed_algorithm})</small>
-                      )}
-                    </td>
-                    <td>
-                      <button
-                        className="link-button"
-                        aria-expanded={open === row.player_id}
-                        onClick={() =>
-                          setOpen(open === row.player_id ? null : row.player_id)
-                        }
-                      >
-                        {row.gamer_tag}
-                      </button>
-                      {row.override && <span className="tag">manual</span>}
-                    </td>
-                    <td>{row.main_circuit || "—"}</td>
-                    <td>
-                      {row.rating === null
-                        ? "—"
-                        : `${num(row.rating)} ± ${num(row.rd)}`}
-                    </td>
-                    <td>{num(row.placement_score, 2)}</td>
-                    <td>
-                      {row.wins}-{row.losses}
-                    </td>
-                    <td>{row.confidence}</td>
-                    <td className="seeding-flags">{row.flags.join(" · ")}</td>
-                    {admin && (
-                      <td className="seeding-arrows">
-                        <button
-                          aria-label={`Subir a ${row.gamer_tag}`}
-                          disabled={row.seed === 1}
-                          onClick={() =>
-                            act("PUT", `${slug}/overrides/${row.player_id}`, {
-                              seed: row.seed - 1,
-                              reason:
-                                row.override?.reason ||
-                                "Ajuste manual desde la página",
-                            })
-                          }
-                        >
-                          ↑
-                        </button>
-                        <button
-                          aria-label={`Bajar a ${row.gamer_tag}`}
-                          disabled={row.seed === total}
-                          onClick={() =>
-                            act("PUT", `${slug}/overrides/${row.player_id}`, {
-                              seed: row.seed + 1,
-                              reason:
-                                row.override?.reason ||
-                                "Ajuste manual desde la página",
-                            })
-                          }
-                        >
-                          ↓
-                        </button>
-                      </td>
-                    )}
-                  </tr>
-                  {open === row.player_id && (
-                    <tr className="seeding-open">
-                      <td colSpan={admin ? 9 : 8}>
-                        <Details row={row} />
-                        {admin && (
-                          <div className="seeding-edit">
-                            <MoveForm
-                              row={row}
-                              total={total}
-                              onMove={(seed, reason) =>
-                                act(
-                                  "PUT",
-                                  `${slug}/overrides/${row.player_id}`,
-                                  {
-                                    seed,
-                                    reason,
-                                  },
-                                )
-                              }
-                            />
-                            {row.override && (
-                              <button
-                                className="link-button"
-                                onClick={() =>
-                                  act(
-                                    "DELETE",
-                                    `${slug}/overrides/${row.player_id}`,
-                                  )
-                                }
-                              >
-                                Quitar ajuste manual (volver al{" "}
-                                {row.seed_algorithm}.º del método)
-                              </button>
-                            )}
-                          </div>
+              {rows.map((row, index) => {
+                const place = previewing
+                  ? (row.ranks?.[method] ?? null)
+                  : ranking
+                    ? index + 1
+                    : row.seed;
+                return (
+                  <Fragment key={row.player_id}>
+                    <tr className={row.override ? "is-manual" : undefined}>
+                      <td>
+                        <strong>{place ?? "—"}</strong>
+                        {previewing && !ranking && (
+                          <small> (oficial {row.seed})</small>
+                        )}
+                        {!previewing && row.seed !== row.seed_algorithm && (
+                          <small> (método {row.seed_algorithm})</small>
                         )}
                       </td>
+                      <td>
+                        <button
+                          className="link-button"
+                          aria-expanded={open === row.player_id}
+                          onClick={() =>
+                            setOpen(
+                              open === row.player_id ? null : row.player_id,
+                            )
+                          }
+                        >
+                          {row.gamer_tag}
+                        </button>
+                        {row.override && <span className="tag">manual</span>}
+                      </td>
+                      <td>{row.main_circuit || "—"}</td>
+                      <td>{scoreText(row, method)}</td>
+                      <td>
+                        {row.rating === null
+                          ? "—"
+                          : `${num(row.rating)} ± ${num(row.rd)}`}
+                      </td>
+                      <td>
+                        {row.wins}-{row.losses}
+                      </td>
+                      <td>{row.confidence}</td>
+                      <td className="seeding-flags">{row.flags.join(" · ")}</td>
+                      {canMove && (
+                        <td className="seeding-arrows">
+                          <button
+                            aria-label={`Subir a ${row.gamer_tag}`}
+                            disabled={row.seed === 1}
+                            onClick={() =>
+                              act("PUT", `${slug}/overrides/${row.player_id}`, {
+                                seed: row.seed - 1,
+                                reason:
+                                  row.override?.reason ||
+                                  "Ajuste manual desde la página",
+                              })
+                            }
+                          >
+                            ↑
+                          </button>
+                          <button
+                            aria-label={`Bajar a ${row.gamer_tag}`}
+                            disabled={row.seed === total}
+                            onClick={() =>
+                              act("PUT", `${slug}/overrides/${row.player_id}`, {
+                                seed: row.seed + 1,
+                                reason:
+                                  row.override?.reason ||
+                                  "Ajuste manual desde la página",
+                              })
+                            }
+                          >
+                            ↓
+                          </button>
+                        </td>
+                      )}
                     </tr>
-                  )}
-                </Fragment>
-              ))}
+                    {open === row.player_id && (
+                      <tr className="seeding-open">
+                        <td colSpan={columns}>
+                          <Details row={row} method={method} />
+                          {canMove && (
+                            <div className="seeding-edit">
+                              <MoveForm
+                                row={row}
+                                total={total}
+                                onMove={(seed, reason) =>
+                                  act(
+                                    "PUT",
+                                    `${slug}/overrides/${row.player_id}`,
+                                    { seed, reason },
+                                  )
+                                }
+                              />
+                              {row.override && (
+                                <button
+                                  className="link-button"
+                                  onClick={() =>
+                                    act(
+                                      "DELETE",
+                                      `${slug}/overrides/${row.player_id}`,
+                                    )
+                                  }
+                                >
+                                  Quitar ajuste manual (volver al{" "}
+                                  {row.seed_algorithm}.º del método)
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>
+        {ranking && (hidden.length > 0 || showAll) && (
+          <p className="seeding-lead">
+            <button
+              className="link-button"
+              onClick={() => setShowAll(!showAll)}
+            >
+              {showAll
+                ? "Ocultar jugadores con pocos sets"
+                : `Mostrar ${hidden.length} jugadores con menos de ${view.run?.parameters.min_sets ?? 0} sets`}
+            </button>
+          </p>
+        )}
       </section>
     </div>
   );
 }
 
-export function SeedingList() {
-  const [items, setItems] = useState<
-    { slug: string; name: string; event_date: string }[] | null
-  >(null);
+export function SeedingList({
+  kind = "seeding",
+}: {
+  kind?: "seeding" | "ranking";
+}) {
+  const [items, setItems] = useState<SeedingProjectSummary[] | null>(null);
   const [error, setError] = useState(false);
+  const ranking = kind === "ranking";
   useEffect(() => {
-    fetch(`${api}/seeding`)
+    fetch(`${api}/seeding?kind=${kind}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error())))
       .then(setItems)
       .catch(() => setError(true));
-  }, []);
+  }, [kind]);
   return (
     <div className="competition-page">
-      <p className="eyebrow">ORGANIZACIÓN DE EVENTOS</p>
-      <h1>Seeding</h1>
-      {error && <p role="alert">No se pudieron cargar los seedings.</p>}
+      <p className="eyebrow">
+        {ranking ? "EL CIRCUITO PARAGUAYO" : "ORGANIZACIÓN DE EVENTOS"}
+      </p>
+      <h1>{ranking ? "Rankings" : "Seeding"}</h1>
+      {error && <p role="alert">No se pudieron cargar los datos.</p>}
       {!items && !error && <p role="status">Cargando…</p>}
       {items && items.length === 0 && (
-        <p>Todavía no hay seedings. Se crean con el comando de seeding.</p>
+        <p>
+          {ranking
+            ? "Todavía no hay rankings. Se crean con el comando create-ranking."
+            : "Todavía no hay seedings. Se crean con el comando de seeding."}
+        </p>
       )}
       <div className="data-grid">
         {items?.map((p) => (
           <article className="data-card" key={p.slug}>
             <h3>
-              <Link href={`/seeding/${p.slug}`}>{p.name} ↗</Link>
+              <Link href={`/${ranking ? "rankings" : "seeding"}/${p.slug}`}>
+                {p.name} ↗
+              </Link>
             </h3>
-            <p>Evento el {day(p.event_date)}</p>
+            <p>
+              {ranking
+                ? `Del ${day(p.window_start)} al ${day(p.event_date)}`
+                : `Evento el ${day(p.event_date)}`}
+            </p>
           </article>
         ))}
       </div>

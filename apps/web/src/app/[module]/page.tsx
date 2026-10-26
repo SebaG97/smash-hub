@@ -5,7 +5,13 @@ export function generateStaticParams() {
   return modules
     .filter(
       (m) =>
-        !["players", "tournaments", "estadisticas", "seeding"].includes(m.slug),
+        ![
+          "players",
+          "tournaments",
+          "estadisticas",
+          "seeding",
+          "rankings",
+        ].includes(m.slug),
     )
     .map((m) => ({ module: m.slug }));
 }

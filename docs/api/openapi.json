@@ -1508,12 +1508,44 @@
         ],
         "summary": "Projects",
         "operationId": "projects_api_v1_seeding_get",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "seeding",
+                    "ranking"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
               }
             }
           }
@@ -2880,6 +2912,40 @@
             "minimum": 1.0,
             "title": "Spread Flag",
             "default": 10
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "combined",
+              "glicko2",
+              "elo",
+              "bradley_terry",
+              "points",
+              "wilson"
+            ],
+            "title": "Method",
+            "default": "combined"
+          },
+          "elo_k": {
+            "type": "number",
+            "maximum": 100.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Elo K",
+            "default": 32
+          },
+          "points_top_events": {
+            "type": "integer",
+            "maximum": 30.0,
+            "minimum": 1.0,
+            "title": "Points Top Events",
+            "default": 5
+          },
+          "min_sets": {
+            "type": "integer",
+            "maximum": 200.0,
+            "minimum": 0.0,
+            "title": "Min Sets",
+            "default": 0
           }
         },
         "additionalProperties": false,
@@ -3159,6 +3225,25 @@
                 "type": "null"
               }
             ]
+          },
+          "method": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "combined",
+                  "glicko2",
+                  "elo",
+                  "bradley_terry",
+                  "points",
+                  "wilson"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Method"
           }
         },
         "additionalProperties": false,

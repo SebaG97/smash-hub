@@ -73,13 +73,17 @@ Todos requieren `game_id: UUID`; opcionales `mode=singles|doubles` (default sing
 
 | Método y ruta bajo /api/v1 | Acceso | Respuesta |
 | --- | --- | --- |
-| GET /seeding | público | `[{slug, name, event_date}]` |
+| GET /seeding?kind=seeding\|ranking | público | `[{slug, name, kind, country_code, event_date, window_start}]` |
 | GET /seeding/{slug} | público | Evento, período, corte de datos, estado de la descarga, conteos del dataset, fusiones, último cálculo y `seeds` (seed final, seed del método, métricas, `reasons`, `flags`, `override`) |
 | GET /seeding/{slug}/export.csv | público | CSV UTF-8 con BOM, en el orden final |
 | GET /seeding/{slug}/session | admin | Valida la clave y devuelve el nombre registrado |
 | GET /seeding/{slug}/audit | admin | Últimos 100 cambios |
-| POST /seeding/{slug}/recalculate | admin | `{window_start?, window_end?, refresh?, parameters?}`. Sin `refresh`: 200 y nuevo cálculo con los datos cargados. Con `refresh`: 202 y descarga de start.gg en segundo plano |
+| POST /seeding/{slug}/recalculate | admin | `{window_start?, window_end?, refresh?, parameters?, method?}`. `method` cambia solo el método oficial y conserva el resto de los parámetros. Sin `refresh`: 200 y nuevo cálculo con los datos cargados. Con `refresh`: 202 y descarga de start.gg en segundo plano |
 | PUT /seeding/{slug}/overrides/{player_id} | admin | `{seed, reason}` fija el seed del jugador |
 | DELETE /seeding/{slug}/overrides/{player_id} | admin | Quita el ajuste manual |
 
 Clave: `Authorization: Bearer <ADMIN_TOKEN>`; `X-Admin-Name` es opcional y solo va al registro. Errores: 401 clave incorrecta, 429 demasiados fallos, 503 edición deshabilitada, 404 proyecto inexistente, 409 descarga en curso, 422 período o seed inválidos (`detail` en español). Las fechas llevan zona horaria y el final del período es exclusivo. `window_start` no puede ser anterior a los datos descargados salvo con `refresh`.
+
+### Métodos y rankings (Misión 05.1, ADR-012)
+
+`GET /seeding/{slug}` agrega `kind` (`seeding` o `ranking`), `country_code`, `method` (método oficial) y `methods` (`[{id, label, description}]`). Cada fila de `seeds` agrega `scores` y `ranks` por método, `reasons_by_method`, `elo`, `bradley_terry`, `points`, `win_rate`, `wilson` y `eligible` (en rankings, si llega al mínimo de sets). Métodos: `combined`, `glicko2`, `elo`, `bradley_terry`, `points`, `wilson`. En rankings `PUT /overrides` responde 422.

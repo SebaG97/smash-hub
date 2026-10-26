@@ -5,7 +5,7 @@ import re
 import time
 from collections import defaultdict, deque
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
@@ -13,7 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.seeding import service
-from app.seeding.engine import Parameters
+from app.seeding.engine import Method, Parameters
 from app.seeding.models import SeedingProject
 
 router = APIRouter(prefix="/api/v1/seeding", tags=["seeding"])
@@ -72,6 +72,8 @@ class RecalculateRequest(BaseModel):
     window_end: AwareDatetime | None = None
     refresh: bool = False
     parameters: Parameters | None = None
+    # Shortcut: keep the current parameters and only change the official method.
+    method: Method | None = None
 
 
 class OverrideRequest(BaseModel):
@@ -81,13 +83,21 @@ class OverrideRequest(BaseModel):
 
 
 @router.get("")
-def projects(request: Request):
+def projects(request: Request, kind: Literal["seeding", "ranking"] | None = None):
+    query = select(SeedingProject).order_by(SeedingProject.event_date.desc())
+    if kind is not None:
+        query = query.where(SeedingProject.kind == kind)
     with session_for(request) as session:
         return [
-            dict(slug=p.slug, name=p.name, event_date=p.event_date)
-            for p in session.scalars(
-                select(SeedingProject).order_by(SeedingProject.event_date.desc())
+            dict(
+                slug=p.slug,
+                name=p.name,
+                kind=p.kind,
+                country_code=p.country_code,
+                event_date=p.event_date,
+                window_start=p.window_start,
             )
+            for p in session.scalars(query)
         ]
 
 
@@ -123,6 +133,7 @@ def recalculate(
                 actor,
                 request.app.state.settings.startgg_api_token,
                 body.window_start,
+                method=body.method,
             )
         except service.ProjectNotFound:
             raise HTTPException(404, "Seeding no encontrado") from None
@@ -144,6 +155,7 @@ def recalculate(
             window_start=body.window_start,
             window_end=body.window_end,
             parameters=body.parameters,
+            method=body.method,
         )
         return {"status": "recalculated"}
 

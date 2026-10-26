@@ -1024,3 +1024,42 @@ footer {
     height: 200px !important;
   }
 }
+
+.seeding-methods {
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--amber);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 16px;
+  margin: 16px 0;
+}
+.seeding-methods label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-display), "Arial Narrow", Impact, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.seeding-methods select {
+  font: inherit;
+  text-transform: none;
+  letter-spacing: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  max-width: 100%;
+}
+.seeding-methods p {
+  color: var(--muted);
+  line-height: 1.7;
+  margin: 10px 0 0;
+}
+.seeding-preview .primary-button {
+  margin-left: 8px;
+  vertical-align: middle;
+}
+.seeding-preview strong {
+  color: var(--amber);
+}

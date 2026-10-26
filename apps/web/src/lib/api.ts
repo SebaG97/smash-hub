@@ -127,7 +127,10 @@ export type HeadToHead = {
 export type SeedingProjectSummary = {
   slug: string;
   name: string;
+  kind: "seeding" | "ranking";
+  country_code: string | null;
   event_date: string;
+  window_start: string;
 };
 export type SeedingOverride = {
   player_id: string;
@@ -166,13 +169,27 @@ export type SeedingRow = {
   rank_conservative: number | null;
   rank_placement: number | null;
   merged_sets: number;
+  elo: number | null;
+  bradley_terry: number | null;
+  points: number | null;
+  win_rate: number | null;
+  wilson: number | null;
+  eligible: boolean;
+  scores: Record<string, number | null>;
+  ranks: Record<string, number>;
+  reasons_by_method?: Record<string, string[]>;
   flags: string[];
   reasons: string[];
   override: SeedingOverride | null;
 };
+export type SeedingMethod = { id: string; label: string; description: string };
 export type SeedingView = {
   slug: string;
   name: string;
+  kind: "seeding" | "ranking";
+  country_code: string | null;
+  method: string | null;
+  methods: SeedingMethod[];
   startgg_event_slug: string | null;
   event_date: string;
   window_start: string;

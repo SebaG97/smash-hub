@@ -1,4 +1,4 @@
-"""Seeding projects: dataset storage, calculation runs, manual overrides and audit."""
+"""Seeding and ranking projects: dataset storage, calculation runs, overrides and audit."""
 
 import asyncio
 import csv
@@ -7,13 +7,14 @@ import logging
 import threading
 from datetime import UTC, datetime, timedelta
 
+from pydantic import ValidationError
 from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
 from app.integrations.startgg.client import ImportFailure, StartGGClient
 from app.rankings.policy import utc
 from app.seeding import startgg
-from app.seeding.engine import ALGORITHM, Parameters, apply_overrides, compute
+from app.seeding.engine import ALGORITHM, METHODS, Parameters, apply_overrides, compute
 from app.seeding.models import (
     SeedingAuditEntry,
     SeedingEntrant,
@@ -69,7 +70,27 @@ def replace_dataset(session, project, entrants, sets, *, cutoff):
     project.data_cutoff = cutoff
 
 
-def recalculate(session, project, actor, *, window_start=None, window_end=None, parameters=None):
+def default_parameters(session, project):
+    """The last run's parameters (so a refresh keeps the chosen method), else kind defaults."""
+    if project.current_run_id is not None:
+        run = session.get(SeedingRun, project.current_run_id)
+        try:
+            return Parameters.model_validate(run.parameters)
+        except ValidationError:
+            pass  # Runs from an older algorithm version.
+    return Parameters(min_sets=10) if project.kind == "ranking" else Parameters()
+
+
+def recalculate(
+    session,
+    project,
+    actor,
+    *,
+    window_start=None,
+    window_end=None,
+    parameters=None,
+    method=None,
+):
     start = utc(window_start) if window_start else utc(project.window_start)
     end = utc(window_end) if window_end else utc(project.event_date)
     if start < utc(project.window_start):
@@ -78,7 +99,9 @@ def recalculate(session, project, actor, *, window_start=None, window_end=None, 
         )
     if end <= start or end > utc(project.event_date):
         raise InvalidRequest("La ventana debe terminar después de empezar y no después del evento.")
-    params = parameters or Parameters()
+    params = parameters or default_parameters(session, project)
+    if method is not None:
+        params = params.model_copy(update={"method": method})
     entrants = [
         dict(player_id=e.startgg_player_id, gamer_tag=e.gamer_tag)
         for e in session.scalars(
@@ -138,6 +161,7 @@ def recalculate(session, project, actor, *, window_start=None, window_end=None, 
         window_start=start.isoformat(),
         window_end=end.isoformat(),
         sets=summary["set_count"],
+        method=params.method,
     )
     return run
 
@@ -181,6 +205,8 @@ def final_seeding(session, project):
 
 
 def set_override(session, project, player_id, seed, reason, actor):
+    if project.kind == "ranking":
+        raise InvalidRequest("Los rankings no admiten ajustes manuales: salen solo del cálculo.")
     run, rows = final_seeding(session, project)
     if not any(r["player_id"] == player_id for r in rows):
         raise InvalidRequest("Ese jugador no está en el seeding actual.")
@@ -240,6 +266,10 @@ def view(session, project):
     return dict(
         slug=project.slug,
         name=project.name,
+        kind=project.kind,
+        country_code=project.country_code,
+        method=(run.parameters or {}).get("method", "combined") if run else None,
+        methods=[dict(id=k, **v) for k, v in METHODS.items()],
         startgg_event_slug=project.startgg_event_slug,
         event_date=project.event_date,
         window_start=project.window_start,
@@ -311,6 +341,11 @@ EXPORT_FIELDS = [
     "rd",
     "conservative",
     "placement_score",
+    "elo",
+    "bradley_terry",
+    "points",
+    "win_rate",
+    "wilson",
     "wins",
     "losses",
     "sets",
@@ -323,6 +358,8 @@ EXPORT_FIELDS = [
 
 def export_csv(session, project):
     _, rows = final_seeding(session, project)
+    if project.kind == "ranking":
+        rows = [r for r in rows if r.get("eligible", True)]
     out = io.StringIO()
     writer = csv.DictWriter(out, EXPORT_FIELDS)
     writer.writeheader()
@@ -342,6 +379,11 @@ def export_csv(session, project):
                 rd=r.get("rd"),
                 conservative=r.get("conservative"),
                 placement_score=r.get("placement_score"),
+                elo=r.get("elo"),
+                bradley_terry=r.get("bradley_terry"),
+                points=r.get("points"),
+                win_rate=r.get("win_rate"),
+                wilson=r.get("wilson"),
                 wins=r.get("wins"),
                 losses=r.get("losses"),
                 sets=r.get("sets"),
@@ -393,28 +435,53 @@ def _progress(engine, project_id, **values):
 async def _download(engine, project_id, client, start):
     with Session(engine) as session:
         project = session.get(SeedingProject, project_id)
+        kind, country = project.kind, project.country_code
         event_id, videogame, event_date = (
             project.startgg_event_id,
             project.startgg_videogame_id,
             project.event_date,
         )
-    entrants = await startgg.fetch_entrants(client, event_id)
-    nodes = []
-    for i, entrant in enumerate(entrants):
-        _progress(engine, project_id, step="sets", done=i, total=len(entrants))
-        nodes += await startgg.fetch_player_sets(client, entrant["startgg_player_id"], start)
+    end = utc(event_date)
+    if kind == "ranking":
+        nodes, tags, _events = await startgg.fetch_country_sets(
+            client,
+            country=country,
+            videogame_id=videogame,
+            start=start,
+            end=end,
+            progress=lambda i, n: _progress(engine, project_id, step="torneos", done=i, total=n),
+        )
+    else:
+        entrants = await startgg.fetch_entrants(client, event_id)
+        nodes = []
+        for i, entrant in enumerate(entrants):
+            _progress(engine, project_id, step="sets", done=i, total=len(entrants))
+            nodes += await startgg.fetch_player_sets(client, entrant["startgg_player_id"], start)
     cutoff = datetime.now(UTC)
     rows, excluded = startgg.normalize(
         nodes,
         videogame_id=videogame,
         own_event_id=event_id,
         start=start,
-        end=min(cutoff, utc(event_date)),
+        end=min(cutoff, end),
     )
+    if kind == "ranking":
+        # The circuit's players are everyone with at least one counted set.
+        players = sorted(
+            {s[k] for s in rows if s["counted"] for k in ("p1_player_id", "p2_player_id") if s[k]}
+        )
+        entrants = [
+            dict(
+                startgg_entrant_id=f"p{pid}",
+                startgg_player_id=pid,
+                gamer_tag=(tags.get(pid) or pid)[:120],
+            )
+            for pid in players
+        ]
     return entrants, rows, excluded, cutoff
 
 
-def run_refresh(engine, project_id, token, actor, start):
+def run_refresh(engine, project_id, token, actor, start, method=None):
     async def main():
         async with StartGGClient(token, interval=0.9) as client:
             return await _download(engine, project_id, client, start)
@@ -426,7 +493,7 @@ def run_refresh(engine, project_id, token, actor, start):
             replace_dataset(session, project, entrants, rows, cutoff=cutoff)
             project.window_start = start
             session.flush()
-            run = recalculate(session, project, actor)
+            run = recalculate(session, project, actor, method=method)
             project.refresh_status, project.refresh_progress = "IDLE", None
             audit(
                 session,
@@ -449,11 +516,11 @@ def run_refresh(engine, project_id, token, actor, start):
             session.commit()
 
 
-def start_refresh(engine, slug, actor, token, window_start=None, *, runner=None):
+def start_refresh(engine, slug, actor, token, window_start=None, *, method=None, runner=None):
     if token is None or not token.get_secret_value().strip():
         raise InvalidRequest("La API no tiene STARTGG_API_TOKEN configurado.")
     project_id, start = claim_refresh(engine, slug, actor, window_start)
-    args = (engine, project_id, token, actor, start)
+    args = (engine, project_id, token, actor, start, method)
     if runner is not None:
         runner(*args)
     else:

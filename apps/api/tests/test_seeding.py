@@ -381,3 +381,92 @@ def test_cli_writes_in_production_need_explicit_flag(monkeypatch):
         cli.engine_for(production, write=True)
     monkeypatch.setattr(cli, "ALLOW_PRODUCTION", True)
     cli.engine_for(production, write=True).dispose()
+
+
+def test_method_choice_is_official_and_survives_recalculation(project):
+    with client_for(project) as client:
+        body = client.get("/api/v1/seeding/cs").json()
+        assert body["method"] == "combined"
+        assert {m["id"] for m in body["methods"]} == {
+            "combined",
+            "glicko2",
+            "elo",
+            "bradley_terry",
+            "points",
+            "wilson",
+        }
+        first = body["seeds"][0]
+        assert set(first["ranks"]) == {m["id"] for m in body["methods"]}
+        assert first["reasons_by_method"]["elo"][1].startswith("Elo")
+        r = client.post("/api/v1/seeding/cs/recalculate", json={"method": "elo"}, headers=AUTH)
+        assert r.status_code == 200
+        assert client.get("/api/v1/seeding/cs").json()["method"] == "elo"
+        # A plain recalculation keeps the chosen method.
+        client.post("/api/v1/seeding/cs/recalculate", json={}, headers=AUTH)
+        body = client.get("/api/v1/seeding/cs").json()
+        assert body["method"] == "elo"
+        assert [s["ranks"]["elo"] for s in body["seeds"] if s["ranks"].get("elo")] == sorted(
+            s["ranks"]["elo"] for s in body["seeds"] if s["ranks"].get("elo")
+        )
+        bad = client.post("/api/v1/seeding/cs/recalculate", json={"method": "x"}, headers=AUTH)
+        assert bad.status_code == 422
+
+
+@pytest.fixture
+def ranking(db):
+    with Session(db) as session:
+        p = SeedingProject(
+            slug="rk",
+            name="Ranking PY",
+            kind="ranking",
+            country_code="PY",
+            startgg_videogame_id="1386",
+            event_date=EVENT,
+            window_start=START,
+            merges={},
+            duplicates={},
+        )
+        session.add(p)
+        session.commit()
+    return db
+
+
+def test_ranking_download_lists_every_player_and_rejects_overrides(ranking, monkeypatch):
+    nodes = [
+        dict(node(i, players=(w, lo)), event=node(i)["event"])
+        for i, (w, lo) in enumerate([("1", "2"), ("1", "3"), ("2", "3")] * 6, 1)
+    ]
+
+    async def fake_country_sets(client, **kwargs):
+        assert kwargs["country"] == "PY"
+        return nodes, {"1": "Ace", "2": "Bee", "3": "Cid"}, []
+
+    monkeypatch.setattr(startgg, "fetch_country_sets", fake_country_sets)
+    import asyncio
+
+    with Session(ranking) as session:
+        project_id = session.scalar(select(SeedingProject.id))
+    entrants, rows, _, _ = asyncio.run(service._download(ranking, project_id, None, START))
+    assert [(e["startgg_player_id"], e["gamer_tag"]) for e in entrants] == [
+        ("1", "Ace"),
+        ("2", "Bee"),
+        ("3", "Cid"),
+    ]
+    with Session(ranking) as session:
+        p = session.get(SeedingProject, project_id)
+        service.replace_dataset(session, p, entrants, rows, cutoff=EVENT)
+        session.flush()
+        run = service.recalculate(session, p, "test")
+        assert run.parameters["min_sets"] == 10
+        session.commit()
+    with client_for(ranking) as client:
+        body = client.get("/api/v1/seeding/rk").json()
+        assert body["kind"] == "ranking" and body["country_code"] == "PY"
+        assert [s["gamer_tag"] for s in body["seeds"]] == ["Ace", "Bee", "Cid"]
+        assert all(s["eligible"] for s in body["seeds"])  # 12 sets each, minimum is 10
+        assert client.get("/api/v1/seeding?kind=ranking").json()[0]["slug"] == "rk"
+        assert client.get("/api/v1/seeding?kind=seeding").json() == []
+        r = client.put(
+            "/api/v1/seeding/rk/overrides/3", json={"seed": 1, "reason": "no"}, headers=AUTH
+        )
+        assert r.status_code == 422

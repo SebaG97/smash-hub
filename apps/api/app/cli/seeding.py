@@ -2,6 +2,8 @@
 
 python -m app.cli.seeding create --slug center-stage-2026 --event-slug tournament/x/event/y \
     --event-date 2026-11-14T00:00:00-03:00 --window-start 2025-11-14T00:00:00-03:00
+python -m app.cli.seeding create-ranking --slug ranking-py --name "Ranking Paraguay" \
+    --country PY --start 2025-11-14T00:00:00-03:00 --end 2026-11-14T00:00:00-03:00
 python -m app.cli.seeding load-phase2 --slug center-stage-2026 --dir /seeding
 python -m app.cli.seeding merge --slug center-stage-2026 --from 5363782 --to 5570394
 python -m app.cli.seeding duplicate --slug center-stage-2026 --player 5509432 --keep 5570394
@@ -88,6 +90,34 @@ def phase2_rows(directory):
         for s in read("sets")
     ]
     return entrants, sets
+
+
+def create_ranking(args, settings):
+    def operation(session):
+        project = SeedingProject(
+            slug=args.slug,
+            name=args.name,
+            kind="ranking",
+            country_code=args.country.upper(),
+            startgg_videogame_id=args.videogame,
+            window_start=datetime.fromisoformat(args.start),
+            event_date=datetime.fromisoformat(args.end),
+            merges={},
+            duplicates={},
+        )
+        session.add(project)
+        session.flush()
+        service.audit(session, project, "create", ACTOR, country=project.country_code)
+        return {"status": "created", "slug": args.slug, "next": "bajar datos desde la página"}
+
+    engine = engine_for(settings, write=True)
+    try:
+        with Session(engine) as session:
+            result = operation(session)
+            session.commit()
+            return result
+    finally:
+        engine.dispose()
 
 
 async def create(args, settings):
@@ -242,6 +272,15 @@ def main():
     c.add_argument("--event-date", required=True, help="ISO 8601 con zona horaria")
     c.add_argument("--window-start", required=True, help="ISO 8601 con zona horaria")
     c.add_argument("--name")
+    cr = sub.add_parser("create-ranking", help="Ranking de un país con sus torneos presenciales")
+    cr.add_argument("--slug", required=True)
+    cr.add_argument("--name", required=True)
+    cr.add_argument("--country", default="PY", help="Código ISO de dos letras")
+    cr.add_argument("--start", required=True, help="Inicio del período, ISO 8601 con zona")
+    cr.add_argument("--end", required=True, help="Fin del período (exclusivo), ISO 8601 con zona")
+    cr.add_argument(
+        "--videogame", default="1386", help="ID de videojuego en start.gg (1386 = SSBU)"
+    )
     lp = sub.add_parser("load-phase2")
     lp.add_argument("--slug", required=True)
     lp.add_argument("--dir", required=True)
@@ -277,7 +316,9 @@ def main():
     ALLOW_PRODUCTION = args.allow_production
     try:
         settings = get_settings()
-        if args.command == "create":
+        if args.command == "create-ranking":
+            result = create_ranking(args, settings)
+        elif args.command == "create":
             result = asyncio.run(create(args, settings))
         elif args.command == "load-phase2":
             result = load_phase2(args, settings)

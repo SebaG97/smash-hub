@@ -1,8 +1,8 @@
-"""Seeding workspace for one external event (ADR-011).
+"""Seeding and ranking workspaces built from start.gg data (ADR-011, ADR-012).
 
-The dataset is the start.gg ego-network of the event's entrants, kept apart from the
-community's canonical results: most sets are foreign or online and must not leak into
-community statistics or rankings.
+A "seeding" project is one external event: its dataset is the start.gg ego-network of the
+event's entrants. A "ranking" project is a country circuit: every set of the offline singles
+events held there in a period. Both are kept apart from the community's canonical results.
 """
 
 from sqlalchemy import (
@@ -25,9 +25,13 @@ class SeedingProject(Record, Base):
     __tablename__ = "seeding_projects"
     slug = Column(String(120), nullable=False, unique=True)
     name = Column(String(200), nullable=False)
-    startgg_event_id = Column(String(40), nullable=False)
+    kind = Column(String(20), nullable=False, default="seeding", server_default="seeding")
+    # Ranking projects: ISO country whose offline events form the circuit.
+    country_code = Column(String(2))
+    startgg_event_id = Column(String(40))
     startgg_event_slug = Column(String(300))
     startgg_videogame_id = Column(String(40), nullable=False)
+    # Seeding: the event day. Ranking: end of the period (exclusive).
     event_date = Column(DateTime(timezone=True), nullable=False)
     window_start = Column(DateTime(timezone=True), nullable=False)
     data_cutoff = Column(DateTime(timezone=True))
@@ -45,6 +49,11 @@ class SeedingProject(Record, Base):
     __table_args__ = (
         CheckConstraint("refresh_status IN ('IDLE','RUNNING','FAILED')", name="refresh_status"),
         CheckConstraint("event_date > window_start", name="window_bounds"),
+        CheckConstraint(
+            "(kind = 'seeding' AND startgg_event_id IS NOT NULL)"
+            " OR (kind = 'ranking' AND country_code IS NOT NULL)",
+            name="project_kind",
+        ),
     )
 
 

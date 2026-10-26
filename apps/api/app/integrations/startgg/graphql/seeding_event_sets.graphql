@@ -1,0 +1,13 @@
+query SeedingEventSets($id: ID!, $page: Int!, $perPage: Int!) {
+  event(id: $id) {
+    id
+    sets(page: $page, perPage: $perPage, sortType: STANDARD, filters: {showByes: true, hideEmpty: false}) {
+      pageInfo { total totalPages }
+      nodes {
+        id state completedAt startedAt winnerId displayScore hasPlaceholder
+        slots { entrant { id name standing { placement } participants { gamerTag player { id } } }
+                standing { stats { score { value } } } }
+      }
+    }
+  }
+}
