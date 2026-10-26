@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
+import { ImportPanel } from "./import-panel";
 import { PlayerStatistics } from "./player-statistics";
 import type {
   Page,
@@ -183,6 +184,7 @@ export function Tournaments() {
     <div className="competition-page">
       <p className="eyebrow">LA ESCENA COMPETITIVA</p>
       <h1>Torneos</h1>
+      <ImportPanel />
       <Collection<Tournament>
         title="Torneos importados"
         path="tournaments"
@@ -314,9 +316,19 @@ export function Players() {
         title="Jugadores importados"
         search
         render={(p) => (
-          <h3>
-            <Link href={`/players/${p.id}`}>{p.tag} ↗</Link>
-          </h3>
+          <>
+            <h3>
+              <Link href={`/players/${p.id}`}>{p.tag} ↗</Link>
+            </h3>
+            {p.mains && p.mains.length > 0 && (
+              <p>
+                Main:{" "}
+                {p.mains
+                  .map((m) => `${m.character} (${Math.round(m.share)} %)`)
+                  .join(" · ")}
+              </p>
+            )}
+          </>
         )}
       />
     </div>
@@ -331,6 +343,31 @@ export function PlayerPage({ id }: { id: string }) {
         {(p) => (
           <>
             <h1>{p.tag}</h1>
+            {p.mains && p.mains.length > 0 && (
+              <section className="player-mains" aria-label="Mains">
+                <h2>Mains</h2>
+                <ul>
+                  {p.mains.map((m) => (
+                    <li key={m.character}>
+                      <strong>{m.character}</strong>
+                      <span
+                        className="main-bar"
+                        style={{ width: `${Math.max(4, m.share)}%` }}
+                        aria-hidden="true"
+                      />
+                      <small>
+                        {Math.round(m.share)} % · {m.games}{" "}
+                        {m.games === 1 ? "partida" : "partidas"}
+                      </small>
+                    </li>
+                  ))}
+                </ul>
+                <p className="seeding-lead">
+                  Según los personajes que los torneos cargaron en start.gg
+                  (partidas de singles).
+                </p>
+              </section>
+            )}
             <PlayerStatistics key={id} id={id} scopes={p.scopes || []} />
             <h2>Tags conocidos</h2>
             <p>{p.aliases.join(" · ") || "Sin tags adicionales"}</p>

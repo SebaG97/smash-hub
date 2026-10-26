@@ -66,9 +66,9 @@ function num(value: number | null, digits = 0) {
       });
 }
 
-type Admin = { key: string; name: string };
+export type Admin = { key: string; name: string };
 
-function readAdmin(): Admin | null {
+export function readAdmin(): Admin | null {
   try {
     const raw = sessionStorage.getItem(KEY_STORE);
     return raw ? (JSON.parse(raw) as Admin) : null;
@@ -94,7 +94,7 @@ async function send(
   });
 }
 
-async function problem(r: Response) {
+export async function problem(r: Response) {
   try {
     const body = (await r.json()) as { detail?: unknown };
     if (typeof body.detail === "string") return body.detail;
@@ -104,7 +104,7 @@ async function problem(r: Response) {
   return `La API respondió ${r.status}.`;
 }
 
-function AdminLogin({ onLogin }: { onLogin: (admin: Admin) => void }) {
+export function AdminLogin({ onLogin }: { onLogin: (admin: Admin) => void }) {
   const [key, setKey] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState("");

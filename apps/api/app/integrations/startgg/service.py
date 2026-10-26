@@ -14,11 +14,12 @@ from app.competitions.models import (
     Event,
     EventEntrant,
     Set,
+    SetSelection,
     SetSide,
     Tournament,
     TournamentParticipant,
 )
-from app.games.models import Game
+from app.games.models import Character, Game
 from app.integrations.models import DataSource, ExternalMapping, ImportJob
 from app.integrations.startgg.classification import classify
 from app.integrations.startgg.client import ImportFailure, parse_slug
@@ -48,7 +49,8 @@ def validate(payload):
 
 
 def normalized_result(result, entrants, event_sets=None):
-    raw = result.model_dump()
+    # Character selections are stored apart and must not change result fingerprints.
+    raw = result.model_dump(exclude={"games"})
     slots = []
     scores = []
     for slot in result.slots:
@@ -160,6 +162,60 @@ class Persister:
             self.counts["created"] += 1
         mapping.synced_at, mapping.payload_hash = now(), hashed
         return row, True
+
+    def character(self, game, external):
+        slug = f"startgg-{external['id']}"
+        key = (game.id, slug)
+        cache = self.__dict__.setdefault("_characters", {})
+        if key not in cache:
+            row = self.s.scalar(
+                select(Character).where(Character.game_id == game.id, Character.slug == slug)
+            )
+            if row is None:
+                row = Character(game_id=game.id, slug=slug, name=str(external["name"])[:120])
+                self.s.add(row)
+                self.s.flush()
+            cache[key] = row
+        return cache[key]
+
+    def selections(self, match, event, game, result, entrants):
+        """Replace the set's character selections when start.gg reports different ones."""
+        wanted = set()
+        for item in result.games or []:
+            try:
+                number = int(item.get("orderNum"))
+            except (TypeError, ValueError):
+                continue
+            winner = str(item.get("winnerId")) if item.get("winnerId") is not None else None
+            for selection in item.get("selections") or []:
+                entrant = str(((selection or {}).get("entrant") or {}).get("id") or "")
+                character = (selection or {}).get("character") or {}
+                if number < 1 or entrant not in entrants or not character.get("id"):
+                    continue
+                won = None if winner is None else winner == entrant
+                wanted.add((number, entrants[entrant].id, self.character(game, character).id, won))
+        current = {
+            (r.game_number, r.entrant_id, r.character_id, r.won)
+            for r in self.s.scalars(select(SetSelection).where(SetSelection.set_id == match.id))
+        }
+        if current == wanted:
+            return
+        self.s.execute(delete(SetSelection).where(SetSelection.set_id == match.id))
+        seen = set()
+        for number, entrant_id, character_id, won in sorted(wanted, key=str):
+            if (number, entrant_id) in seen:
+                continue  # start.gg should not report two characters per game and entrant.
+            seen.add((number, entrant_id))
+            self.s.add(
+                SetSelection(
+                    set_id=match.id,
+                    event_id=event.id,
+                    game_number=number,
+                    entrant_id=entrant_id,
+                    character_id=character_id,
+                    won=won,
+                )
+            )
 
     def participant(self, tournament, person, observed_at):
         scoped = f"tournament:{tournament.id}:participant:{person.id}"
@@ -400,10 +456,14 @@ class Persister:
                     result.id,
                     Set,
                     {"event_id": event.id, **values},
-                    {"source": result.model_dump(), "classification": replacement_classification},
+                    {
+                        "source": result.model_dump(exclude={"games"}),
+                        "classification": replacement_classification,
+                    },
                 )
                 if match.event_id != event.id:
                     raise ImportFailure("set_scope_conflict")
+                self.selections(match, event, game, result, entrants)
                 if changed:
                     if previous is not None and (
                         previous != values["source_result"]

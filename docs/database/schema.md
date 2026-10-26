@@ -412,3 +412,7 @@ Tablas aisladas del modelo competitivo: usan IDs de start.gg y no tienen FKs hac
 ### Migración 0006 (ADR-012)
 
 `seeding_projects` agrega `kind` (`seeding` por defecto o `ranking`) y `country_code`; `startgg_event_id` pasa a ser opcional. Check `project_kind`: un seeding necesita evento de start.gg y un ranking necesita país. El downgrade borra los proyectos de tipo ranking.
+
+### Migración 0007 (ADR-013)
+
+`set_selections`: personaje usado por un entrant en una partida de un set (`set_id`, `event_id`, `game_number` ≥ 1, `entrant_id`, `character_id`, `won`). FKs compuestas con `sets (id, event_id)` (borrado en cascada) y `event_entrants (id, event_id)`, y FK a `characters`. Única por set, partida y entrant.

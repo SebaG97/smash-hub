@@ -176,3 +176,10 @@ python -m app.runtime seeding --allow-production create-ranking --slug ranking-p
 ```
 
 4. En `/rankings/ranking-py-2026`, entrar con la clave y recalcular con «Bajar datos nuevos de start.gg».
+
+## Actualización a la Misión 06 (jugadores, mains e importación)
+
+1. Componente **`migrate`** → *Environment Variables*: `APPROVED_MIGRATION` = `0007`.
+2. **Actions → Force rebuild and deploy**. El job debe mostrar `Running upgrade 0006 -> 0007`.
+3. En `/tournaments`, «Organizadores: importar torneos desde start.gg» → entrar con la clave → elegir el período → **Importar todos los de Paraguay**. Son ~30 torneos y tarda entre 10 y 20 minutos. No redesplegar mientras corre; si se corta, repetirlo es seguro.
+4. Revisar `/players`: cada jugador muestra su main y la ficha los porcentajes.

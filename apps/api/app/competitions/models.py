@@ -173,3 +173,25 @@ class SetSide(Record, Base):
             "entrant_id IS NOT NULL OR (score IS NULL AND NOT is_winner)", name="empty_side"
         ),
     )
+
+
+class SetSelection(Record, Base):
+    """Character an entrant used in one game of a set, as reported to start.gg."""
+
+    __tablename__ = "set_selections"
+    set_id = Column(Uuid, nullable=False, index=True)
+    event_id = Column(Uuid, nullable=False)
+    game_number = Column(Integer, nullable=False)
+    entrant_id = Column(Uuid, nullable=False, index=True)
+    character_id = Column(Uuid, ForeignKey("characters.id"), nullable=False, index=True)
+    won = Column(Boolean)
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["set_id", "event_id"], ["sets.id", "sets.event_id"], ondelete="CASCADE"
+        ),
+        ForeignKeyConstraint(
+            ["entrant_id", "event_id"], ["event_entrants.id", "event_entrants.event_id"]
+        ),
+        UniqueConstraint("set_id", "game_number", "entrant_id"),
+        CheckConstraint("game_number >= 1", name="game_number"),
+    )

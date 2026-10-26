@@ -39,3 +39,7 @@ Cinco rutas nuevas son GET públicos de lectura; requieren UUID y parámetros ti
 - La API solo *lee* start.gg (descarga de sets, una por proyecto a la vez, código de error seguro si falla). Escribir los seeds en start.gg requiere la CLI con `--confirm`.
 - El seeding es público en lectura: tags, IDs de start.gg y resultados que ya son públicos en start.gg; no incluye ubicación ni contacto.
 - Pendiente: cuentas individuales con roles, límite de peticiones compartido entre réplicas y rotación de la clave.
+
+## Misión 06: importación web
+
+`POST /imports/startgg` y `GET /imports/status` exigen la clave de admin. Solo aceptan links `https://start.gg` o `https://www.start.gg` (o slugs) y no siguen URLs aportadas. Cada torneo pasa por el importador transaccional con locks por torneo y por proveedor; los fallos se registran en `import_jobs` con códigos seguros. El token de start.gg se usa solo para leer.

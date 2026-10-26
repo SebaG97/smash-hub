@@ -19,6 +19,7 @@ from app.competitions.models import (
     TournamentParticipant,
 )
 from app.games.models import Game
+from app.players.mains import player_mains
 from app.players.models import Player, PlayerAlias
 
 router = APIRouter(
@@ -97,8 +98,16 @@ class SetView(PublicModel):
     sides: list[SideView]
 
 
+class MainView(BaseModel):
+    character: str
+    games: int
+    share: float
+
+
 class PlayerView(PublicModel):
     tag: str
+    # Most used characters in singles games reported to start.gg (may be empty).
+    mains: list[MainView] = []
 
 
 class ParticipationView(BaseModel):
@@ -443,7 +452,9 @@ def players(
                 .exists()
             )
         rows, total = paginate(s, stmt.order_by(Player.tag, Player.id), page, page_size)
-        return page_result(rows, total, page, page_size)
+        mains = player_mains(s, [r.id for r in rows], limit=2)
+        items = [{"id": r.id, "tag": r.tag, "mains": mains.get(r.id, [])} for r in rows]
+        return page_result(items, total, page, page_size)
 
 
 @router.get("/players/{id}", response_model=PlayerDetail)
@@ -490,6 +501,7 @@ def player(
         return {
             "id": row.id,
             "tag": row.tag,
+            "mains": player_mains(s, [id], limit=5).get(id, []),
             "aliases": aliases,
             "history": page_result(history, total, page, page_size),
             "scopes": player_scopes(s, id),

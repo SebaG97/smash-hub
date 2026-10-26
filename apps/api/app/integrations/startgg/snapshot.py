@@ -65,6 +65,8 @@ class Result(ExternalModel):
     winnerId: int | str | None = None
     displayScore: str | None = None
     slots: list[Slot] = Field(max_length=2)
+    # Per-game character selections; kept out of the result fingerprint.
+    games: list[dict[str, Any]] | None = None
 
 
 class Event(ExternalModel):

@@ -100,3 +100,12 @@ Clave: `Authorization: Bearer <ADMIN_TOKEN>`; `X-Admin-Name` es opcional y solo 
 | DELETE /seeding/{slug}/duplicates/{player_id} | admin | Deshace la marca |
 
 Cada cambio de identidad recalcula al instante si el proyecto ya tiene datos. `GET /seeding/{slug}` agrega `merge_candidates`: IDs con el mismo tag normalizado que un jugador de la lista, con sus sets. Son sugerencias, no fusiones.
+
+## Jugadores con mains e importación web (Misión 06, ADR-013)
+
+`GET /players` y `GET /players/{id}` agregan `mains`: `[{character, games, share}]`, los personajes más usados en partidas de singles de sets elegibles (2 en el listado, 5 en la ficha). Puede venir vacío si los torneos no informaron personajes.
+
+| Método y ruta bajo /api/v1 | Acceso | Respuesta |
+| --- | --- | --- |
+| POST /imports/startgg | admin | `{source: "country", country, window_start, end}` o `{source: "links", urls: [...]}` → 202. 409 si ya hay una importación en curso; 422 sin token de start.gg o con links que no son de start.gg |
+| GET /imports/status | admin | `{status, total, done, current, results: [{slug, name, status, error?, counts?, conflicts?}]}` |

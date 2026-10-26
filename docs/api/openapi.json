@@ -2489,6 +2489,142 @@
           }
         }
       }
+    },
+    "/api/v1/imports/startgg": {
+      "post": {
+        "tags": [
+          "imports"
+        ],
+        "summary": "Start Import",
+        "operationId": "start_import_api_v1_imports_startgg_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "x-admin-name",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Admin-Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/imports/status": {
+      "get": {
+        "tags": [
+          "imports"
+        ],
+        "summary": "Import Status",
+        "operationId": "import_status_api_v1_imports_status_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "x-admin-name",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Admin-Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2893,6 +3029,83 @@
           "status"
         ],
         "title": "HealthResponse"
+      },
+      "ImportRequest": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "country",
+              "links"
+            ],
+            "title": "Source",
+            "default": "country"
+          },
+          "country": {
+            "type": "string",
+            "pattern": "^[A-Za-z]{2}$",
+            "title": "Country",
+            "default": "PY"
+          },
+          "window_start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window Start"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "urls": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Urls"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ImportRequest"
+      },
+      "MainView": {
+        "properties": {
+          "character": {
+            "type": "string",
+            "title": "Character"
+          },
+          "games": {
+            "type": "integer",
+            "title": "Games"
+          },
+          "share": {
+            "type": "number",
+            "title": "Share"
+          }
+        },
+        "type": "object",
+        "required": [
+          "character",
+          "games",
+          "share"
+        ],
+        "title": "MainView"
       },
       "MatchPage": {
         "properties": {
@@ -3691,6 +3904,14 @@
             "type": "string",
             "title": "Tag"
           },
+          "mains": {
+            "items": {
+              "$ref": "#/components/schemas/MainView"
+            },
+            "type": "array",
+            "title": "Mains",
+            "default": []
+          },
           "aliases": {
             "items": {
               "type": "string"
@@ -3757,6 +3978,14 @@
           "tag": {
             "type": "string",
             "title": "Tag"
+          },
+          "mains": {
+            "items": {
+              "$ref": "#/components/schemas/MainView"
+            },
+            "type": "array",
+            "title": "Mains",
+            "default": []
           }
         },
         "type": "object",

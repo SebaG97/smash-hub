@@ -120,3 +120,5 @@ docker compose run --rm --no-deps -T api python -m app.cli.validate_statistics -
 ```
 
 Misiones 02/02.1 consolidadas en `d402e64`. Misión 03 queda sin commit, push ni despliegue para revisión. No se inicia Misión 04.
+
+Misión 06: importación de torneos de Paraguay desde la web (`/tournaments`, con clave de organizadores) y personajes por partida desde start.gg; el listado y la ficha de cada jugador muestran sus mains (ADR-013).

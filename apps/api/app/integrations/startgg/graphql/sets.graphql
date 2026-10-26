@@ -5,6 +5,7 @@ query Sets($id: ID!, $page: Int!, $perPage: Int!, $states: [Int], $showByes: Boo
       nodes {
         id state round fullRoundText completedAt startedAt updatedAt winnerId displayScore hasPlaceholder
         phaseGroup { id bracketType }
+        games { orderNum winnerId selections { entrant { id } character { id name } } }
         slots(includeByes: true) {
           slotIndex prereqId prereqType prereqPlacement
           entrant { id }

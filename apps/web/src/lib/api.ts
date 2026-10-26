@@ -53,7 +53,8 @@ export type Match = {
     is_winner: boolean;
   }[];
 };
-export type Player = { id: string; tag: string };
+export type Main = { character: string; games: number; share: number };
+export type Player = { id: string; tag: string; mains?: Main[] };
 export type History = {
   tournament_id: string;
   tournament_name: string;
