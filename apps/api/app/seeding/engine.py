@@ -96,7 +96,11 @@ def compute(entrants, sets, *, merges, duplicates, window_start, window_end, par
     start, end = utc(window_start), utc(window_end)
     recent_from = end - timedelta(days=p.recent_days)
     tags = {e["player_id"]: e["gamer_tag"] for e in entrants}
-    seeded = [e["player_id"] for e in entrants if e["player_id"] not in duplicates]
+    seeded = [
+        e["player_id"]
+        for e in entrants
+        if e["player_id"] not in duplicates and e["player_id"] not in merges
+    ]
 
     def canon(pid):
         pid = merges.get(pid, pid) if pid else pid

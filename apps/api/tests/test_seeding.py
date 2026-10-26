@@ -470,3 +470,128 @@ def test_ranking_download_lists_every_player_and_rejects_overrides(ranking, monk
             "/api/v1/seeding/rk/overrides/3", json={"seed": 1, "reason": "no"}, headers=AUTH
         )
         assert r.status_code == 422
+
+
+def test_create_projects_from_the_web(db, monkeypatch):
+    from app.seeding import router as seeding_router
+
+    class FakeClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            pass
+
+    async def fake_event(client, path):
+        assert path == "tournament/cs-1/event/ultimate-singles"
+        return {"id": 99, "slug": path, "videogame": {"id": 1386}}
+
+    monkeypatch.setattr(seeding_router, "StartGGClient", FakeClient)
+    monkeypatch.setattr(startgg, "fetch_event", fake_event)
+    period = {"window_start": "2025-11-14T00:00:00-03:00", "end": "2026-11-14T00:00:00-03:00"}
+    with client_for(db) as client:
+        assert client.get("/api/v1/seeding/session", headers=AUTH).json() == {"actor": "Org script"}
+        assert (
+            client.post(
+                "/api/v1/seeding", json={"kind": "ranking", "name": "Ranking PY", **period}
+            ).status_code
+            == 401
+        )
+        r = client.post(
+            "/api/v1/seeding",
+            json={"kind": "ranking", "name": "Ranking Paraguay 2026", "country": "py", **period},
+            headers=AUTH,
+        )
+        assert r.status_code == 201 and r.json() == {
+            "slug": "ranking-paraguay-2026",
+            "kind": "ranking",
+            "downloading": False,
+        }
+        again = client.post(
+            "/api/v1/seeding",
+            json={"kind": "ranking", "name": "Ranking Paraguay 2026", "country": "PY", **period},
+            headers=AUTH,
+        )
+        assert again.status_code == 409
+        bad = client.post(
+            "/api/v1/seeding",
+            json={
+                "kind": "seeding",
+                "name": "Otro",
+                "event_url": "https://evil.example/x",
+                **period,
+            },
+            headers=AUTH,
+        )
+        assert bad.status_code == 422
+        ok = client.post(
+            "/api/v1/seeding",
+            json={
+                "kind": "seeding",
+                "name": "Center Stage",
+                "event_url": "https://www.start.gg/tournament/cs-1/event/ultimate-singles/overview",
+                **period,
+            },
+            headers=AUTH,
+        )
+        assert ok.status_code == 201 and ok.json()["slug"] == "center-stage"
+        body = client.get("/api/v1/seeding/center-stage").json()
+        assert body["kind"] == "seeding" and body["startgg_event_slug"].startswith(
+            "tournament/cs-1"
+        )
+        assert client.get("/api/v1/seeding?kind=ranking").json()[0]["country_code"] == "PY"
+
+
+def test_merges_and_duplicates_from_the_web(project):
+    with client_for(project) as client:
+        body = client.get("/api/v1/seeding/cs").json()
+        # Fixture merges 9 -> 4 (Dot); undo and redo it through the API.
+        assert client.delete("/api/v1/seeding/cs/merges/9", headers=AUTH).status_code == 200
+        dot = next(
+            s for s in client.get("/api/v1/seeding/cs").json()["seeds"] if s["gamer_tag"] == "Dot"
+        )
+        assert dot["merged_sets"] == 0
+        r = client.put(
+            "/api/v1/seeding/cs/merges",
+            json={"from_player_id": "9", "to_player_id": "4"},
+            headers=AUTH,
+        )
+        assert r.status_code == 200
+        dot = next(
+            s for s in client.get("/api/v1/seeding/cs").json()["seeds"] if s["gamer_tag"] == "Dot"
+        )
+        assert dot["merged_sets"] == 1
+        # Two entrants are a duplicate entry, not a merge.
+        r = client.put(
+            "/api/v1/seeding/cs/merges",
+            json={"from_player_id": "5", "to_player_id": "1"},
+            headers=AUTH,
+        )
+        assert r.status_code == 422
+        r = client.put(
+            "/api/v1/seeding/cs/duplicates",
+            json={"player_id": "5", "keep_player_id": "1"},
+            headers=AUTH,
+        )
+        assert r.status_code == 200
+        body = client.get("/api/v1/seeding/cs").json()
+        assert "Eve" not in [s["gamer_tag"] for s in body["seeds"]]
+        assert client.delete("/api/v1/seeding/cs/duplicates/5", headers=AUTH).status_code == 200
+        actions = [e["action"] for e in client.get("/api/v1/seeding/cs/audit", headers=AUTH).json()]
+        assert {"merge", "unmerge", "duplicate", "unduplicate"} <= set(actions)
+
+
+def test_merge_candidates_match_tags_without_merging():
+    from types import SimpleNamespace as NS
+
+    project = NS(kind="seeding", merges={}, duplicates={})
+    entrants = [NS(startgg_player_id="1", gamer_tag="Thebrother")]
+    sets = [
+        NS(p1_player_id="7", p1_tag="TB | TheBrother", p2_player_id="1", p2_tag="x", counted=True),
+        NS(p1_player_id="8", p1_tag="Someone", p2_player_id="1", p2_tag="x", counted=True),
+    ]
+    found = service.merge_candidates(project, entrants, sets)
+    assert [(c["source"], c["target"], c["counted_sets"]) for c in found] == [("7", "1", 1)]

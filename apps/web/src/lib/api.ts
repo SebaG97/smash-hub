@@ -218,6 +218,14 @@ export type SeedingView = {
     kept_player_id: string;
     tag: string | null;
   }[];
+  merge_candidates?: {
+    source: string;
+    source_tag: string;
+    target: string;
+    target_tag: string;
+    sets: number;
+    counted_sets: number;
+  }[];
   run: {
     id: string;
     created_at: string;

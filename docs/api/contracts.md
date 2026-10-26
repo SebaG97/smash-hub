@@ -87,3 +87,16 @@ Clave: `Authorization: Bearer <ADMIN_TOKEN>`; `X-Admin-Name` es opcional y solo 
 ### Métodos y rankings (Misión 05.1, ADR-012)
 
 `GET /seeding/{slug}` agrega `kind` (`seeding` o `ranking`), `country_code`, `method` (método oficial) y `methods` (`[{id, label, description}]`). Cada fila de `seeds` agrega `scores` y `ranks` por método, `reasons_by_method`, `elo`, `bradley_terry`, `points`, `win_rate`, `wilson` y `eligible` (en rankings, si llega al mínimo de sets). Métodos: `combined`, `glicko2`, `elo`, `bradley_terry`, `points`, `wilson`. En rankings `PUT /overrides` responde 422.
+
+### Administración desde la web (Misión 05.2)
+
+| Método y ruta bajo /api/v1 | Acceso | Respuesta |
+| --- | --- | --- |
+| GET /seeding/session | admin | Valida la clave sin elegir proyecto |
+| POST /seeding | admin | `{kind, name, slug?, event_url? (seeding), country? (ranking), window_start, end, download=true}` → 201 `{slug, kind, downloading}`. 409 si el slug existe; 422 si el link no es de start.gg o el evento no existe |
+| PUT /seeding/{slug}/merges | admin | `{from_player_id, to_player_id}`; el destino tiene que estar en la lista. En un seeding, dos inscritos se marcan como duplicados, no se fusionan |
+| DELETE /seeding/{slug}/merges/{player_id} | admin | Deshace la fusión |
+| PUT /seeding/{slug}/duplicates | admin | `{player_id, keep_player_id}`, solo seeding |
+| DELETE /seeding/{slug}/duplicates/{player_id} | admin | Deshace la marca |
+
+Cada cambio de identidad recalcula al instante si el proyecto ya tiene datos. `GET /seeding/{slug}` agrega `merge_candidates`: IDs con el mismo tag normalizado que un jugador de la lista, con sus sets. Son sugerencias, no fusiones.

@@ -73,3 +73,13 @@ docker compose run --rm api python -m app.cli.seeding create-ranking --slug rank
 Después, en `/rankings/ranking-py-2026`, entrar con la clave y **Recalcular** con «Bajar datos nuevos de start.gg». Para aparecer hacen falta al menos 10 sets en el período (los demás se pueden mostrar con un botón al final). Los rankings no admiten ajustes manuales.
 
 En producción, desde la consola de `api`: `python -m app.runtime seeding --allow-production create-ranking ...` con los mismos argumentos.
+
+## Crear y configurar desde la web (sin consola)
+
+Con la clave de organizadores:
+
+- **Nuevo seeding** (`/seeding`): nombre, link del evento de start.gg y fechas. Al crearlo empieza a bajar los datos.
+- **Nuevo ranking** (`/rankings`): nombre, país (por ejemplo `PY`) y período.
+- **Identidades** (en cada página): fusionar un ID de start.gg con un jugador de la lista, marcar inscripciones duplicadas y deshacer ambas cosas. La sección sugiere IDs con el mismo tag; nunca fusiona sola (ADR-006). Ojo con homónimos, como «RT/ZN | Cherry» de Colombia frente a Cherry! de Paraguay.
+
+Cada cambio queda en el registro y el cálculo se rehace al instante. Los comandos de consola siguen disponibles, pero ya no son necesarios.

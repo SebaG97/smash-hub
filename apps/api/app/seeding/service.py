@@ -4,7 +4,9 @@ import asyncio
 import csv
 import io
 import logging
+import re
 import threading
+import unicodedata
 from datetime import UTC, datetime, timedelta
 
 from pydantic import ValidationError
@@ -39,6 +41,200 @@ class InvalidRequest(Exception):
 
 class RefreshBusy(Exception):
     pass
+
+
+RESERVED_SLUGS = {"session"}
+EVENT_PATH = re.compile(r"tournament/[A-Za-z0-9-]{1,150}/event/[A-Za-z0-9-]{1,150}")
+
+
+class SlugTaken(Exception):
+    pass
+
+
+def slugify(text):
+    text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode()
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:80]
+
+
+def event_path(value):
+    """start.gg event link or path -> 'tournament/<t>/event/<e>' (nothing else is accepted)."""
+    match = EVENT_PATH.search(value or "")
+    if not match or ("://" in value and not re.match(r"https://(www\.)?start\.gg/", value)):
+        raise InvalidRequest(
+            "Pega el link del evento de start.gg (…/tournament/<torneo>/event/<evento>)."
+        )
+    return match.group(0)
+
+
+def create_project(
+    session, actor, *, kind, name, slug, window_start, end, event=None, country=None
+):
+    """Create a seeding (needs the start.gg event dict) or a ranking (needs a country)."""
+    slug = slugify(slug or name)
+    if not slug or slug in RESERVED_SLUGS:
+        raise InvalidRequest("Elige otro nombre corto (slug).")
+    if session.scalar(select(SeedingProject.id).where(SeedingProject.slug == slug)):
+        raise SlugTaken
+    if utc(end) <= utc(window_start):
+        raise InvalidRequest("El período debe terminar después de empezar.")
+    common = dict(
+        slug=slug,
+        name=name.strip()[:200],
+        window_start=window_start,
+        event_date=end,
+        merges={},
+        duplicates={},
+    )
+    if kind == "seeding":
+        project = SeedingProject(
+            kind="seeding",
+            startgg_event_id=str(event["id"]),
+            startgg_event_slug=event.get("slug"),
+            startgg_videogame_id=str((event.get("videogame") or {}).get("id") or "1386"),
+            **common,
+        )
+    else:
+        project = SeedingProject(
+            kind="ranking", country_code=country.upper(), startgg_videogame_id="1386", **common
+        )
+    session.add(project)
+    session.flush()
+    audit(
+        session,
+        project,
+        "create",
+        actor,
+        kind=kind,
+        startgg_event_id=project.startgg_event_id,
+        country=project.country_code,
+    )
+    return project
+
+
+def _entrant_ids(session, project):
+    return set(
+        session.scalars(
+            select(SeedingEntrant.startgg_player_id).where(SeedingEntrant.project_id == project.id)
+        )
+    )
+
+
+def _recalculate_if_loaded(session, project, actor):
+    if project.current_run_id is not None and project.refresh_status != "RUNNING":
+        session.flush()
+        recalculate(session, project, actor)
+
+
+def set_merge(session, project, source, target, actor):
+    entrants = _entrant_ids(session, project)
+    merges = dict(project.merges or {})
+    if source == target:
+        raise InvalidRequest("Un ID no se puede fusionar consigo mismo.")
+    if target not in entrants:
+        raise InvalidRequest("El ID de destino tiene que ser un jugador de la lista.")
+    if target in merges or source in merges.values():
+        raise InvalidRequest("No se pueden encadenar fusiones; fusiona directo al ID final.")
+    if project.kind == "seeding" and source in entrants:
+        raise InvalidRequest("Los dos son inscritos: márcalo como inscripción duplicada.")
+    merges[source] = target
+    project.merges = merges
+    audit(session, project, "merge", actor, source=source, target=target)
+    _recalculate_if_loaded(session, project, actor)
+
+
+def clear_merge(session, project, source, actor):
+    merges = dict(project.merges or {})
+    if merges.pop(source, None) is None:
+        raise InvalidRequest("Esa fusión no existe.")
+    project.merges = merges
+    audit(session, project, "unmerge", actor, source=source)
+    _recalculate_if_loaded(session, project, actor)
+
+
+def set_duplicate(session, project, player, keep, actor):
+    if project.kind != "seeding":
+        raise InvalidRequest("Las inscripciones duplicadas solo existen en un seeding.")
+    entrants = _entrant_ids(session, project)
+    if player == keep or player not in entrants or keep not in entrants:
+        raise InvalidRequest("Elige dos inscritos distintos.")
+    duplicates = dict(project.duplicates or {})
+    if keep in duplicates:
+        raise InvalidRequest("La inscripción que se conserva ya está marcada como duplicada.")
+    duplicates[player] = keep
+    project.duplicates = duplicates
+    audit(session, project, "duplicate", actor, player=player, keep=keep)
+    _recalculate_if_loaded(session, project, actor)
+
+
+def clear_duplicate(session, project, player, actor):
+    duplicates = dict(project.duplicates or {})
+    if duplicates.pop(player, None) is None:
+        raise InvalidRequest("Esa inscripción no está marcada como duplicada.")
+    project.duplicates = duplicates
+    audit(session, project, "unduplicate", actor, player=player)
+    _recalculate_if_loaded(session, project, actor)
+
+
+def _tag_key(name):
+    tag = (name or "").split(" | ")[-1]
+    tag = unicodedata.normalize("NFKD", tag).encode("ascii", "ignore").decode()
+    return re.sub(r"[^a-z0-9]", "", tag.lower())
+
+
+def merge_candidates(project, entrants, sets, limit=40):
+    """IDs whose tag matches a listed player's tag: likely the same person (never merged
+    automatically, ADR-006). Seeding only looks at non-entrants; rankings at everyone."""
+    by_key = {}
+    for e in entrants:
+        by_key.setdefault(_tag_key(e.gamer_tag), []).append(e)
+    listed = {e.startgg_player_id for e in entrants}
+    merges, duplicates = project.merges or {}, project.duplicates or {}
+    seen = {}
+    for s in sets:
+        for pid, tag in ((s.p1_player_id, s.p1_tag), (s.p2_player_id, s.p2_tag)):
+            if not pid or pid in merges or pid in duplicates:
+                continue
+            if project.kind == "seeding" and pid in listed:
+                continue
+            for target in by_key.get(_tag_key(tag), []):
+                if target.startgg_player_id == pid or target.startgg_player_id in merges:
+                    continue
+                key = (pid, target.startgg_player_id)
+                item = seen.setdefault(
+                    key,
+                    dict(
+                        source=pid,
+                        source_tag=tag,
+                        target=target.startgg_player_id,
+                        target_tag=target.gamer_tag,
+                        sets=0,
+                        counted_sets=0,
+                    ),
+                )
+                item["sets"] += 1
+                item["counted_sets"] += int(s.counted)
+    ranked = sorted(seen.values(), key=lambda c: (-c["counted_sets"], -c["sets"], c["source"]))
+    if project.kind == "ranking":
+        # Each pair appears in both directions; keep the side with fewer sets as the source.
+        counts = {}
+        for s in sets:
+            for pid in (s.p1_player_id, s.p2_player_id):
+                counts[pid] = counts.get(pid, 0) + int(s.counted)
+        unique = {}
+        for c in ranked:
+            pair = frozenset((c["source"], c["target"]))
+            if pair not in unique:
+                if counts.get(c["source"], 0) > counts.get(c["target"], 0):
+                    c = dict(
+                        c,
+                        source=c["target"],
+                        source_tag=c["target_tag"],
+                        target=c["source"],
+                        target_tag=c["source_tag"],
+                    )
+                unique[pair] = c
+        ranked = list(unique.values())
+    return ranked[:limit]
 
 
 def project_by_slug(session, slug, *, lock=False):
@@ -292,6 +488,7 @@ def view(session, project):
             dict(from_player_id=k, to_player_id=v, tag=tags.get(v))
             for k, v in (project.merges or {}).items()
         ],
+        merge_candidates=merge_candidates(project, entrants, sets),
         duplicates=[
             dict(player_id=k, kept_player_id=v, tag=tags.get(v))
             for k, v in (project.duplicates or {}).items()

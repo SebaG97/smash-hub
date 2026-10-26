@@ -1,5 +1,6 @@
 """Seeding routes. Reads are public; every write requires the admin key and is audited."""
 
+import asyncio
 import hmac
 import re
 import time
@@ -12,7 +13,8 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.seeding import service
+from app.integrations.startgg.client import ImportFailure, StartGGClient
+from app.seeding import service, startgg
 from app.seeding.engine import Method, Parameters
 from app.seeding.models import SeedingProject
 
@@ -80,6 +82,91 @@ class OverrideRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     seed: int = Field(ge=1, le=4096)
     reason: str = Field(min_length=3, max_length=300)
+
+
+class CreateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    kind: Literal["seeding", "ranking"]
+    name: str = Field(min_length=3, max_length=200)
+    slug: str | None = Field(default=None, max_length=80)
+    # Seeding: link or path of the start.gg event. Ranking: ISO country code.
+    event_url: str | None = Field(default=None, max_length=400)
+    country: str | None = Field(default=None, pattern=r"^[A-Za-z]{2}$")
+    window_start: AwareDatetime
+    end: AwareDatetime
+    download: bool = True
+
+
+class MergeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    from_player_id: str = Field(pattern=r"^\d{1,20}$")
+    to_player_id: str = Field(pattern=r"^\d{1,20}$")
+
+
+class DuplicateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    player_id: str = Field(pattern=r"^\d{1,20}$")
+    keep_player_id: str = Field(pattern=r"^\d{1,20}$")
+
+
+@router.get("/session")
+def check_admin(actor: Admin):
+    """Validates the admin key from list pages, where there is no project yet."""
+    return {"actor": actor}
+
+
+@router.post("", status_code=201)
+def create(request: Request, body: CreateRequest, actor: Admin):
+    token = request.app.state.settings.startgg_api_token
+    event = None
+    if body.kind == "seeding":
+        try:
+            path = service.event_path(body.event_url)
+        except service.InvalidRequest as exc:
+            raise HTTPException(422, str(exc)) from None
+
+        async def lookup():
+            async with StartGGClient(token) as client:
+                return await startgg.fetch_event(client, path)
+
+        try:
+            event = asyncio.run(lookup())
+        except ImportFailure as exc:
+            detail = {
+                "startgg_token_missing": "La API no tiene STARTGG_API_TOKEN configurado.",
+                "startgg_event_not_found": "start.gg no encontró ese evento.",
+            }.get(str(exc), "No se pudo consultar start.gg; intenta de nuevo.")
+            raise HTTPException(422, detail) from None
+    elif not body.country:
+        raise HTTPException(422, "Indica el país del ranking (por ejemplo PY).")
+
+    def operation(session):
+        project = service.create_project(
+            session,
+            actor,
+            kind=body.kind,
+            name=body.name,
+            slug=body.slug,
+            window_start=body.window_start,
+            end=body.end,
+            event=event,
+            country=body.country,
+        )
+        return project.slug
+
+    with session_for(request) as session:
+        try:
+            slug = operation(session)
+            session.commit()
+        except service.SlugTaken:
+            raise HTTPException(409, "Ya existe uno con ese nombre corto; elige otro.") from None
+        except service.InvalidRequest as exc:
+            raise HTTPException(422, str(exc)) from None
+    started = False
+    if body.download and token is not None and token.get_secret_value().strip():
+        service.start_refresh(request.app.state.engine, slug, actor, token)
+        started = True
+    return {"slug": slug, "kind": body.kind, "downloading": started}
 
 
 @router.get("")
@@ -187,3 +274,43 @@ def reset(request: Request, slug: str, player_id: str, actor: Admin):
 def check_key(request: Request, slug: str, actor: Admin):
     """Lets the page validate the admin key without changing anything."""
     return {"actor": actor, "at": datetime.now().astimezone().isoformat()}
+
+
+@router.put("/{slug}/merges")
+def merge(request: Request, slug: str, body: MergeRequest, actor: Admin):
+    def operation(session):
+        project = service.project_by_slug(session, slug, lock=True)
+        service.set_merge(session, project, body.from_player_id, body.to_player_id, actor)
+        return {"status": "merged"}
+
+    return run(request, operation, write=True)
+
+
+@router.delete("/{slug}/merges/{player_id}")
+def unmerge(request: Request, slug: str, player_id: str, actor: Admin):
+    def operation(session):
+        project = service.project_by_slug(session, slug, lock=True)
+        service.clear_merge(session, project, player_id, actor)
+        return {"status": "unmerged"}
+
+    return run(request, operation, write=True)
+
+
+@router.put("/{slug}/duplicates")
+def duplicate(request: Request, slug: str, body: DuplicateRequest, actor: Admin):
+    def operation(session):
+        project = service.project_by_slug(session, slug, lock=True)
+        service.set_duplicate(session, project, body.player_id, body.keep_player_id, actor)
+        return {"status": "saved"}
+
+    return run(request, operation, write=True)
+
+
+@router.delete("/{slug}/duplicates/{player_id}")
+def unduplicate(request: Request, slug: str, player_id: str, actor: Admin):
+    def operation(session):
+        project = service.project_by_slug(session, slug, lock=True)
+        service.clear_duplicate(session, project, player_id, actor)
+        return {"status": "removed"}
+
+    return run(request, operation, write=True)

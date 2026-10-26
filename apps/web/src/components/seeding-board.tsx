@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Fragment, useCallback, useEffect, useState } from "react";
 import type {
   SeedingProjectSummary,
@@ -82,7 +83,7 @@ async function send(
   path: string,
   body?: unknown,
 ): Promise<Response> {
-  return fetch(`${api}/seeding/${path}`, {
+  return fetch(`${api}/seeding${path ? `/${path}` : ""}`, {
     method,
     headers: {
       Authorization: `Bearer ${admin.key}`,
@@ -103,13 +104,7 @@ async function problem(r: Response) {
   return `La API respondió ${r.status}.`;
 }
 
-function AdminLogin({
-  slug,
-  onLogin,
-}: {
-  slug: string;
-  onLogin: (admin: Admin) => void;
-}) {
+function AdminLogin({ onLogin }: { onLogin: (admin: Admin) => void }) {
   const [key, setKey] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState("");
@@ -121,7 +116,7 @@ function AdminLogin({
         setError("");
         const admin = { key: key.trim(), name: name.trim() || "admin" };
         try {
-          const r = await send(admin, "GET", `${slug}/session`);
+          const r = await send(admin, "GET", "session");
           if (!r.ok) return setError(await problem(r));
           try {
             sessionStorage.setItem(KEY_STORE, JSON.stringify(admin));
@@ -489,6 +484,190 @@ function MethodPicker({
   );
 }
 
+function IdentityPanel({
+  view,
+  act,
+}: {
+  view: SeedingView;
+  act: (method: string, path: string, body?: unknown) => Promise<boolean>;
+}) {
+  const [source, setSource] = useState("");
+  const [target, setTarget] = useState("");
+  const [dupe, setDupe] = useState("");
+  const [keep, setKeep] = useState("");
+  const players = [...view.seeds].sort((a, b) =>
+    a.gamer_tag.localeCompare(b.gamer_tag),
+  );
+  const seeding = view.kind === "seeding";
+  const candidates = view.merge_candidates || [];
+  return (
+    <section className="seeding-identities" aria-label="Identidades">
+      <h2>Identidades</h2>
+      <p className="seeding-lead">
+        Une IDs de start.gg que son la misma persona (por ejemplo, inscripciones
+        sin cuenta). Nunca se fusiona solo: cada cambio queda en el registro y
+        el cálculo se rehace al instante.
+      </p>
+      {candidates.length > 0 && (
+        <>
+          <h3>Posibles IDs de la misma persona</h3>
+          <ul className="seeding-candidates">
+            {candidates.map((c) => (
+              <li key={`${c.source}-${c.target}`}>
+                <span>
+                  ID {c.source} («{c.source_tag}», {c.counted_sets} sets
+                  contados) → <strong>{c.target_tag}</strong> ({c.target})
+                </span>
+                <button
+                  className="link-button"
+                  onClick={() =>
+                    act("PUT", `${view.slug}/merges`, {
+                      from_player_id: c.source,
+                      to_player_id: c.target,
+                    })
+                  }
+                >
+                  Fusionar
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      <form
+        className="seeding-move"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          if (
+            await act("PUT", `${view.slug}/merges`, {
+              from_player_id: source.trim(),
+              to_player_id: target,
+            })
+          )
+            setSource("");
+        }}
+      >
+        <label>
+          ID de start.gg a fusionar
+          <input
+            value={source}
+            inputMode="numeric"
+            pattern="[0-9]{1,20}"
+            onChange={(e) => setSource(e.target.value)}
+            placeholder="Ej. 5363782"
+            required
+          />
+        </label>
+        <label>
+          Es el jugador
+          <select
+            value={target}
+            onChange={(e) => setTarget(e.target.value)}
+            required
+          >
+            <option value="">Elegir…</option>
+            {players.map((p) => (
+              <option key={p.player_id} value={p.player_id}>
+                {p.gamer_tag} ({p.player_id})
+              </option>
+            ))}
+          </select>
+        </label>
+        <button className="primary-button">Fusionar</button>
+      </form>
+      {view.merges.length > 0 && (
+        <ul className="seeding-candidates">
+          {view.merges.map((m) => (
+            <li key={m.from_player_id}>
+              <span>
+                ID {m.from_player_id} → {m.tag || m.to_player_id}
+              </span>
+              <button
+                className="link-button"
+                onClick={() =>
+                  act("DELETE", `${view.slug}/merges/${m.from_player_id}`)
+                }
+              >
+                Deshacer
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {seeding && (
+        <>
+          <h3>Inscripciones duplicadas</h3>
+          <form
+            className="seeding-move"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (
+                await act("PUT", `${view.slug}/duplicates`, {
+                  player_id: dupe,
+                  keep_player_id: keep,
+                })
+              )
+                setDupe("");
+            }}
+          >
+            <label>
+              Inscripción duplicada
+              <select
+                value={dupe}
+                onChange={(e) => setDupe(e.target.value)}
+                required
+              >
+                <option value="">Elegir…</option>
+                {players.map((p) => (
+                  <option key={p.player_id} value={p.player_id}>
+                    {p.gamer_tag} ({p.player_id})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Se conserva
+              <select
+                value={keep}
+                onChange={(e) => setKeep(e.target.value)}
+                required
+              >
+                <option value="">Elegir…</option>
+                {players.map((p) => (
+                  <option key={p.player_id} value={p.player_id}>
+                    {p.gamer_tag} ({p.player_id})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button className="primary-button">Marcar duplicada</button>
+          </form>
+          {view.duplicates.length > 0 && (
+            <ul className="seeding-candidates">
+              {view.duplicates.map((d) => (
+                <li key={d.player_id}>
+                  <span>
+                    {d.player_id} omitida (se conserva{" "}
+                    {d.tag || d.kept_player_id})
+                  </span>
+                  <button
+                    className="link-button"
+                    onClick={() =>
+                      act("DELETE", `${view.slug}/duplicates/${d.player_id}`)
+                    }
+                  >
+                    Deshacer
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+
 export function SeedingBoard({
   slug,
   base = "seeding",
@@ -687,7 +866,7 @@ export function SeedingBoard({
           />
         </section>
       ) : (
-        <AdminLogin slug={slug} onLogin={setAdmin} />
+        <AdminLogin onLogin={setAdmin} />
       )}
       {message && (
         <p role="status" className="seeding-banner">
@@ -717,6 +896,9 @@ export function SeedingBoard({
       )}
 
       <DataPanel view={view} />
+      {admin && view.dataset.entrants > 0 && (
+        <IdentityPanel view={view} act={act} />
+      )}
 
       <section
         aria-label={ranking ? "Ranking" : "Seeds"}
@@ -875,6 +1057,113 @@ export function SeedingBoard({
   );
 }
 
+function localDay(offsetDays: number) {
+  return new Date(Date.now() + offsetDays * 86400000).toLocaleDateString(
+    "en-CA",
+    { timeZone: "America/Asuncion" },
+  );
+}
+
+function NewProjectForm({
+  kind,
+  admin,
+}: {
+  kind: "seeding" | "ranking";
+  admin: Admin;
+}) {
+  const router = useRouter();
+  const ranking = kind === "ranking";
+  const [name, setName] = useState("");
+  const [eventUrl, setEventUrl] = useState("");
+  const [country, setCountry] = useState("PY");
+  // Defaults: the last 365 days, in Asunción calendar days.
+  const [from, setFrom] = useState(() => localDay(-365));
+  const [to, setTo] = useState(() => localDay(0));
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  return (
+    <form
+      className="seeding-admin seeding-new"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        setBusy(true);
+        setError("");
+        const r = await send(admin, "POST", "", {
+          kind,
+          name: name.trim(),
+          event_url: ranking ? undefined : eventUrl.trim(),
+          country: ranking ? country.trim() : undefined,
+          window_start: fromInput(from),
+          end: fromInput(to),
+        }).catch(() => null);
+        setBusy(false);
+        if (!r) return setError("No se pudo contactar a la API.");
+        if (!r.ok) return setError(await problem(r));
+        const created = (await r.json()) as { slug: string };
+        router.push(`/${ranking ? "rankings" : "seeding"}/${created.slug}`);
+      }}
+    >
+      <strong>{ranking ? "Nuevo ranking" : "Nuevo seeding"}</strong>
+      <label>
+        Nombre
+        <input
+          value={name}
+          minLength={3}
+          maxLength={200}
+          onChange={(e) => setName(e.target.value)}
+          placeholder={
+            ranking ? "Ranking Paraguay 2027" : "Torneo · Ultimate Singles"
+          }
+          required
+        />
+      </label>
+      {ranking ? (
+        <label>
+          País (código)
+          <input
+            value={country}
+            maxLength={2}
+            onChange={(e) => setCountry(e.target.value.toUpperCase())}
+            required
+          />
+        </label>
+      ) : (
+        <label>
+          Link del evento en start.gg
+          <input
+            value={eventUrl}
+            onChange={(e) => setEventUrl(e.target.value)}
+            placeholder="https://www.start.gg/tournament/…/event/…"
+            required
+          />
+        </label>
+      )}
+      <label>
+        {ranking ? "Desde" : "Datos desde"}
+        <input
+          type="date"
+          value={from}
+          onChange={(e) => setFrom(e.target.value)}
+          required
+        />
+      </label>
+      <label>
+        {ranking ? "Hasta (exclusivo)" : "Fecha del evento"}
+        <input
+          type="date"
+          value={to}
+          onChange={(e) => setTo(e.target.value)}
+          required
+        />
+      </label>
+      <button className="primary-button" disabled={busy}>
+        {busy ? "Creando…" : "Crear y bajar datos"}
+      </button>
+      {error && <p role="alert">{error}</p>}
+    </form>
+  );
+}
+
 export function SeedingList({
   kind = "seeding",
 }: {
@@ -882,6 +1171,9 @@ export function SeedingList({
 }) {
   const [items, setItems] = useState<SeedingProjectSummary[] | null>(null);
   const [error, setError] = useState(false);
+  const [admin, setAdmin] = useState<Admin | null>(() =>
+    typeof window === "undefined" ? null : readAdmin(),
+  );
   const ranking = kind === "ranking";
   useEffect(() => {
     fetch(`${api}/seeding?kind=${kind}`)
@@ -895,13 +1187,18 @@ export function SeedingList({
         {ranking ? "EL CIRCUITO PARAGUAYO" : "ORGANIZACIÓN DE EVENTOS"}
       </p>
       <h1>{ranking ? "Rankings" : "Seeding"}</h1>
+      {admin ? (
+        <NewProjectForm kind={kind} admin={admin} />
+      ) : (
+        <AdminLogin onLogin={setAdmin} />
+      )}
       {error && <p role="alert">No se pudieron cargar los datos.</p>}
       {!items && !error && <p role="status">Cargando…</p>}
       {items && items.length === 0 && (
         <p>
           {ranking
-            ? "Todavía no hay rankings. Se crean con el comando create-ranking."
-            : "Todavía no hay seedings. Se crean con el comando de seeding."}
+            ? "Todavía no hay rankings. Con la clave de organizadores puedes crear uno arriba."
+            : "Todavía no hay seedings. Con la clave de organizadores puedes crear uno arriba."}
         </p>
       )}
       <div className="data-grid">

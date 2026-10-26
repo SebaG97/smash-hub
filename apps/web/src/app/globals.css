@@ -1063,3 +1063,35 @@ footer {
 .seeding-preview strong {
   color: var(--amber);
 }
+
+.seeding-identities {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  padding: 20px;
+  margin: 32px 0;
+}
+.seeding-identities h3 {
+  font-size: 16px;
+  margin: 24px 0 8px;
+}
+.seeding-candidates {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0;
+}
+.seeding-candidates li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+}
+.seeding-candidates strong {
+  color: var(--ink);
+}
+.seeding-new input {
+  min-width: 0;
+}
