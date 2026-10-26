@@ -34,7 +34,8 @@ def inactive(state, periods=1):
     if not isinstance(periods, int) or periods < 0:
         raise ValueError("Inactivity periods must be a nonnegative integer")
     return Rating(
-        state.rating, SCALE * sqrt((state.rd / SCALE) ** 2 + periods * state.volatility**2),
+        state.rating,
+        SCALE * sqrt((state.rd / SCALE) ** 2 + periods * state.volatility**2),
         state.volatility,
     )
 
@@ -66,9 +67,10 @@ def update(state, results, *, tau=0.5, epsilon=1e-6, max_iterations=100):
 
     def f(x):
         ex = exp(x)
-        return ex * (delta**2 - phi**2 - variance - ex) / (
-            2 * (phi**2 + variance + ex) ** 2
-        ) - (x - a) / tau**2
+        return (
+            ex * (delta**2 - phi**2 - variance - ex) / (2 * (phi**2 + variance + ex) ** 2)
+            - (x - a) / tau**2
+        )
 
     A = a
     if delta**2 > phi**2 + variance:

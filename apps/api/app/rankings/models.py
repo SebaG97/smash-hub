@@ -1,6 +1,15 @@
 from sqlalchemy import (
-    JSON, CheckConstraint, Column, DateTime, Float, ForeignKey, ForeignKeyConstraint,
-    Integer, String, UniqueConstraint, Uuid,
+    JSON,
+    CheckConstraint,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    ForeignKeyConstraint,
+    Integer,
+    String,
+    UniqueConstraint,
+    Uuid,
 )
 
 from app.database.base import Base, Record
@@ -24,7 +33,9 @@ class RatingPool(Record, Base):
     event_ids = Column(JSON, nullable=False, default=list)
     # null = any unambiguous participant in allowed events; [] = nobody.
     player_ids = Column(JSON)
-    published_run_id = Column(Uuid, ForeignKey("rating_calculation_runs.id", use_alter=True, name="fk_pool_published_run"))
+    published_run_id = Column(
+        Uuid, ForeignKey("rating_calculation_runs.id", use_alter=True, name="fk_pool_published_run")
+    )
     __table_args__ = (CheckConstraint("mode IN ('singles','doubles')", name="pool_mode"),)
 
 
@@ -80,12 +91,21 @@ class RatingSnapshot(Record, Base):
     calculated_at = Column(DateTime(timezone=True), nullable=False)
     policy_version = Column(String(80), nullable=False)
     __table_args__ = (
-        ForeignKeyConstraint(["run_id", "pool_id"], ["rating_calculation_runs.id", "rating_calculation_runs.pool_id"]),
-        ForeignKeyConstraint(["period_id", "pool_id"], ["rating_periods.id", "rating_periods.pool_id"]),
+        ForeignKeyConstraint(
+            ["run_id", "pool_id"], ["rating_calculation_runs.id", "rating_calculation_runs.pool_id"]
+        ),
+        ForeignKeyConstraint(
+            ["period_id", "pool_id"], ["rating_periods.id", "rating_periods.pool_id"]
+        ),
         UniqueConstraint("run_id", "period_id", "player_id"),
         UniqueConstraint("id", "run_id", "pool_id", "period_id"),
-        CheckConstraint("rd > 0 AND rd < 'Infinity'::float8 AND volatility > 0 AND volatility < 'Infinity'::float8 AND rating > '-Infinity'::float8 AND rating < 'Infinity'::float8", name="finite_rating"),
-        CheckConstraint("period_sets >= 0 AND cumulative_sets >= period_sets", name="snapshot_counts"),
+        CheckConstraint(
+            "rd > 0 AND rd < 'Infinity'::float8 AND volatility > 0 AND volatility < 'Infinity'::float8 AND rating > '-Infinity'::float8 AND rating < 'Infinity'::float8",
+            name="finite_rating",
+        ),
+        CheckConstraint(
+            "period_sets >= 0 AND cumulative_sets >= period_sets", name="snapshot_counts"
+        ),
     )
 
 
@@ -98,7 +118,15 @@ class RankingSnapshot(Record, Base):
     status = Column(String(20), nullable=False)
     position = Column(Integer, nullable=False)
     __table_args__ = (
-        ForeignKeyConstraint(["rating_snapshot_id", "run_id", "pool_id", "period_id"], ["rating_snapshots.id", "rating_snapshots.run_id", "rating_snapshots.pool_id", "rating_snapshots.period_id"]),
+        ForeignKeyConstraint(
+            ["rating_snapshot_id", "run_id", "pool_id", "period_id"],
+            [
+                "rating_snapshots.id",
+                "rating_snapshots.run_id",
+                "rating_snapshots.pool_id",
+                "rating_snapshots.period_id",
+            ],
+        ),
         UniqueConstraint("run_id", "period_id", "status", "position"),
         CheckConstraint("status IN ('ACTIVE','PROVISIONAL','INACTIVE')", name="ranking_status"),
         CheckConstraint("position > 0", name="ranking_position"),
