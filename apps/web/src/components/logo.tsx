@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 /**
- * Club logo from /logo.png; falls back to a CSS emblem in the same palette
+ * Club logo from /smashclublogo.jpg; falls back to a CSS emblem in the same palette
  * when the file is missing, so the layout never shows a broken image.
  */
 export function Logo({
@@ -26,7 +26,7 @@ export function Logo({
     );
   return (
     <img
-      src="/logo.png"
+      src="/smashclublogo.jpg"
       alt=""
       width={size}
       height={size}

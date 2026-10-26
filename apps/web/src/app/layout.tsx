@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   },
   description:
     "El punto de encuentro de la comunidad competitiva de Smash en Paraguay.",
+  icons: { icon: "/smashclublogo.jpg", apple: "/smashclublogo.jpg" },
 };
 export default function RootLayout({
   children,
