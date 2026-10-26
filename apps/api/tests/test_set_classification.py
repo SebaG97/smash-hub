@@ -267,6 +267,8 @@ def test_0003_upgrade_with_existing_results_and_reclassification(db, snapshot):
         assert {
             m.id: (m.status, m.source_result, m.completed_at) for m in s.scalars(select(Set))
         } == before
+    # Later migrations (0004+) must exist again for the rest of the session.
+    command.upgrade(cfg, "head")
 
 
 @pytest.mark.parametrize("inconsistent", [False, True])

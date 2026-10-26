@@ -4,6 +4,8 @@ Fundación técnica de una plataforma comunitaria de esports. Primera comunidad:
 
 Misión 03: estadísticas competitivas e historial Head-to-Head sobre resultados locales elegibles, con filtros por juego, modalidad, torneo, comunidad y período. Conserva el importador start.gg y la clasificación de Misiones 02/02.1. Sin ratings, seeding ni rankings calculados; revisión del responsable pendiente.
 
+Misión 05: página de seeding por evento (`/seeding`) con propuesta explicada (Glicko-2 de la Misión 04 + posiciones), ajustes manuales auditados, recálculo, descarga de datos de start.gg, exportación CSV y subida a start.gg por comando (ADR-011).
+
 ## Inicio local
 
 Requisitos: Git, Docker Desktop con motor Linux y Docker Compose v2. Puertos predeterminados: web 3000 y API 8000. PostgreSQL no publica puertos.
@@ -74,7 +76,7 @@ compose.test.yaml       Tests con PostgreSQL efímero independiente
 | `/api/openapi.json` | Contrato OpenAPI |
 | `/api/docs`, `/api/redoc` | Documentación interactiva |
 
-No existen rutas públicas de escritura.
+Las únicas escrituras son las de seeding (`/api/v1/seeding`), protegidas con `ADMIN_TOKEN`; sin esa variable la API es de solo lectura. Ver [docs/operations/seeding.md](docs/operations/seeding.md).
 
 ## Documentación
 

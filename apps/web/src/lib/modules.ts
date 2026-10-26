@@ -23,4 +23,10 @@ export const modules = [
     number: "04",
     description: "Enfrentamientos y resultados con contexto.",
   },
+  {
+    slug: "seeding",
+    title: "Seeding",
+    number: "05",
+    description: "Propuestas de seeds explicadas para cada evento.",
+  },
 ] as const;

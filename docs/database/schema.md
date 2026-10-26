@@ -394,3 +394,17 @@ Check: `side IN (1,2)`.
 Única: `set_id, entrant_id`.
 
 Única: `set_id, side`.
+
+## Seeding (migración 0005, ADR-011)
+
+Tablas aisladas del modelo competitivo: usan IDs de start.gg y no tienen FKs hacia `players` ni `sets`.
+
+| Tabla | Contenido |
+| --- | --- |
+| `seeding_projects` | Evento a seedear: IDs de start.gg, fecha del evento, inicio de los datos, corte de la última descarga, `merges` y `duplicates` aprobados, cálculo vigente y estado de la descarga (`IDLE`/`RUNNING`/`FAILED`). |
+| `seeding_entrants` | Inscritos del evento; únicos por proyecto y jugador. |
+| `seeding_sets` | Sets de los inscritos en el período: evento, fecha, online, país, jugadores, posiciones, ganador, clasificación y si cuenta. Únicos por proyecto y set. |
+| `seeding_runs` | Cada cálculo: algoritmo, parámetros, período, corte de datos, conteos y autor. Inmutable. |
+| `seeding_results` | Resultado por jugador y cálculo: seed del método, métricas, explicaciones y alertas. Únicos por cálculo y jugador, y por cálculo y seed. |
+| `seeding_overrides` | Seed fijado a mano por jugador, con motivo y autor. |
+| `seeding_audit_entries` | Registro de cambios; la aplicación solo inserta. |

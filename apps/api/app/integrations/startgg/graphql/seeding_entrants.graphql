@@ -1,0 +1,11 @@
+query SeedingEntrants($id: ID!, $page: Int!, $perPage: Int!) {
+  event(id: $id) {
+    entrants(query: {page: $page, perPage: $perPage}) {
+      pageInfo { total totalPages }
+      nodes {
+        id name
+        participants { gamerTag prefix player { id } user { location { country } } }
+      }
+    }
+  }
+}

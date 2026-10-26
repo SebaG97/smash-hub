@@ -12,11 +12,38 @@ from app.competitions.models import (
 from app.games.models import Character, Game
 from app.integrations.models import DataSource, ExternalMapping, ImportJob
 from app.players.models import ExternalIdentity, Player, PlayerAlias
-from app.rankings.models import (RatingPolicy, RatingPool, RatingPeriod, RatingSnapshot,
-                              RankingSnapshot, RatingCalculationRun)
+from app.rankings.models import (
+    RankingSnapshot,
+    RatingCalculationRun,
+    RatingPeriod,
+    RatingPolicy,
+    RatingPool,
+    RatingSnapshot,
+)
+from app.seeding.models import (
+    SeedingAuditEntry,
+    SeedingEntrant,
+    SeedingOverride,
+    SeedingProject,
+    SeedingResult,
+    SeedingRun,
+    SeedingSet,
+)
 
 __all__ = [
-    "RatingPolicy", "RatingPool", "RatingPeriod", "RatingSnapshot", "RankingSnapshot", "RatingCalculationRun",
+    "SeedingAuditEntry",
+    "SeedingEntrant",
+    "SeedingOverride",
+    "SeedingProject",
+    "SeedingResult",
+    "SeedingRun",
+    "SeedingSet",
+    "RatingPolicy",
+    "RatingPool",
+    "RatingPeriod",
+    "RatingSnapshot",
+    "RankingSnapshot",
+    "RatingCalculationRun",
     "Community",
     "CommunityGame",
     "Country",

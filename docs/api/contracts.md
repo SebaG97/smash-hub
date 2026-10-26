@@ -1,6 +1,6 @@
 # Contratos iniciales
 
-Base: `/api/v1`. JSON UTF-8. Versión de aplicación `0.1.0`. Sin autenticación en estas rutas públicas de lectura; no existe ninguna escritura pública.
+Base: `/api/v1`. JSON UTF-8. Versión de aplicación `0.1.0`. Sin autenticación en estas rutas públicas de lectura. Las únicas escrituras son las de seeding (Misión 05), protegidas con clave de administración.
 
 | Método y ruta | Éxito | Error previsto |
 | --- | --- | --- |
@@ -68,3 +68,18 @@ Todos requieren `game_id: UUID`; opcionales `mode=singles|doubles` (default sing
 `filters` aparece en todas las respuestas; las páginas contienen items,total,page,page_size,filters. El total se calcula antes de paginar; history H2H tiene esa misma forma y sus totales globales no dependen de la página. Todos los órdenes se desempatan con UUID; fechas null al final. Sin sets: W/L y cantidades son 0, porcentajes/fechas/último torneo/mejor placement ausentes son null. A/B y B/A conservan sets, invirtiendo W/L y scores. Comparación consigo mismo: 422. Jugador inexistente o sin participación publicada: 404; juego/torneo/comunidad sin coincidencias: 200 vacío. Filtros inválidos/desconocidos: 422. No se exponen resultados administrativos en estas rutas.
 
 `PlayerDetail` añade `scopes: [{game_id,game_name,mode}]`, con ámbitos confirmados de inscripciones públicas, sin afirmar sets jugados. Un registro sin puntuaciones puede ser elegible exclusivamente para W/L bajo la excepción de evidencia del clasificador compartido; su motivo se devuelve explícitamente sin cambiar flags persistidos de auditoría. Ver [reglas, fórmulas y dobles](../statistics.md) y ADR-010. El snapshot OpenAPI incluye modelos tipados y validación; la suite comprueba igualdad con la factory.
+
+## Seeding (Misión 05)
+
+| Método y ruta bajo /api/v1 | Acceso | Respuesta |
+| --- | --- | --- |
+| GET /seeding | público | `[{slug, name, event_date}]` |
+| GET /seeding/{slug} | público | Evento, período, corte de datos, estado de la descarga, conteos del dataset, fusiones, último cálculo y `seeds` (seed final, seed del método, métricas, `reasons`, `flags`, `override`) |
+| GET /seeding/{slug}/export.csv | público | CSV UTF-8 con BOM, en el orden final |
+| GET /seeding/{slug}/session | admin | Valida la clave y devuelve el nombre registrado |
+| GET /seeding/{slug}/audit | admin | Últimos 100 cambios |
+| POST /seeding/{slug}/recalculate | admin | `{window_start?, window_end?, refresh?, parameters?}`. Sin `refresh`: 200 y nuevo cálculo con los datos cargados. Con `refresh`: 202 y descarga de start.gg en segundo plano |
+| PUT /seeding/{slug}/overrides/{player_id} | admin | `{seed, reason}` fija el seed del jugador |
+| DELETE /seeding/{slug}/overrides/{player_id} | admin | Quita el ajuste manual |
+
+Clave: `Authorization: Bearer <ADMIN_TOKEN>`; `X-Admin-Name` es opcional y solo va al registro. Errores: 401 clave incorrecta, 429 demasiados fallos, 503 edición deshabilitada, 404 proyecto inexistente, 409 descarga en curso, 422 período o seed inválidos (`detail` en español). Las fechas llevan zona horaria y el final del período es exclusivo. `window_start` no puede ser anterior a los datos descargados salvo con `refresh`.

@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     db_max_overflow: int = Field(default=2, ge=0, le=5)
     db_ca_cert: str | None = None
     startgg_api_token: SecretStr | None = None
+    # Shared key for seeding writes; unset disables every write route.
+    admin_token: SecretStr | None = None
 
     @model_validator(mode="after")
     def validate_security(self):
@@ -33,6 +35,8 @@ class Settings(BaseSettings):
                 raise ValueError("Production PostgreSQL requires sslmode=verify-full and a CA")
         if any(o == "*" or not o.startswith(("http://", "https://")) for o in self.cors_origins):
             raise ValueError("CORS requires explicit HTTP origins")
+        if self.admin_token is not None and len(self.admin_token.get_secret_value()) < 24:
+            raise ValueError("ADMIN_TOKEN must have at least 24 characters")
         if self.environment == "production":
             if not self.db_ca_cert or not all(o.startswith("https://") for o in self.cors_origins):
                 raise ValueError("Production requires a CA path and HTTPS origins")

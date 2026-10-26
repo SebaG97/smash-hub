@@ -701,6 +701,7 @@ def test_incremental_migration_preserves_legacy_rows(db):
 def test_downgrade_refuses_loss_of_incomplete_results(db, snapshot):
     from alembic import command
     from alembic.config import Config
+    from alembic.script import ScriptDirectory
     from sqlalchemy.exc import ProgrammingError
 
     prepare(db)
@@ -708,7 +709,9 @@ def test_downgrade_refuses_loss_of_incomplete_results(db, snapshot):
     with pytest.raises(ProgrammingError, match="Resolve incomplete results"):
         command.downgrade(Config("alembic.ini"), "0001")
     with db.connect() as conn:
-        assert conn.scalar(text("SELECT version_num FROM alembic_version")) == "0003"
+        # The whole downgrade is one transaction: a refusal keeps the current head.
+        head = ScriptDirectory.from_config(Config("alembic.ini")).get_current_head()
+        assert conn.scalar(text("SELECT version_num FROM alembic_version")) == head
         assert (
             conn.scalar(
                 text("SELECT count(*) FROM pg_constraint WHERE conname='ck_sets_ranking_candidate'")

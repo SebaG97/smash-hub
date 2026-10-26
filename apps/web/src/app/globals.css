@@ -612,3 +612,203 @@ footer {
   border-radius: 4px;
   max-width: 100%;
 }
+
+.seeding-lead {
+  color: var(--muted);
+  line-height: 1.7;
+}
+.seeding-lead a,
+.seeding-push a {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.seeding-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  gap: 16px;
+  margin: 24px 0;
+}
+.seeding-push {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 16px;
+  background: #fff;
+  max-width: 100%;
+}
+.seeding-push summary,
+.seeding-data summary {
+  cursor: pointer;
+  font-weight: bold;
+}
+.seeding-push pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--paper);
+  padding: 12px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+.seeding-push p,
+.seeding-data li,
+.seeding-data p {
+  color: var(--muted);
+  line-height: 1.7;
+}
+.seeding-banner {
+  border-left: 4px solid #497519;
+  background: #fff;
+  padding: 12px 16px;
+  margin: 16px 0;
+}
+.seeding-admin {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 16px;
+  margin: 16px 0;
+}
+.seeding-admin > p {
+  margin: 0;
+  width: 100%;
+}
+.seeding-admin label,
+.seeding-tools label,
+.seeding-move label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+}
+.seeding-admin input,
+.seeding-tools input:not([type="checkbox"]),
+.seeding-move input {
+  font: inherit;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  max-width: 100%;
+}
+.seeding-tools,
+.seeding-move {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 16px;
+}
+.seeding-tools .seeding-check {
+  flex-direction: row;
+  align-items: center;
+  min-height: 44px;
+}
+.seeding-data dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+.seeding-data dl div {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 12px 16px;
+}
+.seeding-data dt {
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.seeding-data dd {
+  margin: 6px 0 0;
+  font-weight: bold;
+}
+.seeding-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+.seeding-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.seeding-table th,
+.seeding-table td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+.seeding-table th {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.seeding-table td small {
+  color: var(--muted);
+}
+.seeding-table tr.is-manual > td:first-child {
+  box-shadow: inset 4px 0 0 var(--green);
+}
+.seeding-flags {
+  color: var(--muted);
+  min-width: 180px;
+}
+.seeding-arrows {
+  white-space: nowrap;
+}
+.seeding-arrows button {
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  min-width: 36px;
+  min-height: 36px;
+  margin-right: 4px;
+  background: #fff;
+}
+.seeding-arrows button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.seeding-open > td {
+  background: var(--paper);
+}
+.seeding-details h4 {
+  margin: 4px 0 8px;
+}
+.seeding-details li,
+.seeding-details p {
+  line-height: 1.7;
+  color: var(--ink);
+}
+.seeding-edit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 16px;
+  margin-top: 12px;
+}
+.link-button {
+  background: none;
+  border: 0;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  color: inherit;
+  text-align: left;
+}
+.tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--green);
+  font-size: 11px;
+  font-weight: bold;
+}

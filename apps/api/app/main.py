@@ -10,6 +10,7 @@ from app.core.errors import install_error_handling
 from app.core.logging import configure_logging
 from app.database.session import build_engine
 from app.health.router import router
+from app.seeding.router import router as seeding_router
 from app.statistics.router import router as statistics_router
 
 
@@ -38,15 +39,18 @@ def create_app(settings: Settings | None = None, engine=None) -> FastAPI:
         redoc_url="/api/redoc",
         openapi_url="/api/openapi.json",
     )
+    app.state.settings = settings
     install_error_handling(app)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
-        allow_methods=["GET"],
-        allow_headers=["Accept", "Content-Type"],
+        # Writes exist only under /seeding and require the admin key (ADR-011).
+        allow_methods=["GET", "POST", "PUT", "DELETE"],
+        allow_headers=["Accept", "Content-Type", "Authorization", "X-Admin-Name"],
     )
     app.include_router(router)
     app.include_router(competitions_router)
     app.include_router(statistics_router)
+    app.include_router(seeding_router)
 
     return app

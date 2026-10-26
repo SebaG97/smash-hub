@@ -1,0 +1,9 @@
+query SeedingPhaseSeeds($id: ID!, $page: Int!, $perPage: Int!) {
+  phase(id: $id) {
+    id name
+    seeds(query: {page: $page, perPage: $perPage}) {
+      pageInfo { total totalPages }
+      nodes { id seedNum entrant { id participants { player { id } } } }
+    }
+  }
+}

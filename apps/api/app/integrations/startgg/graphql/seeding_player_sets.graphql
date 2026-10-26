@@ -1,0 +1,15 @@
+query SeedingPlayerSets($id: ID!, $page: Int!, $perPage: Int!, $after: Timestamp) {
+  player(id: $id) {
+    id
+    sets(page: $page, perPage: $perPage, filters: {updatedAfter: $after, showByes: true, hideEmpty: false}) {
+      pageInfo { total totalPages }
+      nodes {
+        id state completedAt startedAt winnerId displayScore hasPlaceholder
+        event { id numEntrants isOnline startAt videogame { id }
+                tournament { name slug countryCode } }
+        slots { entrant { id name standing { placement } participants { player { id } } }
+                standing { stats { score { value } } } }
+      }
+    }
+  }
+}

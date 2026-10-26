@@ -123,3 +123,97 @@ export type HeadToHead = {
   last_encounter_at: string | null;
   history: Page<CompetitiveMatch>;
 };
+
+export type SeedingProjectSummary = {
+  slug: string;
+  name: string;
+  event_date: string;
+};
+export type SeedingOverride = {
+  player_id: string;
+  seed: number;
+  reason: string;
+  actor: string;
+  updated_at: string | null;
+};
+export type SeedingRow = {
+  seed: number;
+  seed_algorithm: number;
+  player_id: string;
+  gamer_tag: string;
+  rating: number | null;
+  rd: number | null;
+  conservative: number | null;
+  placement_score: number | null;
+  best_placements: {
+    placement: number;
+    entrants: number;
+    tournament: string;
+    date: string;
+    score: number;
+  }[];
+  wins: number;
+  losses: number;
+  sets: number;
+  offline_sets: number;
+  events: number;
+  offline_events: number;
+  last_event: string | null;
+  main_circuit: string | null;
+  circuits: Record<string, number>;
+  confidence: string;
+  combined: number | null;
+  rank_conservative: number | null;
+  rank_placement: number | null;
+  merged_sets: number;
+  flags: string[];
+  reasons: string[];
+  override: SeedingOverride | null;
+};
+export type SeedingView = {
+  slug: string;
+  name: string;
+  startgg_event_slug: string | null;
+  event_date: string;
+  window_start: string;
+  data_cutoff: string | null;
+  refresh: {
+    status: "IDLE" | "RUNNING" | "FAILED";
+    started_at: string | null;
+    progress: { step: string; done: number; total: number | null } | null;
+    error: string | null;
+  };
+  dataset: {
+    entrants: number;
+    sets: number;
+    counted_sets: number;
+    events: number;
+    offline_events: number;
+    classifications: Record<string, number>;
+  };
+  merges: {
+    from_player_id: string;
+    to_player_id: string;
+    tag: string | null;
+  }[];
+  duplicates: {
+    player_id: string;
+    kept_player_id: string;
+    tag: string | null;
+  }[];
+  run: {
+    id: string;
+    created_at: string;
+    actor: string;
+    algorithm_version: string;
+    parameters: Record<string, number>;
+    window_start: string;
+    window_end: string;
+    data_cutoff: string | null;
+    set_count: number;
+    event_count: number;
+    offline_event_count: number;
+    player_count: number;
+  } | null;
+  seeds: SeedingRow[];
+};

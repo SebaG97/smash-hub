@@ -1,0 +1,8 @@
+query SeedingEvent($slug: String!) {
+  event(slug: $slug) {
+    id name slug startAt numEntrants
+    videogame { id }
+    tournament { name }
+    phases { id name phaseOrder numSeeds }
+  }
+}
