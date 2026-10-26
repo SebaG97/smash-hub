@@ -1,10 +1,25 @@
 @import "tailwindcss";
 :root {
-  --paper: #f5f4ef;
-  --ink: #17231e;
-  --green: #c9f45a;
-  --muted: #5f6963;
-  --line: #d5d9d0;
+  /* Palette taken from the Smash Club Paraguay logo: charcoal, fire and steel. */
+  --paper: #141110; /* page background (charcoal) */
+  --surface: #1e1a17; /* cards, panels */
+  --surface-2: #2a2420; /* hover, inset areas */
+  --ink: #f4eee6; /* main text (steel white) */
+  --muted: #bcae9f;
+  --line: #3b322b;
+  --amber: #f7a823; /* ring and "PARAGUAY" gold */
+  --fire: #ef5b1c; /* flame orange */
+  --red: #b3231c; /* inner disc red */
+  --green: var(--amber); /* legacy accent name */
+  --fire-gradient: linear-gradient(
+    135deg,
+    #ffcf4a 0%,
+    #f7a823 35%,
+    #ef5b1c 75%,
+    #b3231c 100%
+  );
+  --font-display: "Oswald";
+  color-scheme: dark;
 }
 * {
   box-sizing: border-box;
@@ -32,7 +47,7 @@ button {
 }
 a:focus-visible,
 button:focus-visible {
-  outline: 3px solid #497519;
+  outline: 3px solid var(--amber);
   outline-offset: 5px;
 }
 .skip-link {
@@ -65,7 +80,7 @@ button:focus-visible {
   line-height: 1;
 }
 .brand b {
-  color: #59752e;
+  color: var(--amber);
 }
 .brand small {
   display: block;
@@ -109,7 +124,7 @@ nav a:hover {
 }
 .country-badge span {
   font-size: 8px;
-  color: #65863c;
+  color: var(--fire);
   margin: 0 7px;
 }
 .hero {
@@ -131,7 +146,7 @@ nav a:hover {
 .eyebrow > span {
   width: 7px;
   height: 7px;
-  background: #6c873f;
+  background: var(--fire);
   border-radius: 50%;
 }
 h1 {
@@ -170,14 +185,14 @@ h1 em {
   font-weight: 700;
 }
 .primary-button:hover {
-  background: #324638;
+  background: var(--surface-2);
 }
 .development-label {
   font-size: 11px;
   color: var(--muted);
 }
 .hero-art {
-  background: #203a2d;
+  background: var(--surface);
   position: relative;
   min-height: 390px;
   overflow: hidden;
@@ -189,7 +204,7 @@ h1 em {
 }
 .orbit {
   position: absolute;
-  border: 1px solid #bbdc6e35;
+  border: 1px solid #f7a82340;
   border-radius: 50%;
   width: 360px;
   height: 360px;
@@ -200,31 +215,6 @@ h1 em {
 .orbit-two {
   width: 440px;
   height: 440px;
-}
-.cross-mark {
-  position: absolute;
-  width: 205px;
-  height: 205px;
-  left: 50%;
-  top: 43%;
-  transform: translate(-50%, -50%) rotate(-12deg);
-  background: var(--green);
-  border-radius: 50%;
-  box-shadow: 14px 18px 0 #0d2118;
-}
-.cross-mark span:first-child {
-  position: absolute;
-  height: 100%;
-  width: 13px;
-  background: #203a2d;
-  left: 36%;
-}
-.cross-mark span:last-child {
-  position: absolute;
-  width: 100%;
-  height: 13px;
-  background: #203a2d;
-  top: 54%;
 }
 .art-coordinate {
   position: absolute;
@@ -254,7 +244,7 @@ h1 em {
 }
 .scene-strip {
   background: var(--ink);
-  color: #e0e5da;
+  color: var(--ink);
   padding: 19px 5%;
   display: flex;
   justify-content: space-between;
@@ -299,7 +289,7 @@ h2 {
   transition: background 0.15s;
 }
 .module-card:hover {
-  background: #eaf0df;
+  background: var(--surface-2);
 }
 .card-top {
   display: flex;
@@ -348,7 +338,7 @@ h3 {
 .foundation aside {
   align-self: center;
   border: 1px solid var(--line);
-  background: #edeee6;
+  background: var(--surface);
   padding: 28px;
 }
 .system-label {
@@ -367,7 +357,7 @@ h3 {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #68775d;
+  background: var(--amber);
 }
 .status button {
   margin-left: auto;
@@ -452,10 +442,6 @@ footer {
   }
   .hero-art {
     min-height: 340px;
-  }
-  .cross-mark {
-    width: 160px;
-    height: 160px;
   }
   h1 {
     letter-spacing: -3px;
@@ -570,7 +556,7 @@ footer {
 }
 .data-card {
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--surface);
   padding: 24px;
   border-radius: 8px;
   overflow-wrap: anywhere;
@@ -633,7 +619,7 @@ footer {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 12px 16px;
-  background: #fff;
+  background: var(--surface);
   max-width: 100%;
 }
 .seeding-push summary,
@@ -656,8 +642,8 @@ footer {
   line-height: 1.7;
 }
 .seeding-banner {
-  border-left: 4px solid #497519;
-  background: #fff;
+  border-left: 4px solid var(--fire);
+  background: var(--surface);
   padding: 12px 16px;
   margin: 16px 0;
 }
@@ -668,7 +654,7 @@ footer {
   gap: 16px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface);
   padding: 16px;
   margin: 16px 0;
 }
@@ -714,7 +700,7 @@ footer {
 .seeding-data dl div {
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface);
   padding: 12px 16px;
 }
 .seeding-data dt {
@@ -731,7 +717,7 @@ footer {
   overflow-x: auto;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface);
 }
 .seeding-table {
   width: 100%;
@@ -770,7 +756,7 @@ footer {
   min-width: 36px;
   min-height: 36px;
   margin-right: 4px;
-  background: #fff;
+  background: var(--surface);
 }
 .seeding-arrows button:disabled {
   opacity: 0.35;
@@ -811,4 +797,230 @@ footer {
   background: var(--green);
   font-size: 11px;
   font-weight: bold;
+}
+
+/* ---------------------------------------------------------------- club theme */
+body {
+  background:
+    radial-gradient(1200px 600px at 85% -10%, #ef5b1c1f, transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, #b3231c1a, transparent 60%),
+    var(--paper);
+  background-attachment: fixed;
+}
+h1,
+h2,
+h3,
+.brand,
+.footer-brand,
+.primary-button,
+.eyebrow,
+nav,
+.seeding-table th {
+  font-family: var(--font-display), "Arial Narrow", Impact, sans-serif;
+}
+h1,
+h2,
+h3 {
+  text-transform: uppercase;
+  letter-spacing: 0;
+  font-weight: 700;
+}
+h1 {
+  letter-spacing: -1px;
+}
+h1 em {
+  background: var(--fire-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  padding: 0;
+  margin: 0;
+}
+.eyebrow {
+  color: var(--amber);
+  letter-spacing: 3px;
+}
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: #141110e6;
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 1px 0 #ef5b1c33;
+}
+.brand {
+  letter-spacing: 0.5px;
+}
+.brand small {
+  color: var(--muted);
+}
+.logo {
+  display: block;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.brand-logo {
+  box-shadow:
+    0 0 0 2px var(--amber),
+    0 0 18px #ef5b1c66;
+}
+.logo-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 60%,
+    var(--red) 0 52%,
+    #1a1412 53% 60%,
+    var(--amber) 61% 66%,
+    #1a1412 67%
+  );
+  color: var(--ink);
+  font-family: var(--font-display), Impact, sans-serif;
+  font-weight: 700;
+  box-shadow: 0 0 22px #ef5b1c66;
+}
+.logo-fallback b {
+  color: var(--amber);
+}
+nav a {
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+nav a:hover {
+  color: var(--amber);
+  text-decoration: none;
+}
+.country-badge {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+.primary-button {
+  background: var(--fire-gradient);
+  color: #1a0d06;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-radius: 6px;
+  box-shadow: 0 6px 22px #ef5b1c40;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+.primary-button:hover {
+  background: var(--fire-gradient);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 28px #ef5b1c66;
+}
+.primary-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+  transform: none;
+}
+.hero-art {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--amber);
+  background:
+    radial-gradient(circle at 50% 45%, #ef5b1c40, transparent 55%),
+    linear-gradient(#ffffff06 1px, transparent 1px),
+    linear-gradient(90deg, #ffffff06 1px, transparent 1px), var(--surface);
+  background-size:
+    auto,
+    32px 32px,
+    32px 32px,
+    auto;
+}
+.hero-emblem {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 0 40px #ef5b1c80);
+}
+.art-label strong {
+  color: var(--ink);
+}
+.scene-strip {
+  background: linear-gradient(90deg, var(--red), var(--fire) 50%, var(--amber));
+  color: #1a0d06;
+  font-weight: 700;
+}
+.scene-strip b {
+  color: #1a0d06;
+}
+.module-card,
+.data-card,
+.foundation aside {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.module-card:hover,
+.data-card:hover {
+  border-color: var(--fire);
+  box-shadow:
+    0 0 0 1px var(--fire),
+    0 10px 30px #ef5b1c26;
+}
+.card-top span:last-child {
+  color: var(--amber);
+}
+.coming-soon {
+  border-color: var(--amber);
+  color: var(--amber);
+  border-radius: 4px;
+}
+.data-card a,
+.seeding-lead a,
+.seeding-push a,
+.foundation aside a {
+  color: var(--amber);
+}
+.pagination button,
+.seeding-arrows button {
+  background: var(--surface);
+  color: var(--ink);
+}
+.pagination button:hover:not(:disabled),
+.seeding-arrows button:hover:not(:disabled) {
+  border-color: var(--amber);
+}
+input,
+select,
+textarea {
+  background: var(--paper);
+  color: var(--ink);
+  border-color: var(--line);
+}
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 1px;
+}
+.seeding-table tr.is-manual > td:first-child {
+  box-shadow: inset 4px 0 0 var(--amber);
+}
+.seeding-table tbody tr:hover > td {
+  background: var(--surface-2);
+}
+.tag {
+  background: var(--fire-gradient);
+  color: #1a0d06;
+}
+.skip-link {
+  background: var(--amber);
+  color: #1a0d06;
+}
+footer {
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -1px 0 #ef5b1c22;
+}
+@media (max-width: 580px) {
+  .hero-emblem img,
+  .hero-emblem span {
+    width: 200px !important;
+    height: 200px !important;
+  }
 }

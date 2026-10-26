@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BackendStatus } from "../components/backend-status";
+import { Logo } from "../components/logo";
 import { modules } from "../lib/modules";
 export default function Home() {
   return (
@@ -29,9 +30,8 @@ export default function Home() {
           <div className="orbit orbit-one" />
           <div className="orbit orbit-two" />
           <span className="art-coordinate top">25°17′S · 57°38′W</span>
-          <div className="cross-mark">
-            <span />
-            <span />
+          <div className="hero-emblem">
+            <Logo size={220} />
           </div>
           <span className="art-label">
             PLAYER COMMUNITY
