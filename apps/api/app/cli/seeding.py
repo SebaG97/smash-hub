@@ -31,9 +31,12 @@ ACTOR = "cli"
 PHASE2_TZ = timezone(timedelta(hours=-3))  # Phase 2 CSV dates are local Asunción days
 
 
+ALLOW_PRODUCTION = False
+
+
 def engine_for(settings, *, write):
-    if write and settings.environment == "production":
-        raise ImportFailure("production_seeding_writes_disabled")
+    if write and settings.environment == "production" and not ALLOW_PRODUCTION:
+        raise ImportFailure("production_requires_allow_production")
     return build_engine(settings.model_copy(update={"db_pool_size": 1, "db_max_overflow": 0}))
 
 
@@ -264,7 +267,14 @@ def main():
     p.add_argument(
         "--confirm", action="store_true", help="Escribir en start.gg (sin esto, solo simula)"
     )
+    parser.add_argument(
+        "--allow-production",
+        action="store_true",
+        help="Permitir escrituras con ENVIRONMENT=production",
+    )
     args = parser.parse_args()
+    global ALLOW_PRODUCTION
+    ALLOW_PRODUCTION = args.allow_production
     try:
         settings = get_settings()
         if args.command == "create":

@@ -351,3 +351,33 @@ def test_refresh_requires_token_and_is_single_flight(project):
         assert (
             client.post("/api/v1/seeding/cs/recalculate", json={}, headers=AUTH).status_code == 422
         )
+
+
+@pytest.mark.parametrize("approved", [None, "", "head", "9999"])
+def test_runtime_migrate_requires_an_exact_known_revision(monkeypatch, approved):
+    from app import runtime
+
+    monkeypatch.delenv("DATABASE_CA_CERT", raising=False)
+    monkeypatch.setenv("ENVIRONMENT", "test")
+    if approved is None:
+        monkeypatch.delenv("APPROVED_MIGRATION", raising=False)
+    else:
+        monkeypatch.setenv("APPROVED_MIGRATION", approved)
+    monkeypatch.setattr("sys.argv", ["runtime", "migrate"])
+    with pytest.raises(RuntimeError, match="APPROVED_MIGRATION"):
+        runtime.main()
+
+
+def test_cli_writes_in_production_need_explicit_flag(monkeypatch):
+    from app.cli import seeding as cli
+    from app.integrations.startgg.client import ImportFailure
+
+    settings = Settings(
+        _env_file=None, database_url="postgresql://u:p@localhost/x", environment="test"
+    )
+    production = settings.model_copy(update={"environment": "production"})
+    monkeypatch.setattr(cli, "ALLOW_PRODUCTION", False)
+    with pytest.raises(ImportFailure, match="production_requires_allow_production"):
+        cli.engine_for(production, write=True)
+    monkeypatch.setattr(cli, "ALLOW_PRODUCTION", True)
+    cli.engine_for(production, write=True).dispose()

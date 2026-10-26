@@ -55,6 +55,15 @@ services:
       - key: DB_MAX_OVERFLOW
         scope: RUN_TIME
         value: "2"
+      # Mission 05 secrets: set their values in the control panel, never in Git.
+      # Without ADMIN_TOKEN the seeding page stays read-only (ADR-011).
+      - key: ADMIN_TOKEN
+        scope: RUN_TIME
+        type: SECRET
+      # Read-only use: seeding data refresh. Pushing seeds to start.gg stays CLI-only.
+      - key: STARTGG_API_TOKEN
+        scope: RUN_TIME
+        type: SECRET
 databases:
   - name: hub-db
     engine: PG

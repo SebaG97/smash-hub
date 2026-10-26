@@ -33,3 +33,7 @@ Fuentes oficiales consultadas el 16 de octubre de 2026: [App Spec](https://docs.
 Documentar STARTGG_API_TOKEN como secreto runtime exclusivo del futuro job administrativo; nunca variable pública/build de web. No se modificaron App Specs ni se creó job/worker permanente. La CLI termina con código de salida y libera engine/conexión; su pool se limita a una conexión. Agregar esa conexión al presupuesto si se habilita un job futuro. El secreto no es requisito del servicio público.
 
 La CLI bloquea producción en esta misión. Antes de habilitar jobs futuros, revisar ese control, permisos, target de migración 0002, política de operación y prueba real. El fragmento de migración actual sigue en 0001; no representa aprobación para desplegar 0002. Todo cambio de App Spec requiere doctl apps spec validate --schema-only nuevamente. No se accedió a PostgreSQL Managed ni se crearon recursos.
+
+## Misión 05
+
+El spec declara `ADMIN_TOKEN` y `STARTGG_API_TOKEN` como secretos del servicio API, sin valor en Git. `python -m app.runtime migrate` ya no está fijo en 0001: aplica exactamente la revisión de `APPROVED_MIGRATION` si existe, nunca `head` implícito. `python -m app.runtime seeding|bootstrap` permite correr comandos de operador desde la consola de App Platform con la misma configuración TLS. Pasos completos del primer despliegue: [digitalocean-first-deploy.md](digitalocean-first-deploy.md).

@@ -31,12 +31,24 @@ def main():
                         raise RuntimeError("Invalid database URL") from None
                     os.environ[key] = url.render_as_string(hide_password=False)
         if sys.argv[1:] == ["migrate"]:
-            if os.environ.get("APPROVED_MIGRATION") != "0001":
-                raise RuntimeError("Explicit APPROVED_MIGRATION=0001 is required")
             from alembic import command
             from alembic.config import Config
+            from alembic.script import ScriptDirectory
 
-            command.upgrade(Config("alembic.ini"), "0001")
+            config = Config("alembic.ini")
+            approved = os.environ.get("APPROVED_MIGRATION", "")
+            revisions = {r.revision for r in ScriptDirectory.from_config(config).walk_revisions()}
+            # Upgrade only to the exact revision an operator approved; never "head" implicitly.
+            if approved not in revisions:
+                raise RuntimeError("Explicit APPROVED_MIGRATION=<revision> is required")
+            command.upgrade(config, approved)
+        elif sys.argv[1:2] in (["seeding"], ["bootstrap"]):
+            # Operator commands from the App Platform console, with the same TLS setup.
+            import runpy
+
+            module = {"seeding": "app.cli.seeding", "bootstrap": "app.bootstrap"}[sys.argv[1]]
+            sys.argv = [module, *sys.argv[2:]]
+            runpy.run_module(module, run_name="__main__", alter_sys=True)
         else:
             import uvicorn
 

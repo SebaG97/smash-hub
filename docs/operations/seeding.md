@@ -56,4 +56,4 @@ Sin `--confirm` solo simula: muestra la fase (por defecto la primera, por ejempl
 
 ## Producción
 
-`infra/digitalocean/app.yaml` no define `ADMIN_TOKEN`, así que el hub publicado queda de solo lectura. Para habilitar la edición, agregarla como secreto del servicio API (y `STARTGG_API_TOKEN` si se quiere la descarga), revisar ADR-011 y aplicar la migración 0005 con el job de migraciones. La CLI rechaza escrituras con `ENVIRONMENT=production`.
+La guía completa está en [digitalocean-first-deploy.md](digitalocean-first-deploy.md). En resumen: `ADMIN_TOKEN` y `STARTGG_API_TOKEN` son secretos del servicio API (sin `ADMIN_TOKEN` la página es de solo lectura), el job de migraciones aplica exactamente la revisión aprobada (`APPROVED_MIGRATION=0005`), y los comandos se corren desde la consola de la app con `python -m app.runtime seeding --allow-production ...`. Sin `--allow-production` la CLI rechaza escrituras en producción.
