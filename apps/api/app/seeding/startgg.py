@@ -26,6 +26,7 @@ async def paged(
     per_page=PER_PAGE,
     max_pages=MAX_PAGES,
     connection_is_root=False,
+    stop_early=False,
 ):
     nodes, seen, expected = [], set(), None
     for page in range(1, max_pages + 1):
@@ -47,6 +48,8 @@ async def paged(
             raise ImportFailure("startgg_invalid_response") from None
         if page >= (pages or 0):
             return nodes
+    if stop_early:
+        return nodes
     raise ImportFailure("startgg_pagination_limit")
 
 
@@ -257,3 +260,42 @@ async def update_phase_seeding(client, phase_id, mapping):
     if not data.get("updatePhaseSeeding"):
         raise ImportFailure("startgg_seeding_rejected")
     return data["updatePhaseSeeding"]
+
+
+MAINS_PAGES = 2  # 40 most recent sets per player: enough to tell their mains
+
+
+def mains_from_sets(nodes, player_id, videogame_id, *, limit=3):
+    """Most picked characters of one player across the given set nodes."""
+    counts = {}
+    for node in nodes:
+        if str(((node.get("event") or {}).get("videogame") or {}).get("id")) != str(videogame_id):
+            continue
+        for game in node.get("games") or []:
+            for selection in game.get("selections") or []:
+                people = ((selection or {}).get("entrant") or {}).get("participants") or []
+                character = ((selection or {}).get("character") or {}).get("name")
+                if character and any(
+                    str((p.get("player") or {}).get("id")) == str(player_id) for p in people
+                ):
+                    counts[character] = counts.get(character, 0) + 1
+    total = sum(counts.values())
+    ranked = sorted(counts.items(), key=lambda x: (-x[1], x[0]))[:limit]
+    return [
+        {"character": name, "icon": None, "games": n, "share": round(100 * n / total, 1)}
+        for name, n in ranked
+    ]
+
+
+async def fetch_player_mains(client, player_id, videogame_id):
+    nodes = await paged(
+        client,
+        "seeding_player_characters",
+        "player",
+        "sets",
+        {"id": player_id},
+        per_page=20,
+        max_pages=MAINS_PAGES,
+        stop_early=True,
+    )
+    return mains_from_sets(nodes, player_id, videogame_id)

@@ -1,0 +1,13 @@
+query SeedingPlayerCharacters($id: ID!, $page: Int!, $perPage: Int!) {
+  player(id: $id) {
+    id
+    sets(page: $page, perPage: $perPage, filters: {hideEmpty: true}) {
+      pageInfo { total totalPages }
+      nodes {
+        id
+        event { videogame { id } }
+        games { selections { entrant { participants { player { id } } } character { name } } }
+      }
+    }
+  }
+}

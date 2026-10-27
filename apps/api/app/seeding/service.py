@@ -427,8 +427,17 @@ def final_seeding(session, project):
         for r in results
     ]
     mains = mains_by_startgg_player(session, [r["player_id"] for r in rows])
+    # Seeding entrants carry their recent picks from start.gg (foreign players included);
+    # otherwise use what the hub's imported tournaments say.
+    recent = dict(
+        session.execute(
+            select(SeedingEntrant.startgg_player_id, SeedingEntrant.mains).where(
+                SeedingEntrant.project_id == project.id, SeedingEntrant.mains.is_not(None)
+            )
+        ).all()
+    )
     for r in rows:
-        r["mains"] = mains.get(r["player_id"], [])
+        r["mains"] = (recent.get(r["player_id"]) or mains.get(r["player_id"], []))[:2]
     return run, apply_overrides(rows, _overrides(session, project))
 
 
@@ -691,6 +700,14 @@ async def _download(engine, project_id, client, start):
         for i, entrant in enumerate(entrants):
             _progress(engine, project_id, step="sets", done=i, total=len(entrants))
             nodes += await startgg.fetch_player_sets(client, entrant["startgg_player_id"], start)
+        for i, entrant in enumerate(entrants):
+            _progress(engine, project_id, step="personajes", done=i, total=len(entrants))
+            try:
+                entrant["mains"] = await startgg.fetch_player_mains(
+                    client, entrant["startgg_player_id"], videogame
+                )
+            except ImportFailure:
+                entrant["mains"] = None  # Cosmetic: never fail the refresh for icons.
     cutoff = datetime.now(UTC)
     rows, excluded = startgg.normalize(
         nodes,

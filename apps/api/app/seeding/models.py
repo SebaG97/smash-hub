@@ -70,6 +70,8 @@ class SeedingEntrant(Record, Base):
     gamer_tag = Column(String(120), nullable=False)
     prefix = Column(String(120))
     profile_country = Column(String(80))
+    # Most picked characters in the player's recent start.gg sets, anywhere (Mission 09).
+    mains = Column(JSON)
     __table_args__ = (
         UniqueConstraint("project_id", "startgg_player_id"),
         UniqueConstraint("project_id", "startgg_entrant_id"),

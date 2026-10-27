@@ -424,3 +424,7 @@ Tablas aisladas del modelo competitivo: usan IDs de start.gg y no tienen FKs hac
 ### Migración 0009
 
 `seeding_projects.published` (boolean, por defecto false). Los rankings existentes quedan publicados y los seedings pasan a borrador.
+
+### Migración 0010
+
+`seeding_entrants.mains` (JSON): personajes más elegidos por el inscrito en sus 40 sets más recientes de start.gg, en cualquier torneo. Se completa al bajar los datos del seeding.

@@ -117,3 +117,7 @@ Cada cambio de identidad recalcula al instante si el proyecto ya tiene datos. `G
 ### Vista pública y borradores (Misión 08)
 
 `GET /seeding` y `GET /seeding/{slug}` aceptan la clave de forma opcional. Sin clave: solo publicados y una vista reducida (`public: true`, `method_label`, `seeds: [{seed, gamer_tag, mains, ...}]`). Con clave: la vista completa (`public: false`, `published`). `PUT /seeding/{slug}/publish` (admin) recibe `{published}`. `export.csv` pasa a requerir la clave.
+
+### Mains en el seeding (Misión 09)
+
+En un seeding, `mains` de cada fila sale de los últimos 40 sets del jugador en start.gg, en cualquier torneo, así que los extranjeros también los tienen. Si no hay datos, se usan los mains de los torneos importados al hub.

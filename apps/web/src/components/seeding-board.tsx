@@ -35,6 +35,7 @@ const actionLabels: Record<string, string> = {
   sets: "Descargando sets de los inscritos",
   inscritos: "Descargando inscritos",
   torneos: "Descargando torneos",
+  personajes: "Bajando los personajes de cada jugador",
 };
 
 function day(value: string | null) {

@@ -672,3 +672,37 @@ def test_public_ranking_shows_eligible_players_with_reasons(ranking, monkeypatch
         first = public["seeds"][0]
         assert first["seed"] == 1 and first["wins"] == 12 and first["reasons"]
         assert public["method_label"].startswith("Combinado") and "flags" not in str(public)
+
+
+def test_recent_mains_count_only_the_players_own_picks():
+    def game(*picks):
+        return {
+            "selections": [
+                {"entrant": {"participants": [{"player": {"id": pid}}]}, "character": {"name": c}}
+                for pid, c in picks
+            ]
+        }
+
+    nodes = [
+        {"event": {"videogame": {"id": 1386}}, "games": [game((70916, "Min Min"), (2, "Mario"))]},
+        {"event": {"videogame": {"id": 1386}}, "games": [game((70916, "Min Min"))] * 2},
+        {"event": {"videogame": {"id": 1386}}, "games": [game((70916, "Palutena"))]},
+        {"event": {"videogame": {"id": 33}}, "games": [game((70916, "Ryu"))]},  # other game
+    ]
+    assert startgg.mains_from_sets(nodes, "70916", "1386") == [
+        {"character": "Min Min", "icon": None, "games": 3, "share": 75.0},
+        {"character": "Palutena", "icon": None, "games": 1, "share": 25.0},
+    ]
+
+
+def test_seeding_rows_prefer_recent_startgg_mains(project):
+    from app.seeding.models import SeedingEntrant
+
+    with Session(project) as session:
+        ace = session.scalar(select(SeedingEntrant).where(SeedingEntrant.startgg_player_id == "1"))
+        ace.mains = [{"character": "Min Min", "icon": None, "games": 3, "share": 75.0}]
+        session.commit()
+    with client_for(project) as client:
+        seeds = client.get("/api/v1/seeding/cs", headers=AUTH).json()["seeds"]
+        assert next(s for s in seeds if s["player_id"] == "1")["mains"][0]["character"] == "Min Min"
+        assert next(s for s in seeds if s["player_id"] == "2")["mains"] == []
