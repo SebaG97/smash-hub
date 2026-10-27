@@ -183,3 +183,10 @@ python -m app.runtime seeding --allow-production create-ranking --slug ranking-p
 2. **Actions → Force rebuild and deploy**. El job debe mostrar `Running upgrade 0006 -> 0007`.
 3. En `/tournaments`, «Organizadores: importar torneos desde start.gg» → entrar con la clave → elegir el período → **Importar todos los de Paraguay**. Son ~30 torneos y tarda entre 10 y 20 minutos. No redesplegar mientras corre; si se corta, repetirlo es seguro.
 4. Revisar `/players`: cada jugador muestra su main y la ficha los porcentajes.
+
+## Actualización a la Misión 07 (marca de ranking e íconos)
+
+1. `migrate` → `APPROVED_MIGRATION` = `0008`.
+2. **Force rebuild and deploy** (`Running upgrade 0007 -> 0008`).
+3. Para bajar los íconos de personajes, lanzar cualquier importación desde `/tournaments`: puede ser la de todos los torneos de Paraguay o un solo link. El catálogo de personajes se sincroniza al empezar.
+4. En `/tournaments`, con la clave, desmarcar «Cuenta para el ranking» en los torneos que no deben contar. Los rankings se recalculan solos.

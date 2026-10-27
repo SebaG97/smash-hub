@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { MainIcons } from "./mains";
 import { Fragment, useCallback, useEffect, useState } from "react";
 import type {
   SeedingProjectSummary,
@@ -397,6 +398,12 @@ function DataPanel({ view }: { view: SeedingView }) {
               .join(" · ")}
             .
           </li>
+          {ranking && (view.excluded_tournaments?.length ?? 0) > 0 && (
+            <li>
+              Torneos desmarcados en «Torneos» que no cuentan:{" "}
+              {view.excluded_tournaments!.join(" · ")}.
+            </li>
+          )}
           {ranking && (run?.parameters.min_sets ?? 0) > 0 && (
             <li>
               Para entrar al ranking hacen falta al menos{" "}
@@ -950,7 +957,8 @@ export function SeedingBoard({
                           }
                         >
                           {row.gamer_tag}
-                        </button>
+                        </button>{" "}
+                        <MainIcons mains={row.mains} size={20} />
                         {row.override && <span className="tag">manual</span>}
                       </td>
                       <td>{row.main_circuit || "—"}</td>

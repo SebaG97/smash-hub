@@ -18,6 +18,7 @@ from app.competitions.models import (
     Tournament,
     TournamentParticipant,
 )
+from app.core.admin import Admin
 from app.games.models import Game
 from app.players.mains import player_mains
 from app.players.models import Player, PlayerAlias
@@ -54,6 +55,7 @@ class TournamentView(PublicModel):
     participant_count: int
     entrant_count: int
     games: list[str]
+    counts_for_ranking: bool = True
 
 
 class EventView(PublicModel):
@@ -100,6 +102,7 @@ class SetView(PublicModel):
 
 class MainView(BaseModel):
     character: str
+    icon: str | None = None
     games: int
     share: float
 
@@ -204,6 +207,7 @@ def tournament_views(s, rows):
                     "status",
                     "location",
                     "synced_at",
+                    "counts_for_ranking",
                 )
             },
             "participant_count": participants.get(r.id, 0),
@@ -529,3 +533,30 @@ def player_scopes(session, player_id):
         {"game_id": id, "game_name": name, "mode": "singles" if size == 1 else "doubles"}
         for id, name, size in rows
     ]
+
+
+class RankingFlag(BaseModel):
+    counts: bool
+
+
+@router.put("/tournaments/{id}/ranking", response_model=TournamentView)
+def set_ranking_flag(request: Request, id: UUID, body: RankingFlag, actor: Admin):
+    """Organizer checkbox; rankings that already have data are recalculated at once."""
+    from app.seeding import service as seeding_service
+    from app.seeding.models import SeedingProject
+
+    with Session(request.app.state.engine) as s:
+        tournament = require_tournament(s, id)
+        tournament.counts_for_ranking = body.counts
+        tournament.ranking_flag_actor, tournament.ranking_flag_at = actor, func.now()
+        s.flush()
+        for project in s.scalars(
+            select(SeedingProject).where(
+                SeedingProject.kind == "ranking",
+                SeedingProject.current_run_id.is_not(None),
+                SeedingProject.refresh_status != "RUNNING",
+            )
+        ):
+            seeding_service.recalculate(s, project, actor)
+        s.commit()
+        return tournament_views(s, [tournament])[0]

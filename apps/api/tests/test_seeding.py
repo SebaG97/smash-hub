@@ -595,3 +595,24 @@ def test_merge_candidates_match_tags_without_merging():
     ]
     found = service.merge_candidates(project, entrants, sets)
     assert [(c["source"], c["target"], c["counted_sets"]) for c in found] == [("7", "1", 1)]
+
+
+START_OF = datetime(2023, 1, 1, tzinfo=UTC)
+END_OF = datetime(2024, 12, 31, tzinfo=UTC)
+
+
+def ranking_rows(imported_event_id):
+    """Two sets: one from an imported hub event, one from an event outside the hub."""
+    entrants = [
+        dict(startgg_entrant_id="p100", startgg_player_id="100", gamer_tag="Ace"),
+        dict(startgg_entrant_id="p101", startgg_player_id="101", gamer_tag="Bee"),
+    ]
+    rows = []
+    for n, event in ((1, imported_event_id), (2, "elsewhere")):
+        row = a_set(n, "100", "101", event=event)
+        row.update(
+            played_at=datetime(2023, 11, 14, tzinfo=UTC),
+            tournament_name=("Imported" if event == imported_event_id else "Other"),
+        )
+        rows.append(row)
+    return entrants, rows

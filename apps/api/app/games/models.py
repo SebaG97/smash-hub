@@ -14,4 +14,6 @@ class Character(Record, Base):
     game_id = Column(Uuid, ForeignKey("games.id"), nullable=False, index=True)
     slug = Column(String(100), nullable=False)
     name = Column(String(120), nullable=False)
+    # Stock icon from start.gg, shown next to player names.
+    image_url = Column(String(400))
     __table_args__ = (UniqueConstraint("game_id", "slug"),)

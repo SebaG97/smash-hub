@@ -27,6 +27,10 @@ class Tournament(Record, Base):
     synced_at = Column(DateTime(timezone=True))
     starts_at = Column(DateTime(timezone=True))
     ends_at = Column(DateTime(timezone=True))
+    # Organizer decision (Mission 07): whether its results feed the rankings.
+    counts_for_ranking = Column(Boolean, nullable=False, server_default=text("true"))
+    ranking_flag_actor = Column(String(60))
+    ranking_flag_at = Column(DateTime(timezone=True))
     __table_args__ = (
         UniqueConstraint("community_id", "slug"),
         CheckConstraint(

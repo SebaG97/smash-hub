@@ -102,8 +102,8 @@ def test_mains_in_player_list_and_detail(db, snapshot):
         assert [m["character"] for m in listed["mains"]] == ["C1", "C5"]
         detail = client.get(f"/api/v1/players/{player}").json()
         assert detail["mains"] == [
-            {"character": "C1", "games": 2, "share": 66.7},
-            {"character": "C5", "games": 1, "share": 33.3},
+            {"character": "C1", "icon": None, "games": 2, "share": 66.7},
+            {"character": "C5", "icon": None, "games": 1, "share": 33.3},
         ]
 
 
@@ -145,3 +145,97 @@ def test_web_import_requires_admin_and_reports_progress(db, monkeypatch):
         assert calls[1]["slugs"] == ["abc"]
         bad = {"source": "links", "urls": ["https://evil.example/x"]}
         assert client.post("/api/v1/imports/startgg", json=bad, headers=AUTH).status_code == 422
+
+
+def test_character_icons_sync_from_startgg(db):
+    import asyncio
+
+    from app.games.icons import sync_characters
+
+    prepare(db)
+
+    class Client:
+        async def query(self, document, variables):
+            assert document == "characters" and variables == {"id": "1386"}
+            return {
+                "videogame": {
+                    "characters": [
+                        {
+                            "id": 1,
+                            "name": "C1",
+                            "images": [
+                                {"type": "icon", "url": "https://images.start.gg/big.png"},
+                                {"type": "stockIcon", "url": "https://images.start.gg/c1.png"},
+                            ],
+                        },
+                        {
+                            "id": 2,
+                            "name": "C2",
+                            "images": [{"type": "stockIcon", "url": "https://evil.example/x.png"}],
+                        },
+                    ]
+                }
+            }
+
+    with Session(db) as s, s.begin():
+        assert asyncio.run(sync_characters(Client(), s)) == 2
+    with Session(db) as s:
+        icons = dict(s.execute(select(Character.name, Character.image_url)).all())
+    # Only start.gg's own image host is trusted.
+    assert icons == {"C1": "https://images.start.gg/c1.png", "C2": None}
+
+
+def test_ranking_checkbox_excludes_tournament_and_recalculates(db, snapshot):
+    from test_seeding import END_OF, START_OF, ranking_rows
+
+    from app.competitions.models import Tournament
+    from app.seeding import service
+    from app.seeding.models import SeedingProject
+
+    prepare(db)
+    snapshot["events"][0]["sets"][0]["games"] = games((11, 1, 2))
+    run(db, snapshot)
+    with Session(db) as s:
+        tournament_id = s.scalar(select(Tournament.id))
+        event_external = s.scalar(
+            select(ExternalMapping.external_id).where(ExternalMapping.entity_type == "event")
+        )
+        project = SeedingProject(
+            slug="rk",
+            name="Ranking",
+            kind="ranking",
+            country_code="PY",
+            startgg_videogame_id="1386",
+            window_start=START_OF,
+            event_date=END_OF,
+            merges={},
+            duplicates={},
+        )
+        s.add(project)
+        s.flush()
+        entrants, rows = ranking_rows(event_external)
+        service.replace_dataset(s, project, entrants, rows, cutoff=END_OF)
+        s.flush()
+        service.recalculate(s, project, "test")
+        s.commit()
+    with client_for(db) as client:
+        before = client.get("/api/v1/seeding/rk").json()
+        assert before["run"]["set_count"] == 2 and before["excluded_tournaments"] == []
+        # Player 100 (entrant 11) has mains from the imported tournament.
+        ace = next(r for r in before["seeds"] if r["player_id"] == "100")
+        assert ace["mains"][0]["character"] == "C1"
+        assert (
+            client.put(
+                f"/api/v1/tournaments/{tournament_id}/ranking", json={"counts": False}
+            ).status_code
+            == 401
+        )
+        r = client.put(
+            f"/api/v1/tournaments/{tournament_id}/ranking", json={"counts": False}, headers=AUTH
+        )
+        assert r.status_code == 200 and r.json()["counts_for_ranking"] is False
+        after = client.get("/api/v1/seeding/rk").json()
+        assert after["run"]["set_count"] == 1
+        assert after["excluded_tournaments"] == ["Imported"]
+        listed = client.get("/api/v1/tournaments").json()["items"][0]
+        assert listed["counts_for_ranking"] is False

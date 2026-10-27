@@ -15,6 +15,7 @@ export type Tournament = {
   entrant_count: number;
   source: string | null;
   location: { city?: string; country_code?: string } | null;
+  counts_for_ranking?: boolean;
 };
 export type Event = {
   id: string;
@@ -53,7 +54,12 @@ export type Match = {
     is_winner: boolean;
   }[];
 };
-export type Main = { character: string; games: number; share: number };
+export type Main = {
+  character: string;
+  icon?: string | null;
+  games: number;
+  share: number;
+};
 export type Player = { id: string; tag: string; mains?: Main[] };
 export type History = {
   tournament_id: string;
@@ -179,6 +185,7 @@ export type SeedingRow = {
   scores: Record<string, number | null>;
   ranks: Record<string, number>;
   reasons_by_method?: Record<string, string[]>;
+  mains?: Main[];
   flags: string[];
   reasons: string[];
   override: SeedingOverride | null;
@@ -219,6 +226,7 @@ export type SeedingView = {
     kept_player_id: string;
     tag: string | null;
   }[];
+  excluded_tournaments?: string[];
   merge_candidates?: {
     source: string;
     source_tag: string;

@@ -14,6 +14,7 @@ from datetime import UTC, datetime
 from sqlalchemy.orm import Session
 
 from app.communities.service import bootstrap
+from app.games.icons import sync_characters
 from app.integrations.startgg.client import ImportFailure, StartGGClient, parse_slug
 from app.integrations.startgg.service import run_import
 from app.seeding import startgg as seeding_startgg
@@ -71,6 +72,11 @@ async def discover(client, *, country, start, end, videogame_id="1386"):
 def _run(engine, token, actor, *, country=None, start=None, end=None, slugs=None):
     async def main():
         async with StartGGClient(token) as client:
+            try:
+                with Session(engine) as session, session.begin():
+                    await sync_characters(client, session)
+            except ImportFailure:
+                pass  # Icons are cosmetic; never block the import.
             if slugs is None:
                 found = await discover(client, country=country, start=start, end=end)
             else:

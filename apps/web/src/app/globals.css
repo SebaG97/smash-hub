@@ -1136,3 +1136,35 @@ footer {
   margin: 8px 0 0;
   color: var(--muted);
 }
+
+.main-icons {
+  display: inline-flex;
+  gap: 3px;
+  vertical-align: middle;
+}
+.main-icons img {
+  border-radius: 4px;
+  background: var(--surface-2);
+}
+.main-icon-text {
+  font-size: 11px;
+  color: var(--muted);
+}
+.player-mains strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.ranking-flag {
+  font-size: 13px;
+  color: var(--muted);
+}
+.ranking-flag.on {
+  color: var(--amber);
+}
+.ranking-flag input {
+  accent-color: var(--fire);
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+}

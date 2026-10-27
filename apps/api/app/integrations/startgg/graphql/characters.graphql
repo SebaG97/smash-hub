@@ -1,0 +1,6 @@
+query Characters($id: ID!) {
+  videogame(id: $id) {
+    id
+    characters { id name images { url type } }
+  }
+}

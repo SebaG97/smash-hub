@@ -14,6 +14,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
 from app.integrations.startgg.client import ImportFailure, StartGGClient
+from app.players.mains import mains_by_startgg_player
 from app.rankings.policy import utc
 from app.seeding import startgg
 from app.seeding.engine import ALGORITHM, METHODS, Parameters, apply_overrides, compute
@@ -310,6 +311,9 @@ def recalculate(
         {c.name: getattr(s, c.name) for c in SeedingSet.__table__.columns}
         for s in session.scalars(select(SeedingSet).where(SeedingSet.project_id == project.id))
     ]
+    if project.kind == "ranking":
+        excluded = excluded_events(session)
+        sets = [s for s in sets if s["startgg_event_id"] not in excluded]
     rows, summary = compute(
         entrants,
         sets,
@@ -362,6 +366,27 @@ def recalculate(
     return run
 
 
+def excluded_events(session):
+    """start.gg event ids of hub tournaments an organizer unchecked for rankings."""
+    from app.competitions.models import Event, Tournament
+    from app.integrations.models import ExternalMapping
+
+    return set(
+        session.scalars(
+            select(ExternalMapping.external_id)
+            .join(Event, Event.id == ExternalMapping.event_id)
+            .join(Tournament, Tournament.id == Event.tournament_id)
+            .where(ExternalMapping.entity_type == "event", Tournament.counts_for_ranking.is_(False))
+        )
+    )
+
+
+def excluded_tournaments(session, sets):
+    """Names of unchecked tournaments that appear in this dataset."""
+    excluded = excluded_events(session)
+    return sorted({s.tournament_name for s in sets if s.startgg_event_id in excluded})
+
+
 def _overrides(session, project):
     return [
         dict(
@@ -397,6 +422,9 @@ def final_seeding(session, project):
         )
         for r in results
     ]
+    mains = mains_by_startgg_player(session, [r["player_id"] for r in rows])
+    for r in rows:
+        r["mains"] = mains.get(r["player_id"], [])
     return run, apply_overrides(rows, _overrides(session, project))
 
 
@@ -489,6 +517,9 @@ def view(session, project):
             for k, v in (project.merges or {}).items()
         ],
         merge_candidates=merge_candidates(project, entrants, sets),
+        excluded_tournaments=excluded_tournaments(session, sets)
+        if project.kind == "ranking"
+        else [],
         duplicates=[
             dict(player_id=k, kept_player_id=v, tag=tags.get(v))
             for k, v in (project.duplicates or {}).items()

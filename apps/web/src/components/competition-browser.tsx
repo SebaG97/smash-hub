@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { ImportPanel } from "./import-panel";
+import { MainIcons, RankingFlag } from "./mains";
 import { PlayerStatistics } from "./player-statistics";
 import type {
   Page,
@@ -202,6 +203,10 @@ export function Tournaments() {
               {t.participant_count} participantes · {t.entrant_count}{" "}
               inscripciones a eventos
             </p>
+            <RankingFlag
+              tournamentId={t.id}
+              initial={t.counts_for_ranking !== false}
+            />
           </>
         )}
       />
@@ -318,7 +323,8 @@ export function Players() {
         render={(p) => (
           <>
             <h3>
-              <Link href={`/players/${p.id}`}>{p.tag} ↗</Link>
+              <Link href={`/players/${p.id}`}>{p.tag} ↗</Link>{" "}
+              <MainIcons mains={p.mains} />
             </h3>
             {p.mains && p.mains.length > 0 && (
               <p>
@@ -349,7 +355,10 @@ export function PlayerPage({ id }: { id: string }) {
                 <ul>
                   {p.mains.map((m) => (
                     <li key={m.character}>
-                      <strong>{m.character}</strong>
+                      <strong>
+                        {m.icon && <MainIcons mains={[m]} size={28} />}{" "}
+                        {m.character}
+                      </strong>
                       <span
                         className="main-bar"
                         style={{ width: `${Math.max(4, m.share)}%` }}

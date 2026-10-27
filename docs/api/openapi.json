@@ -709,6 +709,95 @@
         }
       }
     },
+    "/api/v1/tournaments/{id}/ranking": {
+      "put": {
+        "tags": [
+          "competitions"
+        ],
+        "summary": "Set Ranking Flag",
+        "description": "Organizer checkbox; rankings that already have data are recalculated at once.",
+        "operationId": "set_ranking_flag_api_v1_tournaments__id__ranking_put",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "x-admin-name",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Admin-Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RankingFlag"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TournamentView"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Record not found or unpublished"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/players/{id}/statistics": {
       "get": {
         "tags": [
@@ -3090,6 +3179,17 @@
             "type": "string",
             "title": "Character"
           },
+          "icon": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon"
+          },
           "games": {
             "type": "integer",
             "title": "Games"
@@ -3995,6 +4095,19 @@
         ],
         "title": "PlayerView"
       },
+      "RankingFlag": {
+        "properties": {
+          "counts": {
+            "type": "boolean",
+            "title": "Counts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "counts"
+        ],
+        "title": "RankingFlag"
+      },
       "RecalculateRequest": {
         "properties": {
           "window_start": {
@@ -4446,6 +4559,11 @@
             },
             "type": "array",
             "title": "Games"
+          },
+          "counts_for_ranking": {
+            "type": "boolean",
+            "title": "Counts For Ranking",
+            "default": true
           }
         },
         "type": "object",

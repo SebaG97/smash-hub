@@ -109,3 +109,7 @@ Cada cambio de identidad recalcula al instante si el proyecto ya tiene datos. `G
 | --- | --- | --- |
 | POST /imports/startgg | admin | `{source: "country", country, window_start, end}` o `{source: "links", urls: [...]}` → 202. 409 si ya hay una importación en curso; 422 sin token de start.gg o con links que no son de start.gg |
 | GET /imports/status | admin | `{status, total, done, current, results: [{slug, name, status, error?, counts?, conflicts?}]}` |
+
+## Marca de ranking e íconos (Misión 07)
+
+`TournamentView` agrega `counts_for_ranking` (por defecto `true`). `PUT /tournaments/{id}/ranking` (admin) recibe `{counts}` y recalcula al instante los rankings que ya tienen datos. Los sets de eventos de torneos desmarcados no cuentan en ningún ranking; `GET /seeding/{slug}` de un ranking lista sus nombres en `excluded_tournaments`. Los mains (`MainView`) agregan `icon`, el ícono de stock de start.gg (solo URLs de `images.start.gg`), y las filas de seeding y ranking incluyen `mains` del jugador según los torneos importados al hub.
