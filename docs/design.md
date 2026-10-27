@@ -26,3 +26,7 @@ Tipografía: *Big Shoulders Display* (700–900) para títulos, nombres en tabla
 - **Sin** degradés, brillos, sombras de color, etiquetas en mayúsculas sobre los títulos, flechas "↗" en los enlaces ni "01/02/03" decorativos. Los números solo aparecen donde son una secuencia real: puestos y seeds.
 - La portada abre con lo más propio de la escena: el top 8 del ranking publicado y los últimos torneos.
 - El texto en tono de usuario y en oraciones simples; los metadatos van como oraciones, no unidos con puntos medios.
+
+## Íconos de personajes
+
+`apps/web/public/characters/*.svg` son los íconos de stock de los 84 personajes de Smash Ultimate, en vectores a color de 200×200. Los aportó el responsable del proyecto el 27/10/2026, a partir de una colección de la comunidad sin licencia incluida. Son arte de Nintendo y se usan con fines comunitarios. Antes de copiarlos se limpiaron: sin declaración XML ni DOCTYPE, sin `id`, cifras a un decimal y `viewBox` agregado donde faltaba; se verificó que no tengan scripts ni enlaces externos. `src/lib/characters.ts` relaciona los nombres de start.gg con los archivos; algunos usan el nombre interno del juego (`gaogaen` = Incineroar, `homura` = Pyra & Mythra, `packun_flower` = Piranha Plant), y los tres Mii comparten `mii_fighter`. Si no hay ícono local (por ejemplo "Random Character"), se usa la imagen de start.gg.

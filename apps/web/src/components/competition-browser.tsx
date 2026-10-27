@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { ImportPanel } from "./import-panel";
+import { characterIcon } from "../lib/characters";
 import { MainIcons, RankingFlag } from "./mains";
 import { PlayerStatistics } from "./player-statistics";
 import type {
@@ -351,7 +352,9 @@ export function PlayerPage({ id }: { id: string }) {
                   {p.mains.map((m) => (
                     <li key={m.character}>
                       <strong>
-                        {m.icon && <MainIcons mains={[m]} size={28} />}{" "}
+                        {(characterIcon(m.character) || m.icon) && (
+                          <MainIcons mains={[m]} size={28} />
+                        )}{" "}
                         {m.character}
                       </strong>
                       <span

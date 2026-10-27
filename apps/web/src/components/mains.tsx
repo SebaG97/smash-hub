@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import type { Main } from "../lib/api";
+import { characterIcon } from "../lib/characters";
 import { problem } from "./seeding-board";
 import { useAdmin } from "../lib/admin";
 
 const api = (process.env.NEXT_PUBLIC_API_URL || "/api/v1").replace(/\/$/, "");
 
-/** Stock icons of a player's most used characters (start.gg images). */
+/** Stock icons of a player's most used characters: local SVGs, else start.gg's image. */
 export function MainIcons({
   mains,
   size = 22,
@@ -18,13 +19,14 @@ export function MainIcons({
   if (!mains || mains.length === 0) return null;
   return (
     <span className="main-icons">
-      {mains.map((m) =>
-        m.icon ? (
+      {mains.map((m) => {
+        const src = characterIcon(m.character) ?? m.icon;
+        return src ? (
           <img
             key={m.character}
-            src={m.icon}
+            src={src}
             alt={m.character}
-            title={`${m.character} · ${Math.round(m.share)} %`}
+            title={`${m.character}, ${Math.round(m.share)} %`}
             width={size}
             height={size}
             loading="lazy"
@@ -37,8 +39,8 @@ export function MainIcons({
           >
             {m.character}
           </span>
-        ),
-      )}
+        );
+      })}
     </span>
   );
 }
