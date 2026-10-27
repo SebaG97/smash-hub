@@ -709,6 +709,95 @@
         }
       }
     },
+    "/api/v1/players/{id}/costume": {
+      "put": {
+        "tags": [
+          "competitions"
+        ],
+        "summary": "Set Costume",
+        "description": "Organizers pick which of the 8 costumes share images show for a player's character.",
+        "operationId": "set_costume_api_v1_players__id__costume_put",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "x-admin-name",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Admin-Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CostumeChoice"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CostumeChoice"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Record not found or unpublished"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/tournaments/{id}/ranking": {
       "put": {
         "tags": [
@@ -2970,6 +3059,18 @@
               "format": "uuid",
               "title": "Id"
             }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 16,
+              "minimum": 1,
+              "default": 8,
+              "title": "Limit"
+            }
           }
         ],
         "responses": {
@@ -3065,6 +3166,28 @@
           "starts_at"
         ],
         "title": "BestResult"
+      },
+      "CostumeChoice": {
+        "properties": {
+          "character": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Character"
+          },
+          "costume": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 1.0,
+            "title": "Costume"
+          }
+        },
+        "type": "object",
+        "required": [
+          "character",
+          "costume"
+        ],
+        "title": "CostumeChoice"
       },
       "CreateRequest": {
         "properties": {
@@ -3545,6 +3668,11 @@
           "share": {
             "type": "number",
             "title": "Share"
+          },
+          "costume": {
+            "type": "integer",
+            "title": "Costume",
+            "default": 1
           }
         },
         "type": "object",

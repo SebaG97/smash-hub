@@ -367,7 +367,7 @@ export function TournamentSummaryBlock({ id }: { id: string }) {
               href={`/og/tournament/${id}`}
               download={`top8-${id}.png`}
             >
-              Descargar imagen del top 8
+              Descargar imagen del top
             </a>
           </p>
           {s.upsets.length > 0 && (

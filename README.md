@@ -128,3 +128,5 @@ Misión 07: casilla «Cuenta para el ranking» por torneo importado (los desmarc
 Misión 08: vista pública limpia (seedings como borradores hasta publicarlos, ranking sin datos internos) y acceso único de organizadores en `/admin`, con la protección también en la API.
 
 Misión 13: emblemas y récords en la ficha de cada jugador, récords y jugador del mes en `/estadisticas` y la portada, resumen de cada torneo, calendario de próximos torneos desde start.gg e imágenes para redes del top de torneos y rankings (ADR-014).
+
+Misión 14: la imagen para redes pasa a ser un podio con los renders oficiales de los mains y el traje que elige el organizador para cada jugador (ADR-015, migración 0011).

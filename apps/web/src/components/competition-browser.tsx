@@ -5,7 +5,13 @@ import { useEffect, useState, type ReactNode } from "react";
 import { ImportPanel } from "./import-panel";
 import { PlayerAchievements, TournamentSummaryBlock } from "./insights";
 import { characterColor, characterIcon } from "../lib/characters";
-import { MainIcons, RankingFlag, WinBar, mainColor } from "./mains";
+import {
+  CostumePicker,
+  MainIcons,
+  RankingFlag,
+  WinBar,
+  mainColor,
+} from "./mains";
 import { PlayerStatistics } from "./player-statistics";
 import type {
   Page,
@@ -454,6 +460,7 @@ function PlayerSummary({ p }: { p: PlayerDetail }) {
           </p>
         )}
       </section>
+      {p.mains && <CostumePicker playerId={p.id} mains={p.mains} />}
       <section aria-labelledby="best-title">
         <h2 id="best-title">Mejores resultados</h2>
         {p.best_results && p.best_results.length > 0 ? (

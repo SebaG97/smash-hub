@@ -5,7 +5,7 @@ from typing import Literal, TypeVar
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, Request
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -19,7 +19,7 @@ from app.competitions.models import (
     TournamentParticipant,
 )
 from app.core.admin import Admin
-from app.games.models import Game
+from app.games.models import Character, Game
 from app.players.mains import player_mains
 from app.players.models import Player, PlayerAlias
 from app.players.summary import best_results, ranking_place
@@ -106,6 +106,7 @@ class MainView(BaseModel):
     icon: str | None = None
     games: int
     share: float
+    costume: int = 1
 
 
 class PlayerView(PublicModel):
@@ -552,6 +553,30 @@ def player_scopes(session, player_id):
         {"game_id": id, "game_name": name, "mode": "singles" if size == 1 else "doubles"}
         for id, name, size in rows
     ]
+
+
+class CostumeChoice(BaseModel):
+    character: str = Field(min_length=1, max_length=120)
+    costume: int = Field(ge=1, le=8)
+
+
+@router.put("/players/{id}/costume", response_model=CostumeChoice)
+def set_costume(request: Request, id: UUID, body: CostumeChoice, actor: Admin):
+    """Organizers pick which of the 8 costumes share images show for a player's character."""
+    with Session(request.app.state.engine) as s:
+        player = s.get(Player, id)
+        if player is None:
+            raise HTTPException(404, "Player not found")
+        if not s.scalar(select(Character.id).where(Character.name == body.character).limit(1)):
+            raise HTTPException(422, "Unknown character")
+        costumes = dict(player.costumes or {})
+        if body.costume == 1:
+            costumes.pop(body.character, None)
+        else:
+            costumes[body.character] = body.costume
+        player.costumes = costumes
+        s.commit()
+        return body
 
 
 class RankingFlag(BaseModel):

@@ -707,6 +707,8 @@ def test_seeding_rows_prefer_recent_startgg_mains(project):
         seeds = client.get("/api/v1/seeding/cs", headers=AUTH).json()["seeds"]
         assert next(s for s in seeds if s["player_id"] == "1")["mains"][0]["character"] == "Min Min"
         assert next(s for s in seeds if s["player_id"] == "2")["mains"] == []
+        ace_row = next(s for s in seeds if s["player_id"] == "1")
+        assert ace_row["mains"][0]["costume"] == 1
 
 
 def test_recalculate_can_drop_manual_moves(project):

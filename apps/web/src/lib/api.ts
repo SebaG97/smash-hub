@@ -55,6 +55,7 @@ export type Match = {
   }[];
 };
 export type Main = {
+  costume?: number;
   character: string;
   icon?: string | null;
   games: number;

@@ -1,18 +1,27 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { ImageResponse } from "next/og";
-import { characterColor, characterIcon } from "./characters";
+import { characterColor, characterKey } from "./characters";
+import { render, type RenderWidth } from "./renders";
 
 /**
- * Square (1080×1080) share images for Instagram and Discord, in the hub's style:
- * concrete background, slanted place numbers and each player's main color.
+ * Square (1080×1080) share images for Instagram and Discord, laid out as a podium:
+ * the champion large, 2nd and 3rd medium, 4th to 8th as cards and 9th to 12th in a
+ * small row, each with the official render of the player's main and chosen costume.
  */
 export type OgRow = {
   place: number;
   tag: string;
   main?: string | null;
+  costume?: number;
   detail?: string;
 };
+type Art = { src: string; width: number; height: number } | null;
+
+const CONCRETE = "#26221f";
+const SLAB = "#302b27";
+const BONE = "#efe9df";
+const ASH = "#a2988d";
 
 export function apiBase(request: Request) {
   // Inside Docker the web server reaches the API by service name; in production the
@@ -22,20 +31,25 @@ export function apiBase(request: Request) {
   ).replace(/\/$/, "");
 }
 
-async function displayFont() {
-  try {
-    const css = await (
-      await fetch(
-        "https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@800",
-      )
-    ).text();
-    const url = css.match(
-      /src: url\((.+?)\) format\(["'](opentype|truetype)["']\)/,
-    )?.[1];
-    return url ? await (await fetch(url)).arrayBuffer() : null;
-  } catch {
-    return null;
-  }
+let font: Promise<ArrayBuffer | null> | null = null;
+function displayFont() {
+  font ??= (async () => {
+    try {
+      const css = await (
+        await fetch(
+          "https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@800",
+        )
+      ).text();
+      const url = css.match(
+        /src: url\((.+?)\) format\(["'](opentype|truetype)["']\)/,
+      )?.[1];
+      return url ? await (await fetch(url)).arrayBuffer() : null;
+    } catch {
+      font = null;
+      return null;
+    }
+  })();
+  return font;
 }
 
 // Image renderers refuse to fetch local addresses, so public files are inlined.
@@ -49,28 +63,270 @@ async function inline(file: string) {
   }
 }
 
+/** Official render of the main in the chosen costume; the stock icon if it fails. */
+async function art(row: OgRow, width: RenderWidth): Promise<Art> {
+  const key = row.main ? characterKey(row.main) : null;
+  if (!key) return null;
+  const r = await render(key, row.costume ?? 1, width);
+  if (r)
+    return {
+      src: `data:image/png;base64,${r.data.toString("base64")}`,
+      width: r.width,
+      height: r.height,
+    };
+  const icon = await inline(`characters/${key}.svg`);
+  return icon ? { src: icon, width: 200, height: 200 } : null;
+}
+
+async function stock(row: OgRow) {
+  const key = row.main ? characterKey(row.main) : null;
+  return key ? inline(`characters/${key}.svg`) : null;
+}
+
+function fit(a: NonNullable<Art>, maxWidth: number, maxHeight: number) {
+  const scale = Math.min(maxWidth / a.width, maxHeight / a.height);
+  return {
+    width: Math.round(a.width * scale),
+    height: Math.round(a.height * scale),
+  };
+}
+
+function color(row: OgRow) {
+  return (row.main && characterColor(row.main)) || "#5a514a";
+}
+
 function placeColor(place: number) {
   if (place === 1) return "#f3a81f";
   if (place <= 3) return "#e5541b";
-  return "#efe9df";
+  return BONE;
+}
+
+function Place({ place, size }: { place: number; size: number }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        fontSize: size,
+        lineHeight: 0.8,
+        transform: "skewX(-10deg)",
+        color: placeColor(place),
+      }}
+    >
+      {place}
+    </div>
+  );
+}
+
+/** 1st, 2nd and 3rd: full render on the main's color, name on a band at the bottom. */
+function PodiumCard({
+  row,
+  art,
+  width,
+  height,
+  big,
+}: {
+  row: OgRow;
+  art: Art;
+  width: number;
+  height: number;
+  big: boolean;
+}) {
+  const size = art && fit(art, width - 30, height + (big ? 40 : 20));
+  return (
+    <div
+      style={{
+        position: "relative",
+        display: "flex",
+        width,
+        height,
+        overflow: "hidden",
+        background: SLAB,
+        borderLeft: `${big ? 10 : 8}px solid ${color(row)}`,
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          display: "flex",
+          background: `${color(row)}${big ? "55" : "3a"}`,
+        }}
+      />
+      {art && size && (
+        <img
+          src={art.src}
+          width={size.width}
+          height={size.height}
+          style={{ position: "absolute", right: 6, bottom: big ? -40 : -20 }}
+          alt=""
+        />
+      )}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          display: "flex",
+          alignItems: "flex-end",
+          gap: big ? 20 : 14,
+          padding: big ? "16px 22px" : "10px 16px",
+          background: "rgba(38,34,31,0.95)",
+        }}
+      >
+        <Place place={row.place} size={big ? 110 : 64} />
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <div
+            style={{ display: "flex", fontSize: big ? 58 : 38, lineHeight: 1 }}
+          >
+            {row.tag}
+          </div>
+          {row.detail && (
+            <div
+              style={{ display: "flex", fontSize: big ? 26 : 22, color: ASH }}
+            >
+              {row.detail}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** 4th to 8th: upper body of the render, cropped by the card. */
+function Card({ row, art, width }: { row: OgRow; art: Art; width: number }) {
+  const height = 214;
+  const size = art && fit(art, width + 50, 320);
+  return (
+    <div
+      style={{
+        position: "relative",
+        display: "flex",
+        width,
+        height,
+        overflow: "hidden",
+        background: SLAB,
+        borderTop: `6px solid ${color(row)}`,
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          display: "flex",
+          background: `${color(row)}30`,
+        }}
+      />
+      {art && size && (
+        <img
+          src={art.src}
+          width={size.width}
+          height={size.height}
+          style={{
+            position: "absolute",
+            top: 4,
+            left: Math.round((width - size.width) / 2),
+          }}
+          alt=""
+        />
+      )}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          display: "flex",
+          alignItems: "flex-end",
+          gap: 10,
+          padding: "8px 12px",
+          background: "rgba(38,34,31,0.95)",
+        }}
+      >
+        <Place place={row.place} size={44} />
+        <div
+          style={{
+            display: "flex",
+            fontSize: 28,
+            lineHeight: 1,
+            overflow: "hidden",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {row.tag}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** 9th to 12th: stock icon, place and tag. */
+function Small({
+  row,
+  icon,
+  width,
+}: {
+  row: OgRow;
+  icon: string | null;
+  width: number;
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        width,
+        height: 56,
+        padding: "0 12px",
+        background: SLAB,
+        borderLeft: `5px solid ${color(row)}`,
+      }}
+    >
+      <Place place={row.place} size={34} />
+      {icon ? (
+        <img src={icon} width={38} height={38} alt="" />
+      ) : (
+        <div style={{ display: "flex", width: 38 }} />
+      )}
+      <div
+        style={{
+          display: "flex",
+          fontSize: 26,
+          overflow: "hidden",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {row.tag}
+      </div>
+    </div>
+  );
 }
 
 export async function shareImage(
   request: Request,
   { title, subtitle, rows }: { title: string; subtitle: string; rows: OgRow[] },
 ) {
-  const [font, logo, icons] = await Promise.all([
+  const podium = rows.slice(0, 3);
+  const cards = rows.slice(3, 8);
+  const small = rows.slice(8, 12);
+  const [fontData, logo, podiumArt, cardArt, smallIcons] = await Promise.all([
     displayFont(),
     inline("smashclublogo.jpg"),
-    Promise.all(
-      rows.map((r) => {
-        const icon = r.main ? characterIcon(r.main) : null;
-        return icon ? inline(icon.slice(1)) : null;
-      }),
-    ),
+    Promise.all(podium.map((r) => art(r, 640))),
+    Promise.all(cards.map((r) => art(r, 320))),
+    Promise.all(small.map(stock)),
   ]);
-  const big = rows.length <= 8;
-  const iconSize = big ? 64 : 56;
+  const inner = 1000;
+  const cardWidth = Math.floor((inner - 4 * 15) / 5);
+  const smallWidth = Math.floor((inner - 3 * 16) / 4);
   return new ImageResponse(
     <div
       style={{
@@ -78,115 +334,98 @@ export async function shareImage(
         height: "100%",
         display: "flex",
         flexDirection: "column",
-        background: "#26221f",
-        color: "#efe9df",
-        padding: "56px 64px",
-        fontFamily: font ? "Display" : undefined,
+        background: CONCRETE,
+        color: BONE,
+        padding: 40,
+        fontFamily: fontData ? "Display" : undefined,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 22 }}>
         {logo && (
           <img
             src={logo}
-            width={120}
-            height={120}
-            style={{ borderRadius: 60 }}
+            width={84}
+            height={84}
+            style={{ borderRadius: 42 }}
             alt=""
           />
         )}
         <div style={{ display: "flex", flexDirection: "column" }}>
-          <div style={{ display: "flex", fontSize: 64, lineHeight: 1 }}>
+          <div style={{ display: "flex", fontSize: 56, lineHeight: 1 }}>
             {title}
           </div>
           <div
-            style={{
-              display: "flex",
-              fontSize: 30,
-              color: "#a2988d",
-              marginTop: 10,
-            }}
+            style={{ display: "flex", fontSize: 26, color: ASH, marginTop: 6 }}
           >
             {subtitle}
           </div>
         </div>
       </div>
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          marginTop: 40,
-          gap: big ? 10 : 8,
-        }}
-      >
-        {rows.map((r, i) => {
-          const icon = icons[i];
-          const color = (r.main && characterColor(r.main)) || "#3d3631";
-          return (
-            <div
+      <div style={{ display: "flex", gap: 16, marginTop: 20, height: 520 }}>
+        {podium[0] && (
+          <PodiumCard
+            row={podium[0]}
+            art={podiumArt[0]}
+            width={560}
+            height={520}
+            big
+          />
+        )}
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {podium.slice(1).map((r, i) => (
+            <PodiumCard
               key={`${r.place}-${r.tag}`}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 24,
-                padding: big ? "6px 20px" : "6px 18px",
-                borderLeft: `10px solid ${color}`,
-                background:
-                  r.place === 1 ? `${color}33` : "rgba(48,43,39,0.85)",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  width: 90,
-                  fontSize: big ? 64 : 56,
-                  lineHeight: 1,
-                  transform: "skewX(-10deg)",
-                  color: placeColor(r.place),
-                }}
-              >
-                {r.place}
-              </div>
-              {icon ? (
-                <img src={icon} width={iconSize} height={iconSize} alt="" />
-              ) : (
-                <div style={{ width: iconSize }} />
-              )}
-              <div
-                style={{
-                  display: "flex",
-                  fontSize: big ? 50 : 42,
-                  flexGrow: 1,
-                }}
-              >
-                {r.tag}
-              </div>
-              {r.detail && (
-                <div
-                  style={{ display: "flex", fontSize: 28, color: "#a2988d" }}
-                >
-                  {r.detail}
-                </div>
-              )}
-            </div>
-          );
-        })}
+              row={r}
+              art={podiumArt[i + 1]}
+              width={424}
+              height={252}
+              big={false}
+            />
+          ))}
+        </div>
       </div>
+      {cards.length > 0 && (
+        <div style={{ display: "flex", gap: 15, marginTop: 16 }}>
+          {cards.map((r, i) => (
+            <Card
+              key={`${r.place}-${r.tag}`}
+              row={r}
+              art={cardArt[i]}
+              width={cardWidth}
+            />
+          ))}
+        </div>
+      )}
+      {small.length > 0 && (
+        <div style={{ display: "flex", gap: 16, marginTop: 16 }}>
+          {small.map((r, i) => (
+            <Small
+              key={`${r.place}-${r.tag}`}
+              row={r}
+              icon={smallIcons[i]}
+              width={smallWidth}
+            />
+          ))}
+        </div>
+      )}
       <div
         style={{
           display: "flex",
+          justifyContent: "space-between",
           marginTop: "auto",
-          fontSize: 28,
-          color: "#a2988d",
+          fontSize: 24,
+          color: ASH,
         }}
       >
-        Smash Club Paraguay
+        <span>Smash Club Paraguay</span>
+        <span>Renders: Super Smash Bros. Ultimate © Nintendo</span>
       </div>
     </div>,
     {
       width: 1080,
       height: 1080,
-      fonts: font
-        ? [{ name: "Display", data: font, weight: 800, style: "normal" }]
+      fonts: fontData
+        ? [{ name: "Display", data: fontData, weight: 800, style: "normal" }]
         : undefined,
       headers: { "Cache-Control": "public, max-age=600" },
     },

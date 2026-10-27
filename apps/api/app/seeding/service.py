@@ -14,7 +14,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
 from app.integrations.startgg.client import ImportFailure, StartGGClient
-from app.players.mains import mains_by_startgg_player
+from app.players.mains import costumes_by_startgg_player, mains_by_startgg_player, with_costume
 from app.rankings.policy import utc
 from app.seeding import startgg
 from app.seeding.engine import ALGORITHM, METHODS, Parameters, apply_overrides, compute
@@ -436,8 +436,10 @@ def final_seeding(session, project):
             )
         ).all()
     )
+    costumes = costumes_by_startgg_player(session, [r["player_id"] for r in rows])
     for r in rows:
-        r["mains"] = (recent.get(r["player_id"]) or mains.get(r["player_id"], []))[:2]
+        picks = recent.get(r["player_id"]) or mains.get(r["player_id"], [])
+        r["mains"] = with_costume([dict(m) for m in picks[:2]], costumes.get(r["player_id"]))
     return run, apply_overrides(rows, _overrides(session, project))
 
 

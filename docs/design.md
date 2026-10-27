@@ -46,3 +46,7 @@ El color sale del propio juego: cada jugador toma el color característico de su
 - **Sorpresas:** el factor va como `+N` en fuego, a la izquierda, como un marcador.
 - **Jugador del mes:** la única pieza destacada de la portada, con el ícono grande del main y su color de fondo.
 - **Imágenes para redes:** cuadradas (1080×1080) para Instagram y WhatsApp, con la misma receta: concreto, logo, números de puesto inclinados (oro el 1.º, fuego 2.º y 3.º) y la franja de color del main de cada jugador.
+
+## Imagen de podio (Misión 14)
+
+La imagen para redes pasa a ser un podio: el 1.º ocupa la mitad izquierda con el render oficial de su main sobre el color del personaje; el 2.º y el 3.º van a la derecha, medianos; del 4.º al 8.º, tarjetas con medio cuerpo; del 9.º al 12.º, una fila chica con el ícono de stock. Los nombres van sobre una banda de concreto al pie de cada tarjeta, con el número de puesto inclinado. Los organizadores eligen el traje de cada jugador desde su ficha (sección «Traje en las imágenes», visible solo con la clave). Renders: smashbros.com, ver ADR-015.

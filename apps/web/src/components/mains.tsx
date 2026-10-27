@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 import type { Main } from "../lib/api";
-import { characterColor, characterIcon } from "../lib/characters";
+import {
+  characterColor,
+  characterIcon,
+  characterRender,
+} from "../lib/characters";
 import { problem } from "./seeding-board";
 import { useAdmin } from "../lib/admin";
 
@@ -128,4 +132,69 @@ export function WinBar({ wins, losses }: { wins?: number; losses?: number }) {
 export function mainColor(mains?: Main[]): string | undefined {
   const first = mains?.[0]?.character;
   return (first && characterColor(first)) || undefined;
+}
+
+/** Organizers choose which of the 8 official costumes the share images show. */
+export function CostumePicker({
+  playerId,
+  mains,
+}: {
+  playerId: string;
+  mains: Main[];
+}) {
+  const admin = useAdmin();
+  const [chosen, setChosen] = useState<Record<string, number>>(() =>
+    Object.fromEntries(mains.map((m) => [m.character, m.costume ?? 1])),
+  );
+  const [error, setError] = useState("");
+  const options = mains.filter((m) => characterRender(m.character)).slice(0, 2);
+  if (!admin || !options.length) return null;
+  async function choose(character: string, costume: number) {
+    setError("");
+    const r = await fetch(`${api}/players/${playerId}/costume`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${admin!.key}`,
+        "X-Admin-Name": admin!.name,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ character, costume }),
+    }).catch(() => null);
+    if (!r) return setError("No se pudo contactar a la API.");
+    if (!r.ok) return setError(await problem(r));
+    setChosen((c) => ({ ...c, [character]: costume }));
+  }
+  return (
+    <section aria-labelledby="costume-title" className="costumes">
+      <h2 id="costume-title">Traje en las imágenes</h2>
+      <p className="seeding-lead">
+        Elegí el color con el que aparece en las imágenes para redes. Solo lo
+        ven los organizadores.
+      </p>
+      {options.map((m) => (
+        <div key={m.character} role="group" aria-label={m.character}>
+          <h3>{m.character}</h3>
+          <div className="costume-options">
+            {Array.from({ length: 8 }, (_, i) => i + 1).map((n) => (
+              <button
+                key={n}
+                type="button"
+                aria-pressed={chosen[m.character] === n}
+                aria-label={`${m.character}, traje ${n}`}
+                onClick={() => choose(m.character, n)}
+              >
+                <img
+                  src={characterRender(m.character, n, 160)!}
+                  alt=""
+                  loading="lazy"
+                />
+                <span>{n}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+      {error && <p role="alert">{error}</p>}
+    </section>
+  );
 }

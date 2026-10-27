@@ -4,10 +4,10 @@ type Top = {
   placement: number;
   tag: string;
   seed: number | null;
-  mains?: { character: string }[];
+  mains?: { character: string; costume?: number }[];
 };
 
-/** Top 8 of a tournament's main event. */
+/** Top 12 of a tournament's main event. */
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -20,7 +20,7 @@ export async function GET(
       .catch(() => null);
   const [tournament, summary] = await Promise.all([
     get(`tournaments/${encodeURIComponent(id)}`),
-    get(`insights/tournaments/${encodeURIComponent(id)}`),
+    get(`insights/tournaments/${encodeURIComponent(id)}?limit=12`),
   ]);
   if (!tournament || !summary)
     return new Response("Torneo sin resultados", { status: 404 });
@@ -34,11 +34,12 @@ export async function GET(
     : "";
   return shareImage(request, {
     title: tournament.name,
-    subtitle: `Top 8 de ${summary.entrants ?? "?"} jugadores${date ? `, ${date}` : ""}`,
+    subtitle: `${summary.entrants ?? "?"} jugadores${date ? `, ${date}` : ""}`,
     rows: (summary.top as Top[]).map((t) => ({
       place: t.placement,
       tag: t.tag,
       main: t.mains?.[0]?.character,
+      costume: t.mains?.[0]?.costume,
       detail: t.seed ? `seed ${t.seed}` : undefined,
     })),
   });

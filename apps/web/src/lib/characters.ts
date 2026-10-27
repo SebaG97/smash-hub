@@ -118,10 +118,30 @@ function key(name: string) {
   );
 }
 
+/** File key of a start.gg character name, or null (for example "Random Character"). */
+export function characterKey(name: string): string | null {
+  const k = key(name);
+  return AVAILABLE.has(k) ? k : null;
+}
+
+export function isCharacterKey(value: string) {
+  return AVAILABLE.has(value);
+}
+
 /** Path of the local icon, or null (for example "Random Character"). */
 export function characterIcon(name: string): string | null {
-  const k = key(name);
-  return AVAILABLE.has(k) ? `/characters/${k}.svg` : null;
+  const k = characterKey(name);
+  return k ? `/characters/${k}.svg` : null;
+}
+
+/** Path of the official render for one of the 8 costumes (see src/lib/renders.ts). */
+export function characterRender(
+  name: string,
+  costume = 1,
+  width: 160 | 320 | 640 = 320,
+): string | null {
+  const k = characterKey(name);
+  return k ? `/renders/${k}/${costume}?w=${width}` : null;
 }
 
 /** Signature color of a character (from its stock icon), or null. */

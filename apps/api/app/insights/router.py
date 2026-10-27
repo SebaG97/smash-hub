@@ -5,7 +5,7 @@ import time
 from datetime import UTC, datetime
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
 from app.insights import engine
@@ -58,9 +58,9 @@ def records(request: Request):
 
 
 @router.get("/tournaments/{id}")
-def tournament(request: Request, id: UUID):
+def tournament(request: Request, id: UUID, limit: int = Query(8, ge=1, le=16)):
     with Session(request.app.state.engine) as s:
-        summary = engine.tournament_summary(engine.cached(s), id)
+        summary = engine.tournament_summary(engine.cached(s), id, limit)
         if summary is None:
             raise HTTPException(404, "Tournament not found")
         _with_mains(s, summary["top"], None)

@@ -13,6 +13,7 @@ from app.competitions.models import (
     TournamentParticipant,
 )
 from app.games.models import Character
+from app.players.models import ExternalIdentity, Player
 
 
 def player_mains(session, player_ids, *, limit=3):
@@ -49,13 +50,36 @@ def player_mains(session, player_ids, *, limit=3):
             {"character": name, "icon": icon, "games": n, "share": round(100 * n / total, 1)}
             for name, icon, n in ranked
         ]
+    costumes = dict(
+        session.execute(select(Player.id, Player.costumes).where(Player.id.in_(list(result)))).all()
+    )
+    for player_id, mains in result.items():
+        with_costume(mains, costumes.get(player_id))
     return result
+
+
+def with_costume(mains, costumes):
+    """Add the chosen costume (1 = default) to each main."""
+    for m in mains:
+        m["costume"] = (costumes or {}).get(m["character"], 1)
+    return mains
+
+
+def costumes_by_startgg_player(session, startgg_player_ids):
+    """{start.gg player id: {character: costume}} for players known to the hub."""
+    external = {f"player:{pid}": pid for pid in startgg_player_ids if pid}
+    if not external:
+        return {}
+    rows = session.execute(
+        select(ExternalIdentity.external_id, Player.costumes)
+        .join(Player, Player.id == ExternalIdentity.player_id)
+        .where(ExternalIdentity.external_id.in_(list(external)))
+    ).all()
+    return {external[ext]: costumes for ext, costumes in rows if costumes}
 
 
 def mains_by_startgg_player(session, startgg_player_ids, *, limit=2):
     """Same as player_mains, keyed by start.gg player id (seeding and ranking rows)."""
-    from app.players.models import ExternalIdentity
-
     external = {f"player:{pid}": pid for pid in startgg_player_ids if pid}
     if not external:
         return {}

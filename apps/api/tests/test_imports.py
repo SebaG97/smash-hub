@@ -102,9 +102,44 @@ def test_mains_in_player_list_and_detail(db, snapshot):
         assert [m["character"] for m in listed["mains"]] == ["C1", "C5"]
         detail = client.get(f"/api/v1/players/{player}").json()
         assert detail["mains"] == [
-            {"character": "C1", "icon": None, "games": 2, "share": 66.7},
-            {"character": "C5", "icon": None, "games": 1, "share": 33.3},
+            {"character": "C1", "icon": None, "games": 2, "share": 66.7, "costume": 1},
+            {"character": "C5", "icon": None, "games": 1, "share": 33.3, "costume": 1},
         ]
+
+
+def test_organizers_choose_the_costume_of_each_main(db, snapshot):
+    prepare(db)
+    snapshot["events"][0]["sets"][0]["games"] = games((11, 1, 2), (11, 1, 2), (12, 5, 2))
+    run(db, snapshot)
+    with Session(db) as s:
+        player = s.scalar(
+            select(ExternalIdentity.player_id).where(ExternalIdentity.external_id == "player:100")
+        )
+    url = f"/api/v1/players/{player}/costume"
+    with client_for(db) as client:
+        assert client.put(url, json={"character": "C1", "costume": 4}).status_code == 401
+        for body in (
+            {"character": "C1", "costume": 9},
+            {"character": "C1", "costume": 0},
+            {"character": "Nadie", "costume": 2},
+        ):
+            assert client.put(url, json=body, headers=AUTH).status_code == 422
+        missing = "/api/v1/players/00000000-0000-0000-0000-000000000000/costume"
+        assert (
+            client.put(missing, json={"character": "C1", "costume": 2}, headers=AUTH).status_code
+            == 404
+        )
+        r = client.put(url, json={"character": "C1", "costume": 4}, headers=AUTH)
+        assert r.json() == {"character": "C1", "costume": 4}
+        mains = client.get(f"/api/v1/players/{player}").json()["mains"]
+        assert [(m["character"], m["costume"]) for m in mains] == [("C1", 4), ("C5", 1)]
+        # Back to the default costume clears the choice.
+        client.put(url, json={"character": "C1", "costume": 1}, headers=AUTH)
+        assert client.get(f"/api/v1/players/{player}").json()["mains"][0]["costume"] == 1
+    with Session(db) as s:
+        from app.players.models import Player
+
+        assert s.get(Player, player).costumes == {}
 
 
 def test_web_import_requires_admin_and_reports_progress(db, monkeypatch):

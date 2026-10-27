@@ -146,3 +146,10 @@ GET públicos bajo `/api/v1/insights`, calculados sobre los sets elegibles de si
 | `nuevo` Nuevo en la escena | Primer torneo en los últimos 60 días de datos |
 
 Imágenes para redes (web, PNG 1080×1080): `/og/tournament/{id}`, `/og/ranking/{slug}`, `/og/seeding/{slug}` (solo publicados).
+
+## Trajes e imagen de podio (Misión 14, ADR-015)
+
+- `MainView` y los mains de seeding y ranking agregan `costume` (1 a 8; 1 es el traje por defecto).
+- `PUT /api/v1/players/{id}/costume` (admin) recibe `{character, costume}`. 401 sin clave, 404 si el jugador no existe, 422 con un personaje desconocido o un traje fuera de 1–8.
+- `GET /api/v1/insights/tournaments/{id}` acepta `limit` (1–16, por defecto 8); la imagen pide 12.
+- Web: `/renders/{personaje}/{traje}?w=160|320|640` devuelve el render oficial recortado (PNG). Las imágenes de `/og/*` muestran el podio con los 12 primeros.

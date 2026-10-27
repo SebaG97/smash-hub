@@ -10,6 +10,7 @@ from sqlalchemy import (
     Uuid,
     text,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 
 from app.database.base import Base, Record
 
@@ -20,6 +21,8 @@ class Player(Record, Base):
     tag = Column(String(120), nullable=False, index=True)
     country_id = Column(Uuid, ForeignKey("countries.id"), index=True)
     region_id = Column(Uuid, index=True)
+    # {character name: costume 1-8} chosen by organizers for share images.
+    costumes = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
     __table_args__ = (
         ForeignKeyConstraint(["region_id", "country_id"], ["regions.id", "regions.country_id"]),
         CheckConstraint("region_id IS NULL OR country_id IS NOT NULL", name="region_country"),

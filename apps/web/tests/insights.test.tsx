@@ -135,7 +135,7 @@ it("summarizes a tournament with its share image", async () => {
   }));
   render(<TournamentSummaryBlock id="t1" />);
   expect(
-    await screen.findByRole("link", { name: "Descargar imagen del top 8" }),
+    await screen.findByRole("link", { name: "Descargar imagen del top" }),
   ).toHaveAttribute("href", "/og/tournament/t1");
   expect(screen.getByText("seed 4, terminó 1.º")).toBeInTheDocument();
   expect(screen.queryByText("Sorpresas")).not.toBeInTheDocument();
