@@ -3990,6 +3990,7 @@
             "enum": [
               "combined",
               "glicko2",
+              "glicko1",
               "elo",
               "bradley_terry",
               "points",
@@ -4348,6 +4349,7 @@
                 "enum": [
                   "combined",
                   "glicko2",
+                  "glicko1",
                   "elo",
                   "bradley_terry",
                   "points",
@@ -4359,6 +4361,11 @@
               }
             ],
             "title": "Method"
+          },
+          "reset_overrides": {
+            "type": "boolean",
+            "title": "Reset Overrides",
+            "default": false
           }
         },
         "additionalProperties": false,

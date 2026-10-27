@@ -42,3 +42,12 @@ def test_wilson_penalizes_small_samples():
     assert wilson_lower_bound(0, 0) is None
     assert wilson_lower_bound(7, 3) < wilson_lower_bound(70, 30) < 70
     assert wilson_lower_bound(10, 0) < 100
+
+
+def test_glicko1_rewards_wins_and_shrinks_uncertainty():
+    from app.rankings.methods import glicko1
+
+    games = [game(i, "a", "b", day=i * 7) for i in range(6)]
+    ratings = glicko1(games)
+    assert ratings["a"][0] > 1500 > ratings["b"][0]
+    assert ratings["a"][1] < 350

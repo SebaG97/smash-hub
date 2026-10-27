@@ -167,6 +167,7 @@ function Recalculate({
     inputDate(view.run?.window_end || view.event_date),
   );
   const [refresh, setRefresh] = useState(false);
+  const [resetMoves, setResetMoves] = useState(false);
   const [busy, setBusy] = useState(false);
   const running = view.refresh.status === "RUNNING";
   return (
@@ -188,6 +189,7 @@ function Recalculate({
           window_start: fromInput(from),
           window_end: refresh ? undefined : fromInput(to),
           refresh,
+          reset_overrides: resetMoves || undefined,
         }).catch(() => null);
         setBusy(false);
         if (!r) return onDone("No se pudo contactar a la API.");
@@ -197,7 +199,9 @@ function Recalculate({
             ? "Descarga de start.gg iniciada. La tabla se actualiza sola al terminar."
             : view.kind === "ranking"
               ? "Ranking recalculado."
-              : "Seeding recalculado. Los ajustes manuales se conservaron.",
+              : resetMoves
+                ? "Seeding recalculado sin ajustes manuales."
+                : "Seeding recalculado. Los ajustes manuales se conservaron.",
         );
       }}
     >
@@ -228,6 +232,16 @@ function Recalculate({
         />
         Bajar datos nuevos de start.gg (5 a 10 minutos)
       </label>
+      {view.kind === "seeding" && (
+        <label className="seeding-check">
+          <input
+            type="checkbox"
+            checked={resetMoves}
+            onChange={(e) => setResetMoves(e.target.checked)}
+          />
+          Quitar los ajustes manuales (todos vuelven al puesto del cálculo)
+        </label>
+      )}
       <button className="primary-button" disabled={busy || running}>
         {busy ? "Procesando…" : "Recalcular"}
       </button>

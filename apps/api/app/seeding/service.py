@@ -830,3 +830,13 @@ def public_view(session, project):
         ),
         seeds=seeds,
     )
+
+
+def clear_all_overrides(session, project, actor):
+    """Drop every manual move so the order is the calculation's again."""
+    removed = session.execute(
+        delete(SeedingOverride).where(SeedingOverride.project_id == project.id)
+    ).rowcount
+    if removed:
+        audit(session, project, "reset_all", actor, removed=removed)
+    return removed

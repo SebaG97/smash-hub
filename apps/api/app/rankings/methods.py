@@ -69,3 +69,47 @@ def wilson_lower_bound(wins, losses, *, z=1.96):
     centre = phat + z * z / (2 * n)
     margin = z * math.sqrt(phat * (1 - phat) / n + z * z / (4 * n * n))
     return 100 * (centre - margin) / (1 + z * z / n)
+
+
+def glicko1(games, *, initial=1500.0, initial_rd=350.0, min_rd=30.0, c=34.0, period_days=7):
+    """Glicko (Glickman 1999) with weekly rating periods.
+
+    ``c`` grows RD while a player is inactive (about 50 -> 350 in two years).
+    Returns {player: (rating, rd)}.
+    """
+    q = math.log(10) / 400
+
+    def g(rd):
+        return 1 / math.sqrt(1 + 3 * q * q * rd * rd / math.pi**2)
+
+    periods = defaultdict(list)
+    for a, b, a_won, at in (
+        (x["players_a"][0], x["players_b"][0], bool(x["a_won"]), x["completed_at"])
+        for x in sorted(games, key=lambda x: (x["completed_at"], str(x["id"])))
+    ):
+        periods[at.toordinal() // period_days].append((a, b, a_won))
+    rating, rd, last = {}, {}, {}
+    for period in sorted(periods):
+        matches = defaultdict(list)
+        for a, b, a_won in periods[period]:
+            matches[a].append((b, 1.0 if a_won else 0.0))
+            matches[b].append((a, 0.0 if a_won else 1.0))
+        before = {}
+        for p in matches:
+            r0, d0 = rating.get(p, initial), rd.get(p, initial_rd)
+            if p in last:
+                d0 = min(math.sqrt(d0 * d0 + c * c * (period - last[p])), initial_rd)
+            before[p] = (r0, d0)
+        for p, results in matches.items():
+            r0, d0 = before[p]
+            terms = []
+            for opponent, score in results:
+                ro, do = before.get(opponent, (initial, initial_rd))
+                expected = 1 / (1 + 10 ** (-g(do) * (r0 - ro) / 400))
+                terms.append((g(do), expected, score))
+            d2 = 1 / (q * q * sum(w * w * e * (1 - e) for w, e, _ in terms))
+            denominator = 1 / (d0 * d0) + 1 / d2
+            rating[p] = r0 + q / denominator * sum(w * (s - e) for w, e, s in terms)
+            rd[p] = max(math.sqrt(1 / denominator), min_rd)
+            last[p] = period
+    return {p: (rating[p], rd[p]) for p in rating}

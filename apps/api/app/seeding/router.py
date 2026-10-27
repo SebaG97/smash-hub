@@ -43,6 +43,8 @@ class RecalculateRequest(BaseModel):
     parameters: Parameters | None = None
     # Shortcut: keep the current parameters and only change the official method.
     method: Method | None = None
+    # Also drop manual moves, so every player goes back to the calculated place.
+    reset_overrides: bool = False
 
 
 class OverrideRequest(BaseModel):
@@ -192,6 +194,12 @@ def audit(request: Request, slug: str, actor: Admin):
 def recalculate(
     request: Request, slug: str, body: RecalculateRequest, actor: Admin, response: Response
 ):
+    if body.reset_overrides:
+
+        def reset(session):
+            service.clear_all_overrides(session, service.project_by_slug(session, slug), actor)
+
+        run(request, reset, write=True)
     if body.refresh:
         try:
             service.start_refresh(

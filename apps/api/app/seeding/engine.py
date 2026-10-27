@@ -16,7 +16,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.rankings.methods import bradley_terry, elo, wilson_lower_bound
+from app.rankings.methods import bradley_terry, elo, glicko1, wilson_lower_bound
 from app.rankings.policy import Policy, utc
 from app.rankings.service import calculate
 
@@ -32,6 +32,11 @@ METHODS = {
         label="Glicko-2",
         description="Fuerza por enfrentamientos con incertidumbre (RD). Se ordena por el valor "
         "conservador, rating − k·RD, para no premiar muestras chicas.",
+    ),
+    "glicko1": dict(
+        label="Glicko-1",
+        description="La versión original de Glicko (1999): rating con incertidumbre (RD) que "
+        "crece con la inactividad, sin la volatilidad de Glicko-2. Se ordena por rating − 2·RD.",
     ),
     "elo": dict(
         label="Elo",
@@ -54,7 +59,7 @@ METHODS = {
         "(límite inferior del intervalo de Wilson al 95 %).",
     ),
 }
-Method = Literal["combined", "glicko2", "elo", "bradley_terry", "points", "wilson"]
+Method = Literal["combined", "glicko2", "glicko1", "elo", "bradley_terry", "points", "wilson"]
 
 
 class Parameters(BaseModel):
@@ -147,6 +152,7 @@ def compute(entrants, sets, *, merges, duplicates, window_start, window_end, par
     computed = calculate(games, Policy(), end)
     ratings = {r["player_id"]: r for r in computed[-1][2]} if computed else {}
     elo_ratings = elo(games, k=p.elo_k)
+    g1_ratings = glicko1(games)
     bt_ratings = bradley_terry(games)
 
     rows = []
@@ -215,6 +221,11 @@ def compute(entrants, sets, *, merges, duplicates, window_start, window_end, par
                 merged_sets=merged_sets[pid],
                 confidence=_confidence(sets_total, offline_ev, recent_ev, merged_sets[pid]),
                 elo=round(elo_ratings[pid], 1) if pid in elo_ratings else None,
+                glicko1=round(g1_ratings[pid][0], 1) if pid in g1_ratings else None,
+                glicko1_rd=round(g1_ratings[pid][1], 1) if pid in g1_ratings else None,
+                glicko1_conservative=round(g1_ratings[pid][0] - 2 * g1_ratings[pid][1], 1)
+                if pid in g1_ratings
+                else None,
                 bradley_terry=round(bt_ratings[pid], 1) if pid in bt_ratings else None,
                 points=round(sum(x for x, _ in candidates), 1) if candidates else None,
                 points_events=[
@@ -261,6 +272,7 @@ def compute(entrants, sets, *, merges, duplicates, window_start, window_end, par
     keys = dict(
         combined="combined",
         glicko2="conservative",
+        glicko1="glicko1_conservative",
         elo="elo",
         bradley_terry="bradley_terry",
         points="points",
@@ -374,6 +386,11 @@ def _reasons(r, p, rated, method):
         reasons.append(f"Combinado ({weights}): {_num(r['combined'], 3)}, que da el puesto {rank}.")
     elif method == "glicko2":
         reasons.append(glicko + f" Con este método queda {rank}.º.")
+    elif method == "glicko1":
+        reasons.append(
+            f"Glicko-1: {_num(r['glicko1'])} ± {_num(r['glicko1_rd'])}; conservador "
+            f"(rating − 2·RD) {_num(r['glicko1_conservative'])}, el {rank}.º."
+        )
     elif method == "elo":
         reasons.append(
             f"Elo (K = {_num(p.elo_k)}, todos empiezan en 1.500): {_num(r['elo'])}, el {rank}.º."

@@ -83,3 +83,8 @@ Con la clave de organizadores:
 - **Identidades** (en cada página): fusionar un ID de start.gg con un jugador de la lista, marcar inscripciones duplicadas y deshacer ambas cosas. La sección sugiere IDs con el mismo tag; nunca fusiona sola (ADR-006). Ojo con homónimos, como «RT/ZN | Cherry» de Colombia frente a Cherry! de Paraguay.
 
 Cada cambio queda en el registro y el cálculo se rehace al instante. Los comandos de consola siguen disponibles, pero ya no son necesarios.
+
+## Glicko-1 y recalcular sin ajustes manuales (Misión 10)
+
+- Hay un séptimo método, **Glicko-1** (Glickman 1999): rating con incertidumbre que crece con la inactividad, sin la volatilidad de Glicko-2, en períodos semanales. Se ordena por rating − 2·RD.
+- Al recalcular un seeding, la casilla **«Quitar los ajustes manuales»** borra todos los movimientos a mano y deja a cada jugador en el puesto del cálculo. Queda en el registro como `reset_all`. Sin la casilla, los ajustes se conservan como antes.

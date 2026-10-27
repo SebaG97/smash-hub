@@ -390,6 +390,7 @@ def test_method_choice_is_official_and_survives_recalculation(project):
         assert {m["id"] for m in body["methods"]} == {
             "combined",
             "glicko2",
+            "glicko1",
             "elo",
             "bradley_terry",
             "points",
@@ -706,3 +707,27 @@ def test_seeding_rows_prefer_recent_startgg_mains(project):
         seeds = client.get("/api/v1/seeding/cs", headers=AUTH).json()["seeds"]
         assert next(s for s in seeds if s["player_id"] == "1")["mains"][0]["character"] == "Min Min"
         assert next(s for s in seeds if s["player_id"] == "2")["mains"] == []
+
+
+def test_recalculate_can_drop_manual_moves(project):
+    with client_for(project) as client:
+        client.put(
+            "/api/v1/seeding/cs/overrides/3", json={"seed": 1, "reason": "mano"}, headers=AUTH
+        )
+        r = client.post("/api/v1/seeding/cs/recalculate", json={}, headers=AUTH)
+        assert r.status_code == 200
+        assert (
+            client.get("/api/v1/seeding/cs", headers=AUTH).json()["seeds"][0]["gamer_tag"] == "Cid"
+        )
+        r = client.post(
+            "/api/v1/seeding/cs/recalculate", json={"reset_overrides": True}, headers=AUTH
+        )
+        assert r.status_code == 200
+        body = client.get("/api/v1/seeding/cs", headers=AUTH).json()
+        assert body["seeds"][0]["gamer_tag"] == "Ace" and not any(
+            s["override"] for s in body["seeds"]
+        )
+        actions = [e["action"] for e in client.get("/api/v1/seeding/cs/audit", headers=AUTH).json()]
+        assert "reset_all" in actions
+        methods = {m["id"] for m in body["methods"]}
+        assert "glicko1" in methods and body["seeds"][0]["ranks"]["glicko1"] >= 1
