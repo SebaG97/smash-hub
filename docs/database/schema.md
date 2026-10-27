@@ -420,3 +420,7 @@ Tablas aisladas del modelo competitivo: usan IDs de start.gg y no tienen FKs hac
 ### Migración 0008
 
 `tournaments` agrega `counts_for_ranking` (boolean, por defecto true), `ranking_flag_actor` y `ranking_flag_at`. `characters` agrega `image_url`, el ícono de stock de start.gg que se sincroniza al importar.
+
+### Migración 0009
+
+`seeding_projects.published` (boolean, por defecto false). Los rankings existentes quedan publicados y los seedings pasan a borrador.

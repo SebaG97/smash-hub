@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import type { Main } from "../lib/api";
-import { problem, readAdmin } from "./seeding-board";
+import { problem } from "./seeding-board";
+import { useAdmin } from "../lib/admin";
 
 const api = (process.env.NEXT_PUBLIC_API_URL || "/api/v1").replace(/\/$/, "");
 
@@ -53,9 +54,7 @@ export function RankingFlag({
   const [counts, setCounts] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [admin] = useState(() =>
-    typeof window === "undefined" ? null : readAdmin(),
-  );
+  const admin = useAdmin();
   if (!admin)
     return (
       <p className={counts ? "ranking-flag on" : "ranking-flag"}>

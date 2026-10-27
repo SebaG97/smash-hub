@@ -96,7 +96,11 @@ def create_project(
         )
     else:
         project = SeedingProject(
-            kind="ranking", country_code=country.upper(), startgg_videogame_id="1386", **common
+            kind="ranking",
+            country_code=country.upper(),
+            startgg_videogame_id="1386",
+            published=True,
+            **common,
         )
     session.add(project)
     session.flush()
@@ -491,6 +495,8 @@ def view(session, project):
         slug=project.slug,
         name=project.name,
         kind=project.kind,
+        published=project.published,
+        public=False,
         country_code=project.country_code,
         method=(run.parameters or {}).get("method", "combined") if run else None,
         methods=[dict(id=k, **v) for k, v in METHODS.items()],
@@ -753,3 +759,57 @@ def start_refresh(engine, slug, actor, token, window_start=None, *, method=None,
         runner(*args)
     else:
         threading.Thread(target=run_refresh, args=args, daemon=True, name="seeding-refresh").start()
+
+
+def set_published(session, project, published, actor):
+    project.published = published
+    audit(session, project, "publish" if published else "unpublish", actor)
+
+
+PUBLIC_ROW = {
+    "seeding": ("seed", "gamer_tag", "mains"),
+    "ranking": ("seed", "gamer_tag", "mains", "wins", "losses", "sets", "last_event"),
+}
+
+
+def public_view(session, project):
+    """What a reader sees: the official order, mains and (rankings) the official reasons."""
+    full = view(session, project)
+    run = full["run"]
+    method = full["method"]
+    rows = full["seeds"]
+    if project.kind == "ranking":
+        rows = [r for r in rows if r.get("eligible", True)]
+    seeds = []
+    for place, r in enumerate(rows, 1):
+        item = {k: r.get(k) for k in PUBLIC_ROW[project.kind]}
+        if project.kind == "ranking":
+            item["seed"] = place
+            item["score"] = (r.get("scores") or {}).get(method)
+            item["reasons"] = (r.get("reasons_by_method") or {}).get(method, r.get("reasons"))
+        seeds.append(item)
+    label = next((m["label"] for m in full["methods"] if m["id"] == method), method)
+    return dict(
+        slug=full["slug"],
+        name=full["name"],
+        kind=full["kind"],
+        country_code=full["country_code"],
+        published=project.published,
+        public=True,
+        method=method,
+        method_label=label,
+        startgg_event_slug=full["startgg_event_slug"],
+        event_date=full["event_date"],
+        window_start=full["window_start"],
+        data_cutoff=full["data_cutoff"],
+        run=None
+        if run is None
+        else dict(
+            window_start=run["window_start"],
+            window_end=run["window_end"],
+            set_count=run["set_count"],
+            event_count=run["event_count"],
+            parameters={"min_sets": (run["parameters"] or {}).get("min_sets", 0)},
+        ),
+        seeds=seeds,
+    )

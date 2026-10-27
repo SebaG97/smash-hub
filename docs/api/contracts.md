@@ -113,3 +113,7 @@ Cada cambio de identidad recalcula al instante si el proyecto ya tiene datos. `G
 ## Marca de ranking e íconos (Misión 07)
 
 `TournamentView` agrega `counts_for_ranking` (por defecto `true`). `PUT /tournaments/{id}/ranking` (admin) recibe `{counts}` y recalcula al instante los rankings que ya tienen datos. Los sets de eventos de torneos desmarcados no cuentan en ningún ranking; `GET /seeding/{slug}` de un ranking lista sus nombres en `excluded_tournaments`. Los mains (`MainView`) agregan `icon`, el ícono de stock de start.gg (solo URLs de `images.start.gg`), y las filas de seeding y ranking incluyen `mains` del jugador según los torneos importados al hub.
+
+### Vista pública y borradores (Misión 08)
+
+`GET /seeding` y `GET /seeding/{slug}` aceptan la clave de forma opcional. Sin clave: solo publicados y una vista reducida (`public: true`, `method_label`, `seeds: [{seed, gamer_tag, mains, ...}]`). Con clave: la vista completa (`public: false`, `published`). `PUT /seeding/{slug}/publish` (admin) recibe `{published}`. `export.csv` pasa a requerir la clave.

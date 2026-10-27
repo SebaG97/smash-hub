@@ -228,14 +228,14 @@ AUTH = {"Authorization": f"Bearer {KEY}", "X-Admin-Name": "Org <script>"}
 
 def test_view_is_public_and_explains_data(project):
     with client_for(project) as client:
-        body = client.get("/api/v1/seeding/cs").json()
+        body = client.get("/api/v1/seeding/cs", headers=AUTH).json()
         assert [s["gamer_tag"] for s in body["seeds"]][:2] == ["Ace", "Bee"]
         assert body["dataset"]["entrants"] == 5 and body["run"]["window_start"].startswith(
             "2026-01-01"
         )
         assert body["merges"] == [{"from_player_id": "9", "to_player_id": "4", "tag": "Dot"}]
-        assert client.get("/api/v1/seeding").json()[0]["slug"] == "cs"
-        assert client.get("/api/v1/seeding/nope").status_code == 404
+        assert client.get("/api/v1/seeding", headers=AUTH).json()[0]["slug"] == "cs"
+        assert client.get("/api/v1/seeding/nope", headers=AUTH).status_code == 404
 
 
 def test_writes_require_admin_key(project):
@@ -265,7 +265,7 @@ def test_move_reset_recalculate_export_and_audit(project):
             headers=AUTH,
         )
         assert r.status_code == 200
-        seeds = client.get("/api/v1/seeding/cs").json()["seeds"]
+        seeds = client.get("/api/v1/seeding/cs", headers=AUTH).json()["seeds"]
         assert seeds[0]["gamer_tag"] == "Cid" and seeds[0]["override"]["actor"] == "Org script"
         assert (
             client.put(
@@ -280,7 +280,7 @@ def test_move_reset_recalculate_export_and_audit(project):
             json={"window_start": "2026-01-20T00:00:00Z"},
         )
         assert r.status_code == 200
-        body = client.get("/api/v1/seeding/cs").json()
+        body = client.get("/api/v1/seeding/cs", headers=AUTH).json()
         assert body["seeds"][0]["gamer_tag"] == "Cid" and body["run"]["set_count"] < 49
         assert (
             client.post(
@@ -290,7 +290,7 @@ def test_move_reset_recalculate_export_and_audit(project):
             ).status_code
             == 422
         )
-        exported = client.get("/api/v1/seeding/cs/export.csv")
+        exported = client.get("/api/v1/seeding/cs/export.csv", headers=AUTH)
         rows = list(csv.DictReader(io.StringIO(exported.text.lstrip("﻿"))))
         assert rows[0]["gamer_tag"] == "Cid" and rows[0]["manual"] == "sí"
         assert client.delete("/api/v1/seeding/cs/overrides/3", headers=AUTH).status_code == 200
@@ -328,7 +328,7 @@ def test_refresh_replaces_dataset_and_recalculates(project, monkeypatch):
         )
         r = client.post("/api/v1/seeding/cs/recalculate", json={"refresh": True}, headers=AUTH)
         assert r.status_code == 202
-        body = client.get("/api/v1/seeding/cs").json()
+        body = client.get("/api/v1/seeding/cs", headers=AUTH).json()
         assert body["refresh"]["status"] == "IDLE"
         assert [s["gamer_tag"] for s in body["seeds"]] == ["Bee", "Ace"]
         assert app is not None
@@ -385,7 +385,7 @@ def test_cli_writes_in_production_need_explicit_flag(monkeypatch):
 
 def test_method_choice_is_official_and_survives_recalculation(project):
     with client_for(project) as client:
-        body = client.get("/api/v1/seeding/cs").json()
+        body = client.get("/api/v1/seeding/cs", headers=AUTH).json()
         assert body["method"] == "combined"
         assert {m["id"] for m in body["methods"]} == {
             "combined",
@@ -400,10 +400,10 @@ def test_method_choice_is_official_and_survives_recalculation(project):
         assert first["reasons_by_method"]["elo"][1].startswith("Elo")
         r = client.post("/api/v1/seeding/cs/recalculate", json={"method": "elo"}, headers=AUTH)
         assert r.status_code == 200
-        assert client.get("/api/v1/seeding/cs").json()["method"] == "elo"
+        assert client.get("/api/v1/seeding/cs", headers=AUTH).json()["method"] == "elo"
         # A plain recalculation keeps the chosen method.
         client.post("/api/v1/seeding/cs/recalculate", json={}, headers=AUTH)
-        body = client.get("/api/v1/seeding/cs").json()
+        body = client.get("/api/v1/seeding/cs", headers=AUTH).json()
         assert body["method"] == "elo"
         assert [s["ranks"]["elo"] for s in body["seeds"] if s["ranks"].get("elo")] == sorted(
             s["ranks"]["elo"] for s in body["seeds"] if s["ranks"].get("elo")
@@ -460,12 +460,12 @@ def test_ranking_download_lists_every_player_and_rejects_overrides(ranking, monk
         assert run.parameters["min_sets"] == 10
         session.commit()
     with client_for(ranking) as client:
-        body = client.get("/api/v1/seeding/rk").json()
+        body = client.get("/api/v1/seeding/rk", headers=AUTH).json()
         assert body["kind"] == "ranking" and body["country_code"] == "PY"
         assert [s["gamer_tag"] for s in body["seeds"]] == ["Ace", "Bee", "Cid"]
         assert all(s["eligible"] for s in body["seeds"])  # 12 sets each, minimum is 10
-        assert client.get("/api/v1/seeding?kind=ranking").json()[0]["slug"] == "rk"
-        assert client.get("/api/v1/seeding?kind=seeding").json() == []
+        assert client.get("/api/v1/seeding?kind=ranking", headers=AUTH).json()[0]["slug"] == "rk"
+        assert client.get("/api/v1/seeding?kind=seeding", headers=AUTH).json() == []
         r = client.put(
             "/api/v1/seeding/rk/overrides/3", json={"seed": 1, "reason": "no"}, headers=AUTH
         )
@@ -538,20 +538,25 @@ def test_create_projects_from_the_web(db, monkeypatch):
             headers=AUTH,
         )
         assert ok.status_code == 201 and ok.json()["slug"] == "center-stage"
-        body = client.get("/api/v1/seeding/center-stage").json()
+        body = client.get("/api/v1/seeding/center-stage", headers=AUTH).json()
         assert body["kind"] == "seeding" and body["startgg_event_slug"].startswith(
             "tournament/cs-1"
         )
-        assert client.get("/api/v1/seeding?kind=ranking").json()[0]["country_code"] == "PY"
+        assert (
+            client.get("/api/v1/seeding?kind=ranking", headers=AUTH).json()[0]["country_code"]
+            == "PY"
+        )
 
 
 def test_merges_and_duplicates_from_the_web(project):
     with client_for(project) as client:
-        body = client.get("/api/v1/seeding/cs").json()
+        body = client.get("/api/v1/seeding/cs", headers=AUTH).json()
         # Fixture merges 9 -> 4 (Dot); undo and redo it through the API.
         assert client.delete("/api/v1/seeding/cs/merges/9", headers=AUTH).status_code == 200
         dot = next(
-            s for s in client.get("/api/v1/seeding/cs").json()["seeds"] if s["gamer_tag"] == "Dot"
+            s
+            for s in client.get("/api/v1/seeding/cs", headers=AUTH).json()["seeds"]
+            if s["gamer_tag"] == "Dot"
         )
         assert dot["merged_sets"] == 0
         r = client.put(
@@ -561,7 +566,9 @@ def test_merges_and_duplicates_from_the_web(project):
         )
         assert r.status_code == 200
         dot = next(
-            s for s in client.get("/api/v1/seeding/cs").json()["seeds"] if s["gamer_tag"] == "Dot"
+            s
+            for s in client.get("/api/v1/seeding/cs", headers=AUTH).json()["seeds"]
+            if s["gamer_tag"] == "Dot"
         )
         assert dot["merged_sets"] == 1
         # Two entrants are a duplicate entry, not a merge.
@@ -577,7 +584,7 @@ def test_merges_and_duplicates_from_the_web(project):
             headers=AUTH,
         )
         assert r.status_code == 200
-        body = client.get("/api/v1/seeding/cs").json()
+        body = client.get("/api/v1/seeding/cs", headers=AUTH).json()
         assert "Eve" not in [s["gamer_tag"] for s in body["seeds"]]
         assert client.delete("/api/v1/seeding/cs/duplicates/5", headers=AUTH).status_code == 200
         actions = [e["action"] for e in client.get("/api/v1/seeding/cs/audit", headers=AUTH).json()]
@@ -616,3 +623,52 @@ def ranking_rows(imported_event_id):
         )
         rows.append(row)
     return entrants, rows
+
+
+def test_readers_only_see_published_projects_without_internals(project):
+    with client_for(project) as client:
+        assert client.get("/api/v1/seeding/cs").status_code == 404
+        assert client.get("/api/v1/seeding").json() == []
+        assert client.get("/api/v1/seeding/cs/export.csv").status_code == 401
+        bad = {"Authorization": "Bearer " + "x" * 32}
+        assert client.get("/api/v1/seeding/cs", headers=bad).status_code == 401
+        assert client.put("/api/v1/seeding/cs/publish", json={"published": True}).status_code == 401
+        r = client.put("/api/v1/seeding/cs/publish", json={"published": True}, headers=AUTH)
+        assert r.json() == {"published": True}
+        client.put(
+            "/api/v1/seeding/cs/overrides/3", json={"seed": 1, "reason": "secreto"}, headers=AUTH
+        )
+        public = client.get("/api/v1/seeding/cs").json()
+        assert public["public"] is True and public["published"] is True
+        assert [s["gamer_tag"] for s in public["seeds"]][:2] == ["Cid", "Ace"]
+        assert set(public["seeds"][0]) == {"seed", "gamer_tag", "mains"}
+        text = str(public)
+        for hidden in ("secreto", "flags", "merges", "confidence", "rating", "override", "methods"):
+            assert hidden not in text
+        assert client.get("/api/v1/seeding").json()[0]["slug"] == "cs"
+        full = client.get("/api/v1/seeding/cs", headers=AUTH).json()
+        assert full["public"] is False and full["seeds"][0]["override"]["reason"] == "secreto"
+        actions = [e["action"] for e in client.get("/api/v1/seeding/cs/audit", headers=AUTH).json()]
+        assert "publish" in actions
+
+
+def test_public_ranking_shows_eligible_players_with_reasons(ranking, monkeypatch):
+    with Session(ranking) as session:
+        p = session.scalar(select(SeedingProject))
+        p.published = True
+        entrants = [
+            dict(startgg_entrant_id=f"p{i}", startgg_player_id=str(i), gamer_tag=t)
+            for i, t in ((1, "Ace"), (2, "Bee"), (3, "Cid"))
+        ]
+        rows = [a_set(n, "1", "2", day=n % 50 + 1) for n in range(1, 13)]
+        rows.append(a_set(99, "3", "1", day=3))
+        service.replace_dataset(session, p, entrants, rows, cutoff=EVENT)
+        session.flush()
+        service.recalculate(session, p, "test")
+        session.commit()
+    with client_for(ranking) as client:
+        public = client.get("/api/v1/seeding/rk").json()
+        assert [s["gamer_tag"] for s in public["seeds"]] == ["Ace", "Bee"]  # Cid: 1 set
+        first = public["seeds"][0]
+        assert first["seed"] == 1 and first["wins"] == 12 and first["reasons"]
+        assert public["method_label"].startswith("Combinado") and "flags" not in str(public)

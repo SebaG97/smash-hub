@@ -43,3 +43,11 @@ Cinco rutas nuevas son GET públicos de lectura; requieren UUID y parámetros ti
 ## Misión 06: importación web
 
 `POST /imports/startgg` y `GET /imports/status` exigen la clave de admin. Solo aceptan links `https://start.gg` o `https://www.start.gg` (o slugs) y no siguen URLs aportadas. Cada torneo pasa por el importador transaccional con locks por torneo y por proveedor; los fallos se registran en `import_jobs` con códigos seguros. El token de start.gg se usa solo para leer.
+
+## Misión 08: vista pública y borradores
+
+- Los proyectos de seeding nacen como **borradores** (`published = false`). Sin clave, `GET /seeding` solo lista publicados y `GET /seeding/{slug}` de un borrador responde 404, como si no existiera.
+- La respuesta pública trae solo el orden final y los mains (seeding), o puesto, mains, puntaje del método oficial, W-L y explicaciones (ranking). No incluye alertas, confianza, ratings internos, ajustes manuales, identidades, parámetros ni sugerencias.
+- Con la clave (`Authorization`), las mismas rutas devuelven la vista completa. Una clave incorrecta responde 401, no la vista pública.
+- `GET /seeding/{slug}/export.csv` exige la clave. `PUT /seeding/{slug}/publish` publica o despublica, y queda en el registro.
+- La web tiene una sola sesión de organizador (`/admin`, enlace discreto en el pie). Sin sesión no muestra formularios ni herramientas.

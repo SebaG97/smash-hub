@@ -16,6 +16,7 @@ from sqlalchemy import (
     String,
     UniqueConstraint,
     Uuid,
+    text,
 )
 
 from app.database.base import Base, Record
@@ -26,6 +27,8 @@ class SeedingProject(Record, Base):
     slug = Column(String(120), nullable=False, unique=True)
     name = Column(String(200), nullable=False)
     kind = Column(String(20), nullable=False, default="seeding", server_default="seeding")
+    # Readers only see published projects; seedings start as private drafts.
+    published = Column(Boolean, nullable=False, default=False, server_default=text("false"))
     # Ranking projects: ISO country whose offline events form the circuit.
     country_code = Column(String(2))
     startgg_event_id = Column(String(40))

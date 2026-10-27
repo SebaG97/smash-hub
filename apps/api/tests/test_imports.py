@@ -219,7 +219,7 @@ def test_ranking_checkbox_excludes_tournament_and_recalculates(db, snapshot):
         service.recalculate(s, project, "test")
         s.commit()
     with client_for(db) as client:
-        before = client.get("/api/v1/seeding/rk").json()
+        before = client.get("/api/v1/seeding/rk", headers=AUTH).json()
         assert before["run"]["set_count"] == 2 and before["excluded_tournaments"] == []
         # Player 100 (entrant 11) has mains from the imported tournament.
         ace = next(r for r in before["seeds"] if r["player_id"] == "100")
@@ -234,7 +234,7 @@ def test_ranking_checkbox_excludes_tournament_and_recalculates(db, snapshot):
             f"/api/v1/tournaments/{tournament_id}/ranking", json={"counts": False}, headers=AUTH
         )
         assert r.status_code == 200 and r.json()["counts_for_ranking"] is False
-        after = client.get("/api/v1/seeding/rk").json()
+        after = client.get("/api/v1/seeding/rk", headers=AUTH).json()
         assert after["run"]["set_count"] == 1
         assert after["excluded_tournaments"] == ["Imported"]
         listed = client.get("/api/v1/tournaments").json()["items"][0]

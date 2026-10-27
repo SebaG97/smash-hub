@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AdminBadge } from "../components/admin-panel";
 import { Logo } from "../components/logo";
 import { modules } from "../lib/modules";
 import "./globals.css";
@@ -50,6 +51,7 @@ export default function RootLayout({
               </Link>
             ))}
           </nav>
+          <AdminBadge />
           <span className="country-badge">
             PY <span aria-hidden="true">●</span> Paraguay
           </span>
@@ -59,7 +61,12 @@ export default function RootLayout({
           <Link className="footer-brand" href="/">
             SMASH PY HUB<span>Una comunidad. Muchas historias.</span>
           </Link>
-          <p>Hecho para la escena, desde Paraguay.</p>
+          <p>
+            Hecho para la escena, desde Paraguay ·{" "}
+            <Link href="/admin" className="footer-admin">
+              Organizadores
+            </Link>
+          </p>
           <span className="version">FUNDACIÓN · V0.1</span>
         </footer>
       </body>

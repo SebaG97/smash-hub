@@ -37,3 +37,17 @@ def admin(
 
 
 Admin = Annotated[str, Depends(admin)]
+
+
+def optional_admin(
+    request: Request,
+    authorization: Annotated[str | None, Header()] = None,
+    x_admin_name: Annotated[str | None, Header()] = None,
+) -> str | None:
+    """Reader pages: no key means a public reader; a wrong key is still rejected."""
+    if not authorization:
+        return None
+    return admin(request, authorization, x_admin_name)
+
+
+MaybeAdmin = Annotated[str | None, Depends(optional_admin)]

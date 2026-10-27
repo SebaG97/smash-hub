@@ -138,6 +138,7 @@ export type SeedingProjectSummary = {
   country_code: string | null;
   event_date: string;
   window_start: string;
+  published?: boolean;
 };
 export type SeedingOverride = {
   player_id: string;
@@ -190,12 +191,46 @@ export type SeedingRow = {
   reasons: string[];
   override: SeedingOverride | null;
 };
+export type PublicSeedingView = {
+  slug: string;
+  name: string;
+  kind: "seeding" | "ranking";
+  country_code: string | null;
+  published: boolean;
+  public: true;
+  method: string;
+  method_label: string;
+  startgg_event_slug: string | null;
+  event_date: string;
+  window_start: string;
+  data_cutoff: string | null;
+  run: {
+    window_start: string;
+    window_end: string;
+    set_count: number;
+    event_count: number;
+    parameters: { min_sets: number };
+  } | null;
+  seeds: {
+    seed: number;
+    gamer_tag: string;
+    mains?: Main[];
+    wins?: number;
+    losses?: number;
+    sets?: number;
+    last_event?: string | null;
+    score?: number | null;
+    reasons?: string[];
+  }[];
+};
 export type SeedingMethod = { id: string; label: string; description: string };
 export type SeedingView = {
   slug: string;
   name: string;
   kind: "seeding" | "ranking";
   country_code: string | null;
+  published: boolean;
+  public?: false;
   method: string | null;
   methods: SeedingMethod[];
   startgg_event_slug: string | null;

@@ -190,3 +190,9 @@ python -m app.runtime seeding --allow-production create-ranking --slug ranking-p
 2. **Force rebuild and deploy** (`Running upgrade 0007 -> 0008`).
 3. Para bajar los íconos de personajes, lanzar cualquier importación desde `/tournaments`: puede ser la de todos los torneos de Paraguay o un solo link. El catálogo de personajes se sincroniza al empezar.
 4. En `/tournaments`, con la clave, desmarcar «Cuenta para el ranking» en los torneos que no deben contar. Los rankings se recalculan solos.
+
+## Actualización a la Misión 08 (vista pública y /admin)
+
+1. `migrate` → `APPROVED_MIGRATION` = `0009`.
+2. **Force rebuild and deploy** (`Running upgrade 0008 -> 0009`).
+3. Los organizadores entran desde el enlace «Organizadores» del pie (`/admin`). Los seedings existentes pasan a **borrador**: para mostrarlos al público, abrirlos con la sesión iniciada y pulsar **Publicar**.

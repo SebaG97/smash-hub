@@ -124,3 +124,5 @@ Misiones 02/02.1 consolidadas en `d402e64`. Misión 03 queda sin commit, push ni
 Misión 06: importación de torneos de Paraguay desde la web (`/tournaments`, con clave de organizadores) y personajes por partida desde start.gg; el listado y la ficha de cada jugador muestran sus mains (ADR-013).
 
 Misión 07: casilla «Cuenta para el ranking» por torneo importado (los desmarcados no cuentan en los rankings) e íconos de los mains junto al nombre de cada jugador en jugadores, seeding y ranking.
+
+Misión 08: vista pública limpia (seedings como borradores hasta publicarlos, ranking sin datos internos) y acceso único de organizadores en `/admin`, con la protección también en la API.

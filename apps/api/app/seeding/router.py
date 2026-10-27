@@ -9,7 +9,7 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.admin import Admin
+from app.core.admin import Admin, MaybeAdmin
 from app.integrations.startgg.client import ImportFailure, StartGGClient
 from app.seeding import service, startgg
 from app.seeding.engine import Method, Parameters
@@ -137,10 +137,14 @@ def create(request: Request, body: CreateRequest, actor: Admin):
 
 
 @router.get("")
-def projects(request: Request, kind: Literal["seeding", "ranking"] | None = None):
+def projects(
+    request: Request, actor: MaybeAdmin, kind: Literal["seeding", "ranking"] | None = None
+):
     query = select(SeedingProject).order_by(SeedingProject.event_date.desc())
     if kind is not None:
         query = query.where(SeedingProject.kind == kind)
+    if actor is None:
+        query = query.where(SeedingProject.published.is_(True))
     with session_for(request) as session:
         return [
             dict(
@@ -150,18 +154,27 @@ def projects(request: Request, kind: Literal["seeding", "ranking"] | None = None
                 country_code=p.country_code,
                 event_date=p.event_date,
                 window_start=p.window_start,
+                published=p.published,
             )
             for p in session.scalars(query)
         ]
 
 
 @router.get("/{slug}")
-def project_view(request: Request, slug: str):
-    return run(request, lambda s: service.view(s, service.project_by_slug(s, slug)))
+def project_view(request: Request, slug: str, actor: MaybeAdmin):
+    def operation(session):
+        project = service.project_by_slug(session, slug)
+        if actor is not None:
+            return service.view(session, project)
+        if not project.published:
+            raise service.ProjectNotFound  # Drafts do not exist for readers.
+        return service.public_view(session, project)
+
+    return run(request, operation)
 
 
 @router.get("/{slug}/export.csv")
-def export(request: Request, slug: str):
+def export(request: Request, slug: str, actor: Admin):
     body = run(request, lambda s: service.export_csv(s, service.project_by_slug(s, slug)))
     return Response(
         body,
@@ -279,5 +292,20 @@ def unduplicate(request: Request, slug: str, player_id: str, actor: Admin):
         project = service.project_by_slug(session, slug, lock=True)
         service.clear_duplicate(session, project, player_id, actor)
         return {"status": "removed"}
+
+    return run(request, operation, write=True)
+
+
+class PublishRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    published: bool
+
+
+@router.put("/{slug}/publish")
+def publish(request: Request, slug: str, body: PublishRequest, actor: Admin):
+    def operation(session):
+        project = service.project_by_slug(session, slug, lock=True)
+        service.set_published(session, project, body.published, actor)
+        return {"published": project.published}
 
     return run(request, operation, write=True)

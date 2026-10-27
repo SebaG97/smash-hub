@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AdminLogin, readAdmin, problem, type Admin } from "./seeding-board";
+import { problem } from "./seeding-board";
+import { useAdmin, type Admin } from "../lib/admin";
 
 const api = (process.env.NEXT_PUBLIC_API_URL || "/api/v1").replace(/\/$/, "");
 
@@ -46,10 +47,8 @@ async function call(
 
 /** Organizer tool: import every Paraguayan tournament of a period, or pasted links. */
 export function ImportPanel() {
-  const [admin, setAdmin] = useState<Admin | null>(() =>
-    typeof window === "undefined" ? null : readAdmin(),
-  );
-  const [open, setOpen] = useState(false);
+  const admin = useAdmin();
+  const [open, setOpen] = useState(true);
   const [from, setFrom] = useState(() => localDay(-365));
   const [to, setTo] = useState(() => localDay(1));
   const [links, setLinks] = useState("");
@@ -88,15 +87,16 @@ export function ImportPanel() {
     setTick((t) => t + 1);
   }
 
+  // Readers never see the import tool.
+  if (!admin) return null;
   if (!open)
     return (
       <p>
         <button className="link-button" onClick={() => setOpen(true)}>
-          Organizadores: importar torneos desde start.gg
+          Importar torneos desde start.gg
         </button>
       </p>
     );
-  if (!admin) return <AdminLogin onLogin={setAdmin} />;
   return (
     <section
       className="seeding-admin seeding-import"

@@ -7,8 +7,20 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import { AdminPanel } from "../src/components/admin-panel";
 import { SeedingBoard } from "../src/components/seeding-board";
-import type { SeedingRow, SeedingView } from "../src/lib/api";
+import type {
+  PublicSeedingView,
+  SeedingRow,
+  SeedingView,
+} from "../src/lib/api";
+
+function signIn() {
+  sessionStorage.setItem(
+    "seeding-admin",
+    JSON.stringify({ key: "secret-key", name: "Org" }),
+  );
+}
 
 afterEach(() => {
   cleanup();
@@ -66,6 +78,7 @@ const view: SeedingView = {
   name: "Center Stage",
   kind: "seeding",
   country_code: null,
+  published: true,
   method: "combined",
   methods: [
     { id: "combined", label: "Combinado", description: "Mezcla" },
@@ -122,6 +135,7 @@ const view: SeedingView = {
 
 describe("seeding board", () => {
   it("shows data window, explanations and manual adjustments", async () => {
+    signIn();
     vi.stubGlobal(
       "fetch",
       vi.fn(() => Promise.resolve(new Response(JSON.stringify(view)))),
@@ -134,17 +148,19 @@ describe("seeding board", () => {
       screen.getByText(/14\/11\/2025 al 14\/11\/2026/),
     ).toBeInTheDocument();
     expect(screen.getByText(/\(método 1\)/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Exportar CSV" })).toHaveAttribute(
-      "href",
-      expect.stringContaining("/seeding/cs/export.csv"),
-    );
+    expect(
+      screen.getByRole("button", { name: "Exportar CSV" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Despublicar" }),
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Bee" }));
     expect(screen.getByText("Razón de Bee")).toBeInTheDocument();
     expect(screen.getByText(/Conocido local/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Subir a/ })).toBeNull();
   });
 
-  it("logs in with the admin key and moves a player", async () => {
+  it("moves a player with the stored admin key", async () => {
+    signIn();
     const calls: { url: string; init?: RequestInit }[] = [];
     vi.stubGlobal(
       "fetch",
@@ -163,13 +179,6 @@ describe("seeding board", () => {
     );
     render(<SeedingBoard slug="cs" />);
     await screen.findByRole("heading", { name: "Center Stage" });
-    fireEvent.change(screen.getByLabelText("Tu nombre"), {
-      target: { value: "Org" },
-    });
-    fireEvent.change(screen.getByLabelText("Clave de administración"), {
-      target: { value: "secret-key" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
     const down = await screen.findByRole("button", { name: "Bajar a Ace" });
     fireEvent.click(down);
     await waitFor(() =>
@@ -252,7 +261,7 @@ describe("seeding board", () => {
     );
     render(<SeedingBoard slug="rk" base="rankings" />);
     await screen.findByRole("heading", { name: "Ranking Paraguay" });
-    expect(screen.getByText("RANKING · PARAGUAY")).toBeInTheDocument();
+    expect(screen.getByText(/RANKING · PARAGUAY/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Cid" })).toBeNull();
     expect(screen.queryByRole("button", { name: /Bajar a/ })).toBeNull();
     fireEvent.click(
@@ -261,5 +270,80 @@ describe("seeding board", () => {
       }),
     );
     expect(screen.getByRole("button", { name: "Cid" })).toBeInTheDocument();
+  });
+
+  it("shows readers a clean published seeding without tools", async () => {
+    const calls: RequestInit[] = [];
+    const publicView: PublicSeedingView = {
+      slug: "cs",
+      name: "Center Stage",
+      kind: "seeding",
+      country_code: null,
+      published: true,
+      public: true,
+      method: "combined",
+      method_label: "Combinado",
+      startgg_event_slug: null,
+      event_date: "2026-11-14T03:00:00Z",
+      window_start: "2025-11-14T03:00:00Z",
+      data_cutoff: null,
+      run: null,
+      seeds: [
+        {
+          seed: 1,
+          gamer_tag: "Ace",
+          mains: [
+            {
+              character: "Ryu",
+              icon: "https://images.start.gg/r.png",
+              games: 9,
+              share: 90,
+            },
+          ],
+        },
+      ],
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string, init?: RequestInit) => {
+        calls.push(init || {});
+        return Promise.resolve(new Response(JSON.stringify(publicView)));
+      }),
+    );
+    render(<SeedingBoard slug="cs" />);
+    await screen.findByRole("heading", { name: "Center Stage" });
+    expect(screen.getByRole("img", { name: "Ryu" })).toBeInTheDocument();
+    for (const tool of [/Exportar/, /Publicar/, /Recalcular/, /Entrar/])
+      expect(screen.queryByRole("button", { name: tool })).toBeNull();
+    expect(screen.queryByText(/Datos analizados/)).toBeNull();
+    expect(
+      (calls[0].headers as Record<string, string>).Authorization,
+    ).toBeUndefined();
+  });
+
+  it("signs in from /admin and shows the tools", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(new Response(JSON.stringify({ actor: "Org" }))),
+      ),
+    );
+    render(<AdminPanel />);
+    fireEvent.change(screen.getByLabelText("Tu nombre"), {
+      target: { value: "Org" },
+    });
+    fireEvent.change(screen.getByLabelText("Clave de administración"), {
+      target: { value: "secret-key" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
+    expect(await screen.findByText(/Sesión iniciada como/)).toBeInTheDocument();
+    expect(JSON.parse(sessionStorage.getItem("seeding-admin")!)).toEqual({
+      key: "secret-key",
+      name: "Org",
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Salir" }));
+    expect(
+      await screen.findByLabelText("Clave de administración"),
+    ).toBeInTheDocument();
   });
 });

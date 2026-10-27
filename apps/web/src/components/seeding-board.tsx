@@ -3,15 +3,22 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MainIcons } from "./mains";
+import {
+  adminHeaders,
+  clearAdmin,
+  saveAdmin,
+  useAdmin,
+  type Admin,
+} from "../lib/admin";
 import { Fragment, useCallback, useEffect, useState } from "react";
 import type {
+  PublicSeedingView,
   SeedingProjectSummary,
   SeedingRow,
   SeedingView,
 } from "../lib/api";
 
 const api = (process.env.NEXT_PUBLIC_API_URL || "/api/v1").replace(/\/$/, "");
-const KEY_STORE = "seeding-admin";
 
 const classLabels: Record<string, string> = {
   played: "Jugados",
@@ -67,17 +74,6 @@ function num(value: number | null, digits = 0) {
       });
 }
 
-export type Admin = { key: string; name: string };
-
-export function readAdmin(): Admin | null {
-  try {
-    const raw = sessionStorage.getItem(KEY_STORE);
-    return raw ? (JSON.parse(raw) as Admin) : null;
-  } catch {
-    return null;
-  }
-}
-
 async function send(
   admin: Admin,
   method: string,
@@ -105,7 +101,7 @@ export async function problem(r: Response) {
   return `La API respondió ${r.status}.`;
 }
 
-export function AdminLogin({ onLogin }: { onLogin: (admin: Admin) => void }) {
+export function AdminLogin({ onLogin }: { onLogin?: (admin: Admin) => void }) {
   const [key, setKey] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState("");
@@ -119,12 +115,8 @@ export function AdminLogin({ onLogin }: { onLogin: (admin: Admin) => void }) {
         try {
           const r = await send(admin, "GET", "session");
           if (!r.ok) return setError(await problem(r));
-          try {
-            sessionStorage.setItem(KEY_STORE, JSON.stringify(admin));
-          } catch {
-            /* storage blocked: the key lives only in memory */
-          }
-          onLogin(admin);
+          saveAdmin(admin);
+          onLogin?.(admin);
         } catch {
           setError("No se pudo contactar a la API.");
         }
@@ -675,6 +667,115 @@ function IdentityPanel({
   );
 }
 
+function PublicBoard({ view }: { view: PublicSeedingView }) {
+  const [open, setOpen] = useState<number | null>(null);
+  const ranking = view.kind === "ranking";
+  return (
+    <div className="competition-page seeding-page">
+      <p className="eyebrow">
+        {ranking
+          ? `RANKING · ${view.country_code === "PY" ? "PARAGUAY" : view.country_code}`
+          : "SEEDING"}
+      </p>
+      <h1>{view.name}</h1>
+      <p className="seeding-lead">
+        {ranking
+          ? `Período del ${day(view.run?.window_start || view.window_start)} al ${day(view.run?.window_end || view.event_date)} · ${view.seeds.length} jugadores · método: ${view.method_label}`
+          : `Evento el ${day(view.event_date)} · ${view.seeds.length} jugadores`}
+        {view.data_cutoff && ` · datos de start.gg al ${day(view.data_cutoff)}`}
+        {view.startgg_event_slug && (
+          <>
+            {" · "}
+            <a
+              href={`https://www.start.gg/${view.startgg_event_slug}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Ver en start.gg ↗
+            </a>
+          </>
+        )}
+      </p>
+      {ranking && (view.run?.parameters.min_sets ?? 0) > 0 && (
+        <p className="seeding-lead">
+          Entran los jugadores con al menos {view.run?.parameters.min_sets} sets
+          en el período, en {view.run?.event_count} torneos presenciales.
+        </p>
+      )}
+      <section
+        aria-label={ranking ? "Ranking" : "Seeds"}
+        className="data-section"
+      >
+        <div className="seeding-table-wrap">
+          <table className="seeding-table">
+            <thead>
+              <tr>
+                <th scope="col">{ranking ? "Puesto" : "Seed"}</th>
+                <th scope="col">Jugador</th>
+                {ranking && <th scope="col">Puntaje</th>}
+                {ranking && <th scope="col">W-L</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {view.seeds.map((row) => (
+                <Fragment key={row.seed}>
+                  <tr>
+                    <td>
+                      <strong>{row.seed}</strong>
+                    </td>
+                    <td>
+                      {ranking ? (
+                        <button
+                          className="link-button"
+                          aria-expanded={open === row.seed}
+                          onClick={() =>
+                            setOpen(open === row.seed ? null : row.seed)
+                          }
+                        >
+                          {row.gamer_tag}
+                        </button>
+                      ) : (
+                        row.gamer_tag
+                      )}{" "}
+                      <MainIcons mains={row.mains} size={20} />
+                    </td>
+                    {ranking && (
+                      <td>
+                        {row.score === null || row.score === undefined
+                          ? "—"
+                          : num(row.score, view.method === "combined" ? 3 : 0)}
+                      </td>
+                    )}
+                    {ranking && (
+                      <td>
+                        {row.wins}-{row.losses}
+                      </td>
+                    )}
+                  </tr>
+                  {ranking && open === row.seed && row.reasons && (
+                    <tr className="seeding-open">
+                      <td colSpan={4}>
+                        <div className="seeding-details">
+                          <h4>¿Por qué queda {row.seed}.º?</h4>
+                          <ul>
+                            {row.reasons.map((reason) => (
+                              <li key={reason}>{reason}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 export function SeedingBoard({
   slug,
   base = "seeding",
@@ -682,13 +783,11 @@ export function SeedingBoard({
   slug: string;
   base?: "seeding" | "rankings";
 }) {
-  const [view, setView] = useState<SeedingView | null>(null);
-  const [error, setError] = useState("");
-  // The first render is always the loading state, so reading storage here cannot
-  // cause a hydration mismatch.
-  const [admin, setAdmin] = useState<Admin | null>(() =>
-    typeof window === "undefined" ? null : readAdmin(),
+  const [view, setView] = useState<SeedingView | PublicSeedingView | null>(
+    null,
   );
+  const [error, setError] = useState("");
+  const admin = useAdmin();
   const [open, setOpen] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
@@ -699,13 +798,16 @@ export function SeedingBoard({
 
   useEffect(() => {
     let active = true;
-    fetch(`${api}/seeding/${encodeURIComponent(slug)}`)
+    fetch(`${api}/seeding/${encodeURIComponent(slug)}`, {
+      headers: adminHeaders(admin),
+    })
       .then(async (r) => {
+        if (r.status === 401) clearAdmin();
         if (!r.ok)
           throw new Error(
             r.status === 404 ? "No existe esta página." : "No se pudo cargar.",
           );
-        const data = (await r.json()) as SeedingView;
+        const data = (await r.json()) as SeedingView | PublicSeedingView;
         if (active) {
           setView(data);
           setError("");
@@ -718,9 +820,9 @@ export function SeedingBoard({
     return () => {
       active = false;
     };
-  }, [slug, version]);
+  }, [slug, version, admin]);
 
-  const running = view?.refresh.status === "RUNNING";
+  const running = !!view && !view.public && view.refresh.status === "RUNNING";
   useEffect(() => {
     if (!running) return;
     const timer = setInterval(load, 4000);
@@ -734,14 +836,7 @@ export function SeedingBoard({
       setMessage("No se pudo contactar a la API.");
       return false;
     }
-    if (r.status === 401) {
-      setAdmin(null);
-      try {
-        sessionStorage.removeItem(KEY_STORE);
-      } catch {
-        /* ignore */
-      }
-    }
+    if (r.status === 401) clearAdmin();
     if (!r.ok) {
       setMessage(await problem(r));
       return false;
@@ -766,6 +861,21 @@ export function SeedingBoard({
         Cargando…
       </p>
     );
+  if (view.public) return <PublicBoard view={view} />;
+
+  async function exportCsv() {
+    const r = await fetch(
+      `${api}/seeding/${encodeURIComponent(slug)}/export.csv`,
+      { headers: adminHeaders(admin) },
+    ).catch(() => null);
+    if (!r || !r.ok) return setMessage("No se pudo exportar.");
+    const url = URL.createObjectURL(await r.blob());
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${slug}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
 
   const ranking = view.kind === "ranking";
   const official = view.method || "combined";
@@ -792,6 +902,8 @@ export function SeedingBoard({
         {ranking
           ? `RANKING · ${view.country_code === "PY" ? "PARAGUAY" : view.country_code}`
           : "SEEDING · PROPUESTA PARA LA ORGANIZACIÓN"}
+        {" · "}
+        {view.published ? "PUBLICADO" : "BORRADOR (SOLO ADMIN)"}
       </p>
       <h1>{view.name}</h1>
       <p className="seeding-lead">
@@ -822,12 +934,26 @@ export function SeedingBoard({
       </p>
 
       <div className="seeding-actions">
-        <a
-          className="primary-button"
-          href={`${api}/seeding/${encodeURIComponent(slug)}/export.csv`}
-        >
+        <button className="primary-button" onClick={exportCsv}>
           Exportar CSV
-        </a>
+        </button>
+        <button
+          className="primary-button"
+          onClick={async () => {
+            if (
+              await act("PUT", `${slug}/publish`, {
+                published: !view.published,
+              })
+            )
+              setMessage(
+                view.published
+                  ? "Ya no es visible para el público."
+                  : "Publicado: el público ya puede verlo.",
+              );
+          }}
+        >
+          {view.published ? "Despublicar" : "Publicar"}
+        </button>
       </div>
 
       {running && (
@@ -845,23 +971,10 @@ export function SeedingBoard({
         </p>
       )}
 
-      {admin ? (
+      {admin && (
         <section className="seeding-admin" aria-label="Herramientas">
           <p>
-            Editando como <strong>{admin.name}</strong>.{" "}
-            <button
-              className="link-button"
-              onClick={() => {
-                setAdmin(null);
-                try {
-                  sessionStorage.removeItem(KEY_STORE);
-                } catch {
-                  /* ignore */
-                }
-              }}
-            >
-              Salir
-            </button>
+            Editando como <strong>{admin.name}</strong>.
           </p>
           <Recalculate
             view={view}
@@ -872,8 +985,6 @@ export function SeedingBoard({
             }}
           />
         </section>
-      ) : (
-        <AdminLogin onLogin={setAdmin} />
       )}
       {message && (
         <p role="status" className="seeding-banner">
@@ -1179,34 +1290,28 @@ export function SeedingList({
 }) {
   const [items, setItems] = useState<SeedingProjectSummary[] | null>(null);
   const [error, setError] = useState(false);
-  const [admin, setAdmin] = useState<Admin | null>(() =>
-    typeof window === "undefined" ? null : readAdmin(),
-  );
+  const admin = useAdmin();
   const ranking = kind === "ranking";
   useEffect(() => {
-    fetch(`${api}/seeding?kind=${kind}`)
+    fetch(`${api}/seeding?kind=${kind}`, { headers: adminHeaders(admin) })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error())))
       .then(setItems)
       .catch(() => setError(true));
-  }, [kind]);
+  }, [kind, admin]);
   return (
     <div className="competition-page">
       <p className="eyebrow">
         {ranking ? "EL CIRCUITO PARAGUAYO" : "ORGANIZACIÓN DE EVENTOS"}
       </p>
       <h1>{ranking ? "Rankings" : "Seeding"}</h1>
-      {admin ? (
-        <NewProjectForm kind={kind} admin={admin} />
-      ) : (
-        <AdminLogin onLogin={setAdmin} />
-      )}
+      {admin && <NewProjectForm kind={kind} admin={admin} />}
       {error && <p role="alert">No se pudieron cargar los datos.</p>}
       {!items && !error && <p role="status">Cargando…</p>}
       {items && items.length === 0 && (
         <p>
           {ranking
-            ? "Todavía no hay rankings. Con la clave de organizadores puedes crear uno arriba."
-            : "Todavía no hay seedings. Con la clave de organizadores puedes crear uno arriba."}
+            ? "Todavía no hay rankings publicados."
+            : "Todavía no hay seedings publicados."}
         </p>
       )}
       <div className="data-grid">
@@ -1217,6 +1322,7 @@ export function SeedingList({
                 {p.name} ↗
               </Link>
             </h3>
+            {admin && !p.published && <span className="tag">borrador</span>}
             <p>
               {ranking
                 ? `Del ${day(p.window_start)} al ${day(p.event_date)}`

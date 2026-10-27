@@ -1168,3 +1168,20 @@ footer {
   height: 16px;
   vertical-align: middle;
 }
+
+.admin-badge {
+  font-size: 12px;
+  color: var(--amber);
+  border: 1px solid var(--amber);
+  border-radius: 4px;
+  padding: 8px 10px;
+  white-space: nowrap;
+}
+.admin-badge .link-button {
+  color: var(--amber);
+}
+.footer-admin {
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
