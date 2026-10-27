@@ -4,6 +4,7 @@ import Link from "next/link";
 import type React from "react";
 import { useEffect, useState } from "react";
 import type { Page, PublicSeedingView, Tournament } from "../lib/api";
+import { UpcomingTournaments } from "./insights";
 import { MainIcons, WinBar, mainColor } from "./mains";
 
 const api = (process.env.NEXT_PUBLIC_API_URL || "/api/v1").replace(/\/$/, "");
@@ -97,6 +98,8 @@ export function HomeBoard() {
         )}
       </section>
       <section aria-labelledby="recent-title">
+        <h2 id="next-title">Próximos torneos</h2>
+        <UpcomingTournaments />
         <h2 id="recent-title">Últimos torneos</h2>
         {tournaments && tournaments.length > 0 ? (
           <ul className="recent">

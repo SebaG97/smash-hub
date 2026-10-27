@@ -39,3 +39,10 @@ El color sale del propio juego: cada jugador toma el color característico de su
 
 - **Fondo:** grano de concreto muy sutil en todo el sitio (la textura del logo, generada con `feTurbulence`). En la ficha, la parte superior toma el tono del main del jugador y se funde con el concreto.
 - **Ficha:** cabecera con el ícono grande del main; franja con puesto en el ranking (número inclinado en oro), récord con barra, % de victorias, torneos y último torneo; pestañas **Resumen** (mains como "stocks" con el color de cada personaje, y los tres mejores resultados según el tamaño del bracket), **Estadísticas**, **Rivales** (con el ícono del main de cada rival y la barra del H2H) e **Historial**.
+
+## Récords, emblemas e imágenes (Misión 13)
+
+- **Emblemas:** fila de chapas con el nombre en la tipografía de títulos y el motivo debajo. Oro para los de títulos y el liderato, fuego para las hazañas (sorpresas, remontadas, rachas) y hueso para el resto.
+- **Sorpresas:** el factor va como `+N` en fuego, a la izquierda, como un marcador.
+- **Jugador del mes:** la única pieza destacada de la portada, con el ícono grande del main y su color de fondo.
+- **Imágenes para redes:** cuadradas (1080×1080) para Instagram y WhatsApp, con la misma receta: concreto, logo, números de puesto inclinados (oro el 1.º, fuego 2.º y 3.º) y la franja de color del main de cada jugador.

@@ -2892,6 +2892,127 @@
           }
         }
       }
+    },
+    "/api/v1/insights/players/{id}": {
+      "get": {
+        "tags": [
+          "insights"
+        ],
+        "summary": "Player",
+        "operationId": "player_api_v1_insights_players__id__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/insights/records": {
+      "get": {
+        "tags": [
+          "insights"
+        ],
+        "summary": "Records",
+        "operationId": "records_api_v1_insights_records_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/insights/tournaments/{id}": {
+      "get": {
+        "tags": [
+          "insights"
+        ],
+        "summary": "Tournament",
+        "operationId": "tournament_api_v1_insights_tournaments__id__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/insights/calendar": {
+      "get": {
+        "tags": [
+          "insights"
+        ],
+        "summary": "Calendar",
+        "description": "Upcoming offline tournaments in Paraguay from start.gg, cached for an hour.",
+        "operationId": "calendar_api_v1_insights_calendar_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {

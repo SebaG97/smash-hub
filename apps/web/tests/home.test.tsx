@@ -12,6 +12,25 @@ describe("public foundation", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn((url: string) => {
+        if (url.includes("/insights/calendar"))
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                items: [
+                  {
+                    name: "Center Stage 2026",
+                    url: "https://start.gg/tournament/center-stage-2026",
+                    starts_at: "2026-11-14T13:00:00Z",
+                    city: "Asunción",
+                    venue: null,
+                    attendees: 40,
+                  },
+                ],
+              }),
+            ),
+          );
+        if (url.includes("/insights/"))
+          return Promise.resolve(new Response("{}", { status: 404 }));
         const body = url.endsWith("/seeding?kind=ranking")
           ? [{ slug: "rk" }]
           : url.endsWith("/seeding/rk")
@@ -56,6 +75,9 @@ describe("public foundation", () => {
     expect(
       screen.getByRole("link", { name: "Ver ranking completo" }),
     ).toBeInTheDocument();
+    expect(
+      await screen.findByRole("link", { name: "Center Stage 2026" }),
+    ).toHaveAttribute("href", "https://start.gg/tournament/center-stage-2026");
   });
   it("reports readiness", async () => {
     vi.stubGlobal(

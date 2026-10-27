@@ -711,6 +711,15 @@ function PublicBoard({ view }: { view: PublicSeedingView }) {
           </>
         )}
       </p>
+      <p className="home-more">
+        <a
+          className="primary-button"
+          href={`/og/${ranking ? "ranking" : "seeding"}/${view.slug}`}
+          download={`${view.slug}.png`}
+        >
+          Descargar imagen para redes
+        </a>
+      </p>
       {ranking && (view.run?.parameters.min_sets ?? 0) > 0 && (
         <p className="seeding-lead">
           Entran los jugadores con al menos {view.run?.parameters.min_sets} sets

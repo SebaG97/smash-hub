@@ -42,7 +42,12 @@ const page = (items: unknown[]) => ({
 function mock(data: (url: string) => unknown) {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async (url: string) => ({ ok: true, json: async () => data(url) })),
+    vi.fn(async (url: string) =>
+      // Insights blocks are optional extras; these tests cover the base pages.
+      url.includes("/insights/")
+        ? { ok: false, status: 404 }
+        : { ok: true, json: async () => data(url) },
+    ),
   );
 }
 

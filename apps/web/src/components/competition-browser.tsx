@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { ImportPanel } from "./import-panel";
+import { PlayerAchievements, TournamentSummaryBlock } from "./insights";
 import { characterColor, characterIcon } from "../lib/characters";
 import { MainIcons, RankingFlag, WinBar, mainColor } from "./mains";
 import { PlayerStatistics } from "./player-statistics";
@@ -46,9 +47,12 @@ function date(value: string | null) {
 export function Resource<T>({
   path,
   children,
+  optional = false,
 }: {
   path: string;
   children: (data: T) => ReactNode;
+  /** Extra blocks: render nothing while loading or when the data is missing. */
+  optional?: boolean;
 }) {
   const [state, setState] = useState<{
     path: string;
@@ -91,6 +95,8 @@ export function Resource<T>({
       clearTimeout(timer);
     };
   }, [path, retry]);
+  if (optional && (state.path !== path || state.loading || state.error))
+    return null;
   if (state.path !== path || state.loading)
     return <p role="status">Cargando datos…</p>;
   if (state.error)
@@ -251,6 +257,7 @@ export function TournamentPage({ id }: { id: string }) {
               inscripciones a eventos
             </p>
             <p>Fuente: {t.source || "No disponible"}</p>
+            <TournamentSummaryBlock id={id} />
             <Collection<Event>
               title="Eventos y resultados"
               path={`tournaments/${id}/events`}
@@ -470,6 +477,7 @@ function PlayerSummary({ p }: { p: PlayerDetail }) {
           <p className="seeding-lead">Todavía no hay posiciones finales.</p>
         )}
       </section>
+      <PlayerAchievements id={p.id} />
     </>
   );
 }

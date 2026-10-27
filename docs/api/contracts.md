@@ -121,3 +121,28 @@ Cada cambio de identidad recalcula al instante si el proyecto ya tiene datos. `G
 ### Mains en el seeding (Misión 09)
 
 En un seeding, `mains` de cada fila sale de los últimos 40 sets del jugador en start.gg, en cualquier torneo, así que los extranjeros también los tienen. Si no hay datos, se usan los mains de los torneos importados al hub.
+
+## Emblemas, récords y calendario (Misión 13, ADR-014)
+
+GET públicos bajo `/api/v1/insights`, calculados sobre los sets elegibles de singles de torneos publicados:
+
+| GET | Respuesta |
+| --- | --- |
+| `/players/{id}` | `{records, badges}`. `records`: `biggest_upset`, `best_streak`, `current_streak`, `comebacks`, `titles`, `top8`, `tournaments`, `best_overperformance`, `main_rival`. 404 si el jugador no tiene sets ni ubicaciones |
+| `/records` | `player_of_month`, `streaks`, `rivalries`, `upsets`, `comebacks`, `most_active`, `titles`, con `mains` de cada jugador |
+| `/tournaments/{id}` | Evento con más jugadores: `entrants`, `top` (8), `upsets` (5), `overperformers` (3). 404 sin ubicaciones |
+| `/calendar` | `{items: [{name, url, starts_at, city, venue, attendees}]}`; `unavailable: true` si start.gg no responde |
+
+| Emblema | Regla |
+| --- | --- |
+| `lider` Líder indiscutible | 1.º del ranking publicado |
+| `trofeos` / `campeon` | 3 o más títulos / al menos uno (eventos de 8 o más) |
+| `david` David contra Goliat | Una sorpresa de factor 3 o más |
+| `remontadas` Maestro de las remontadas | 5 o más sets ganados tras perder la primera partida |
+| `racha` Racha imparable | 10 o más sets ganados seguidos |
+| `top8` Siempre en el top 8 | 5 o más top 8 en eventos de 16 o más |
+| `incansable` | 15 o más torneos |
+| `especialista` / `camaleon` | Con 30 partidas o más: un personaje en el 90 % / 4 personajes con 5 partidas o más |
+| `nuevo` Nuevo en la escena | Primer torneo en los últimos 60 días de datos |
+
+Imágenes para redes (web, PNG 1080×1080): `/og/tournament/{id}`, `/og/ranking/{slug}`, `/og/seeding/{slug}` (solo publicados).

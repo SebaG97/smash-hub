@@ -109,7 +109,7 @@ Auditoría Misión 02.1: clasificación de estado/resolución/elegibilidad, migr
 
 ## Estadísticas y Head-to-Head — Misión 03
 
-Desde `/players`, abrir un perfil para consultar estadísticas, rivales frecuentes y últimos resultados; un rival enlaza a `/players/[id]/vs/[opponentId]`. `/estadisticas` dirige al selector de jugadores. La web ofrece filtros de juego/modalidad y período, carga, errores, vacío y paginación. No calcula métricas competitivas.
+Desde `/players`, abrir un perfil para consultar estadísticas, rivales frecuentes y últimos resultados; un rival enlaza a `/players/[id]/vs/[opponentId]`. `/estadisticas` muestra los récords de la comunidad (Misión 13). La web ofrece filtros de juego/modalidad y período, carga, errores, vacío y paginación. No calcula métricas competitivas.
 
 Nuevos GET bajo `/api/v1/players/{id}`: `/statistics`, `/matches`, `/opponents`, `/placements`, `/head-to-head/{opponent_id}`. Requieren `game_id`; `mode=singles|doubles`, torneo, comunidad y timestamps con offset opcionales. `PlayerDetail.scopes` proporciona los ámbitos disponibles. Win rate sin sets es `null`; DQ/BYE/bracket no generan victorias jugadas. Sin nuevas migraciones ni servicios.
 
@@ -126,3 +126,5 @@ Misión 06: importación de torneos de Paraguay desde la web (`/tournaments`, co
 Misión 07: casilla «Cuenta para el ranking» por torneo importado (los desmarcados no cuentan en los rankings) e íconos de los mains junto al nombre de cada jugador en jugadores, seeding y ranking.
 
 Misión 08: vista pública limpia (seedings como borradores hasta publicarlos, ranking sin datos internos) y acceso único de organizadores en `/admin`, con la protección también en la API.
+
+Misión 13: emblemas y récords en la ficha de cada jugador, récords y jugador del mes en `/estadisticas` y la portada, resumen de cada torneo, calendario de próximos torneos desde start.gg e imágenes para redes del top de torneos y rankings (ADR-014).

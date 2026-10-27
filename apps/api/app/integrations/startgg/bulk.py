@@ -106,6 +106,9 @@ def _run(engine, token, actor, *, country=None, start=None, end=None, slugs=None
             bootstrap(session)  # Idempotent: community, game and data source must exist.
         asyncio.run(main())
         _update(status="completed", current=None, finished_at=datetime.now(UTC).isoformat())
+        from app.insights.engine import invalidate
+
+        invalidate()  # Records and badges must see the new tournaments.
     except Exception as exc:
         code = str(exc) if isinstance(exc, ImportFailure) else type(exc).__name__
         log.error("Bulk import failed: %s", code)
