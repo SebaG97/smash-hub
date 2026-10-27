@@ -2,6 +2,7 @@ from sqlalchemy import func, select
 
 from app.competitions.router import visible_players
 from app.integrations.startgg.client import ImportFailure, parse_slug
+from app.players.mains import player_mains
 from app.players.models import Player
 from app.statistics import repository as repo
 from app.statistics.contracts import Filters
@@ -112,10 +113,11 @@ def opponents(session, id, filters):
     player(session, id)
     data = repo.perspective(repo.eligible_sets(session, filters), id)
     rows, total = repo.page(session, repo.opponents(data), filters.page, filters.page_size)
+    mains = player_mains(session, [row["id"] for row in rows], limit=1)
     items = [
         {
             **{k: v for k, v in row.items() if k not in {"id", "tag"}},
-            "opponent": {"id": row["id"], "tag": row["tag"]},
+            "opponent": {"id": row["id"], "tag": row["tag"], "mains": mains.get(row["id"], [])},
             "win_rate": percentage(row["wins"], row["sets_played"]),
         }
         for row in rows

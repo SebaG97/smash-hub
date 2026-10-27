@@ -34,3 +34,8 @@ Tipografía: *Big Shoulders Display* (700–900) para títulos, nombres en tabla
 ## Pasada de color (Misión 11)
 
 El color sale del propio juego: cada jugador toma el color característico de su main (`src/lib/character-colors.ts`, generado desde los SVG, con 16 elegidos a mano). Se usa en la franja de las filas del ranking y la portada, en el fondo teñido del 1.º y en la cabecera de la ficha. El W-L lleva una barra verde y roja; el menú marca la sección actual; la portada tiene un buscador de jugadores, y las páginas de ranking y seeding tienen enlace para volver.
+
+## Ficha del jugador y fondo (Misión 12)
+
+- **Fondo:** grano de concreto muy sutil en todo el sitio (la textura del logo, generada con `feTurbulence`). En la ficha, la parte superior toma el tono del main del jugador y se funde con el concreto.
+- **Ficha:** cabecera con el ícono grande del main; franja con puesto en el ranking (número inclinado en oro), récord con barra, % de victorias, torneos y último torneo; pestañas **Resumen** (mains como "stocks" con el color de cada personaje, y los tres mejores resultados según el tamaño del bracket), **Estadísticas**, **Rivales** (con el ícono del main de cada rival y la barra del H2H) e **Historial**.

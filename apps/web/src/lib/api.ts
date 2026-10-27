@@ -74,6 +74,14 @@ export type PlayerDetail = Player & {
   aliases: string[];
   history: Page<History>;
   scopes: Scope[];
+  ranking?: { slug: string; name: string; place: number } | null;
+  best_results?: {
+    placement: number;
+    entrants: number | null;
+    tournament_id: string;
+    tournament_name: string;
+    starts_at: string | null;
+  }[];
 };
 
 export type Scope = {
@@ -92,6 +100,7 @@ export type Statistics = {
   first_set_at: string | null;
   last_set_at: string | null;
   best_final_placement: number | null;
+  latest_tournament?: { id: string; name: string } | null;
   unique_opponents: number;
 };
 export type CompetitiveMatch = {

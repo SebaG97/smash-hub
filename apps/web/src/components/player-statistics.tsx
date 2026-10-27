@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Collection, Resource } from "./competition-browser";
+import { MainIcons, WinBar } from "./mains";
 import type {
   CompetitiveMatch,
   FrequentOpponent,
@@ -118,9 +119,12 @@ export function CompetitiveMatchCard({ match }: { match: CompetitiveMatch }) {
 export function PlayerStatistics({
   id,
   scopes,
+  section = "all",
 }: {
   id: string;
   scopes: Scope[];
+  /** Which part a profile tab shows; filters are shown in every one. */
+  section?: "all" | "stats" | "rivals";
 }) {
   const [selected, setSelected] = useState("");
   const [from, setFrom] = useState("");
@@ -138,7 +142,7 @@ export function PlayerStatistics({
   const invalid = from && to && new Date(from) >= new Date(to);
   return (
     <section className="data-section" aria-label="Estadísticas competitivas">
-      <h2>Estadísticas competitivas</h2>
+      {section === "all" && <h2>Estadísticas competitivas</h2>}
       <ScopeFilters
         scopes={scopes}
         scope={scope}
@@ -158,57 +162,65 @@ export function PlayerStatistics({
         <p role="alert">La fecha inicial debe ser anterior a la final.</p>
       ) : (
         <>
-          <Resource<Statistics> path={`players/${id}/statistics?${filters}`}>
-            {(s) => (
-              <div className="data-card">
-                {s.sets_played === 0 && (
-                  <p>No hay sets elegibles en este ámbito.</p>
-                )}
-                <p>
-                  {s.sets_played} sets jugados · {s.wins} victorias · {s.losses}{" "}
-                  derrotas
-                </p>
-                <p>Porcentaje de victorias: {rate(s.win_rate)}</p>
-                <p>
-                  {s.tournaments_played} torneos disputados ·{" "}
-                  {s.tournaments_registered} torneos con inscripción
-                </p>
-                <p>
-                  Mejor placement final:{" "}
-                  {s.best_final_placement ?? "No disponible"}
-                </p>
-                <p>
-                  {s.unique_opponents} rivales únicos · Primer set:{" "}
-                  {date(s.first_set_at)} · Último set: {date(s.last_set_at)}
-                </p>
-              </div>
-            )}
-          </Resource>
-          <Collection<FrequentOpponent>
-            key={`opponents-${filters}`}
-            title="Rivales frecuentes"
-            path={`players/${id}/opponents?${filters}`}
-            render={(r) => (
-              <>
-                <h3>
-                  <Link href={`/players/${id}/vs/${r.opponent.id}?${filters}`}>
-                    {r.opponent.tag}: ver Head-to-Head
-                  </Link>
-                </h3>
-                <p>
-                  {r.sets_played} sets · {r.wins} victorias · {r.losses}{" "}
-                  derrotas · {rate(r.win_rate)}
-                </p>
-                <p>Último enfrentamiento: {date(r.last_encounter_at)}</p>
-              </>
-            )}
-          />
-          <Collection<CompetitiveMatch>
-            key={`matches-${filters}`}
-            title="Últimos resultados"
-            path={`players/${id}/matches?${filters}`}
-            render={(match) => <CompetitiveMatchCard match={match} />}
-          />
+          {section !== "rivals" && (
+            <Resource<Statistics> path={`players/${id}/statistics?${filters}`}>
+              {(s) => (
+                <div className="data-card">
+                  {s.sets_played === 0 && (
+                    <p>No hay sets elegibles en este ámbito.</p>
+                  )}
+                  <p>
+                    {s.sets_played} sets jugados · {s.wins} victorias ·{" "}
+                    {s.losses} derrotas
+                  </p>
+                  <p>Porcentaje de victorias: {rate(s.win_rate)}</p>
+                  <p>
+                    {s.tournaments_played} torneos disputados ·{" "}
+                    {s.tournaments_registered} torneos con inscripción
+                  </p>
+                  <p>
+                    Mejor placement final:{" "}
+                    {s.best_final_placement ?? "No disponible"}
+                  </p>
+                  <p>
+                    {s.unique_opponents} rivales únicos · Primer set:{" "}
+                    {date(s.first_set_at)} · Último set: {date(s.last_set_at)}
+                  </p>
+                </div>
+              )}
+            </Resource>
+          )}
+          {section !== "stats" && (
+            <Collection<FrequentOpponent>
+              key={`opponents-${filters}`}
+              title="Rivales frecuentes"
+              path={`players/${id}/opponents?${filters}`}
+              render={(r) => (
+                <div className="rival">
+                  <MainIcons mains={r.opponent.mains} size={40} />
+                  <div>
+                    <h3>
+                      <Link
+                        href={`/players/${id}/vs/${r.opponent.id}?${filters}`}
+                      >
+                        {r.opponent.tag}: ver Head-to-Head
+                      </Link>
+                    </h3>
+                    <p>Último enfrentamiento: {date(r.last_encounter_at)}.</p>
+                  </div>
+                  <WinBar wins={r.wins} losses={r.losses} />
+                </div>
+              )}
+            />
+          )}
+          {section !== "rivals" && (
+            <Collection<CompetitiveMatch>
+              key={`matches-${filters}`}
+              title="Últimos resultados"
+              path={`players/${id}/matches?${filters}`}
+              render={(match) => <CompetitiveMatchCard match={match} />}
+            />
+          )}
         </>
       )}
     </section>

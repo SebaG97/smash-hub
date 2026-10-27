@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { ImportPanel } from "./import-panel";
 import { characterColor, characterIcon } from "../lib/characters";
-import { MainIcons, RankingFlag, mainColor } from "./mains";
+import { MainIcons, RankingFlag, WinBar, mainColor } from "./mains";
 import { PlayerStatistics } from "./player-statistics";
 import type {
   Page,
@@ -14,6 +14,7 @@ import type {
   Match,
   Player,
   PlayerDetail,
+  Statistics,
 } from "../lib/api";
 
 const api = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
@@ -339,103 +340,255 @@ export function Players({ initialQuery = "" }: { initialQuery?: string }) {
     </div>
   );
 }
+const PLAYER_TABS = [
+  ["resumen", "Resumen"],
+  ["estadisticas", "Estadísticas"],
+  ["rivales", "Rivales"],
+  ["historial", "Historial"],
+] as const;
+
+function PlayerStrip({ p }: { p: PlayerDetail }) {
+  const singles = p.scopes?.find((s) => s.mode === "singles");
+  return (
+    <dl className="player-strip">
+      <div>
+        <dt>Ranking</dt>
+        <dd>
+          {p.ranking ? (
+            <Link href={`/rankings/${p.ranking.slug}`} className="place">
+              {p.ranking.place}
+            </Link>
+          ) : (
+            <span className="muted-value">Sin puesto</span>
+          )}
+        </dd>
+      </div>
+      {singles && (
+        <Resource<Statistics>
+          path={`players/${p.id}/statistics?game_id=${singles.game_id}&mode=singles`}
+        >
+          {(s) => (
+            <>
+              <div>
+                <dt>Récord</dt>
+                <dd>
+                  <WinBar wins={s.wins} losses={s.losses} />
+                </dd>
+              </div>
+              <div>
+                <dt>Victorias</dt>
+                <dd>
+                  {s.win_rate === null ? "—" : `${Math.round(s.win_rate)} %`}
+                </dd>
+              </div>
+              <div>
+                <dt>Torneos</dt>
+                <dd>{s.tournaments_played}</dd>
+              </div>
+              <div>
+                <dt>Último torneo</dt>
+                <dd className="strip-text">
+                  {s.latest_tournament ? (
+                    <Link href={`/tournaments/${s.latest_tournament.id}`}>
+                      {s.latest_tournament.name}
+                    </Link>
+                  ) : (
+                    "—"
+                  )}
+                </dd>
+              </div>
+            </>
+          )}
+        </Resource>
+      )}
+    </dl>
+  );
+}
+
+function PlayerSummary({ p }: { p: PlayerDetail }) {
+  return (
+    <>
+      <section aria-labelledby="mains-title">
+        <h2 id="mains-title">Mains</h2>
+        {p.mains && p.mains.length > 0 ? (
+          <>
+            <ul className="stocks">
+              {p.mains.map((m) => (
+                <li
+                  key={m.character}
+                  style={
+                    {
+                      "--main": characterColor(m.character) ?? "var(--line)",
+                    } as React.CSSProperties
+                  }
+                >
+                  {characterIcon(m.character) || m.icon ? (
+                    <MainIcons mains={[m]} size={56} />
+                  ) : (
+                    <span className="stock-blank" aria-hidden="true">
+                      ?
+                    </span>
+                  )}
+                  <strong>{m.character}</strong>
+                  <span>
+                    {Math.round(m.share)} %, {m.games}{" "}
+                    {m.games === 1 ? "partida" : "partidas"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="seeding-lead">
+              Según los personajes que cargaron los torneos en start.gg.
+            </p>
+          </>
+        ) : (
+          <p className="seeding-lead">
+            Los torneos importados no informaron sus personajes.
+          </p>
+        )}
+      </section>
+      <section aria-labelledby="best-title">
+        <h2 id="best-title">Mejores resultados</h2>
+        {p.best_results && p.best_results.length > 0 ? (
+          <ol className="best-results">
+            {p.best_results.map((b) => (
+              <li key={b.tournament_id + b.placement}>
+                <span className="place">{b.placement}</span>
+                <span>
+                  <Link href={`/tournaments/${b.tournament_id}`}>
+                    {b.tournament_name}
+                  </Link>
+                  <small>
+                    {b.entrants ? `de ${b.entrants} jugadores` : ""}
+                    {b.starts_at ? `, ${date(b.starts_at)}` : ""}
+                  </small>
+                </span>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="seeding-lead">Todavía no hay posiciones finales.</p>
+        )}
+      </section>
+    </>
+  );
+}
+
 export function PlayerPage({ id }: { id: string }) {
   const [page, setPage] = useState(1);
+  const [tab, setTab] = useState<(typeof PLAYER_TABS)[number][0]>("resumen");
   return (
-    <div className="competition-page">
-      <Link href="/players">← Jugadores</Link>
-      <Resource<PlayerDetail> path={`players/${id}?page=${page}`}>
-        {(p) => (
-          <>
-            <header
-              className="player-hero"
-              style={
-                mainColor(p.mains)
-                  ? ({ "--main": mainColor(p.mains) } as React.CSSProperties)
-                  : undefined
-              }
-            >
-              <MainIcons mains={p.mains?.slice(0, 1)} size={88} />
-              <div>
-                <h1>{p.tag}</h1>
-                {p.mains && p.mains.length > 0 && (
-                  <p>Juega sobre todo {p.mains[0].character}.</p>
-                )}
-              </div>
-            </header>
-            {p.mains && p.mains.length > 0 && (
-              <section className="player-mains" aria-label="Mains">
-                <h2>Mains</h2>
-                <ul>
-                  {p.mains.map((m) => (
-                    <li key={m.character}>
-                      <strong>
-                        {(characterIcon(m.character) || m.icon) && (
-                          <MainIcons mains={[m]} size={28} />
-                        )}{" "}
-                        {m.character}
-                      </strong>
-                      <span
-                        className="main-bar"
-                        style={{
-                          width: `${Math.max(4, m.share)}%`,
-                          background: characterColor(m.character) ?? undefined,
-                        }}
-                        aria-hidden="true"
-                      />
-                      <small>
-                        {Math.round(m.share)} % · {m.games}{" "}
-                        {m.games === 1 ? "partida" : "partidas"}
-                      </small>
-                    </li>
-                  ))}
-                </ul>
-                <p className="seeding-lead">
-                  Según los personajes que los torneos cargaron en start.gg
-                  (partidas de singles).
-                </p>
-              </section>
-            )}
-            <PlayerStatistics key={id} id={id} scopes={p.scopes || []} />
-            <h2>Tags conocidos</h2>
-            <p>{p.aliases.join(" · ") || "Sin tags adicionales"}</p>
-            <h2>Historial competitivo</h2>
-            {p.history.items.length === 0 ? (
-              <p>No hay historial disponible.</p>
-            ) : (
-              <div className="data-grid">
-                {p.history.items.map((h) => (
-                  <article className="data-card" key={h.event_id}>
-                    <h3>
-                      <Link href={`/tournaments/${h.tournament_id}`}>
-                        {h.tournament_name}
-                      </Link>
-                    </h3>
-                    <Link href={`/events/${h.event_id}`}>{h.event_name}</Link>
-                    <p>
-                      Tag histórico: {h.tag} · {h.entrant_name}
-                    </p>
-                    <p>Placement: {h.placement ?? "No disponible"}</p>
-                  </article>
-                ))}
-              </div>
-            )}
-            <div className="pagination">
-              <button disabled={page === 1} onClick={() => setPage(page - 1)}>
-                Anterior
-              </button>
-              <span>Página {page}</span>
-              <button
-                disabled={page * p.history.page_size >= p.history.total}
-                onClick={() => setPage(page + 1)}
-              >
-                Siguiente
-              </button>
+    <Resource<PlayerDetail> path={`players/${id}?page=${page}`}>
+      {(p) => (
+        <div
+          className="competition-page player-page"
+          style={
+            mainColor(p.mains)
+              ? ({ "--main": mainColor(p.mains) } as React.CSSProperties)
+              : undefined
+          }
+        >
+          <Link className="back-link" href="/players">
+            ← Jugadores
+          </Link>
+          <header className="player-hero">
+            <MainIcons mains={p.mains?.slice(0, 1)} size={96} />
+            <div>
+              <h1>{p.tag}</h1>
+              {p.mains && p.mains.length > 0 && (
+                <p>Juega sobre todo {p.mains[0].character}.</p>
+              )}
             </div>
-          </>
-        )}
-      </Resource>
-    </div>
+          </header>
+          <PlayerStrip p={p} />
+          <div
+            className="tabs"
+            role="tablist"
+            aria-label="Secciones del jugador"
+          >
+            {PLAYER_TABS.map(([key, label]) => (
+              <button
+                key={key}
+                role="tab"
+                id={`tab-${key}`}
+                aria-selected={tab === key}
+                aria-controls={`panel-${key}`}
+                onClick={() => setTab(key)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div
+            role="tabpanel"
+            id={`panel-${tab}`}
+            aria-labelledby={`tab-${tab}`}
+          >
+            {tab === "resumen" && <PlayerSummary p={p} />}
+            {tab === "estadisticas" && (
+              <PlayerStatistics
+                key={`stats-${id}`}
+                id={id}
+                scopes={p.scopes || []}
+                section="stats"
+              />
+            )}
+            {tab === "rivales" && (
+              <PlayerStatistics
+                key={`rivals-${id}`}
+                id={id}
+                scopes={p.scopes || []}
+                section="rivals"
+              />
+            )}
+            {tab === "historial" && (
+              <>
+                <h2>Tags conocidos</h2>
+                <p>{p.aliases.join(", ") || "Sin tags adicionales."}</p>
+                <h2>Torneos jugados</h2>
+                {p.history.items.length === 0 ? (
+                  <p>No hay historial disponible.</p>
+                ) : (
+                  <ol className="history">
+                    {p.history.items.map((h) => (
+                      <li key={h.event_id}>
+                        <span className="place">{h.placement ?? "–"}</span>
+                        <span>
+                          <Link href={`/tournaments/${h.tournament_id}`}>
+                            {h.tournament_name}
+                          </Link>
+                          <small>
+                            <Link href={`/events/${h.event_id}`}>
+                              {h.event_name}
+                            </Link>
+                            , como {h.tag}
+                          </small>
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+                <div className="pagination">
+                  <button
+                    disabled={page === 1}
+                    onClick={() => setPage(page - 1)}
+                  >
+                    Anterior
+                  </button>
+                  <span>Página {page}</span>
+                  <button
+                    disabled={page * p.history.page_size >= p.history.total}
+                    onClick={() => setPage(page + 1)}
+                  >
+                    Siguiente
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </Resource>
   );
 }
 

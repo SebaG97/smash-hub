@@ -922,3 +922,200 @@ nav a[aria-current="page"] {
   font-size: 0.9rem;
   flex: 1 1 200px;
 }
+
+/* ---------------------------------------------------------------- profile + background (Mission 12)
+ * A: the logo's concrete grain over the whole page. B: the profile takes its main's tone
+ * at the top and fades into concrete.
+ */
+body {
+  background-color: var(--concrete);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.94 0 0 0 0 0.9 0 0 0 0 0.85 0 0 0 0.07 0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.player-page {
+  max-width: none;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--main, var(--fire)) 26%, transparent) 0,
+    transparent 520px
+  );
+  padding-left: max(24px, calc((100% - 1152px) / 2));
+  padding-right: max(24px, calc((100% - 1152px) / 2));
+}
+.player-page .player-hero {
+  background: none;
+  border-left: 0;
+  padding: 8px 0 0;
+}
+.player-hero h1 {
+  font-size: clamp(2.8rem, 7vw, 4.8rem);
+}
+.player-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 36px;
+  margin: 18px 0 8px;
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.player-strip div {
+  min-width: 90px;
+}
+.player-strip dt {
+  font-size: 0.8rem;
+  color: var(--ash);
+}
+.player-strip dd {
+  margin: 2px 0 0;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 1.5rem;
+}
+.player-strip .place {
+  font-size: 2.4rem;
+  color: var(--gold);
+  text-decoration: none;
+}
+.player-strip .strip-text {
+  font-size: 1.15rem;
+  max-width: 22ch;
+}
+.player-strip .strip-text a,
+.player-strip .muted-value {
+  text-decoration: none;
+  color: var(--bone);
+}
+.player-strip .muted-value {
+  color: var(--ash);
+  font-size: 1.1rem;
+}
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin: 22px 0 6px;
+  border-bottom: 2px solid var(--line);
+  overflow-x: auto;
+}
+.tabs button {
+  background: none;
+  border: 0;
+  color: var(--ash);
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 1.2rem;
+  padding: 10px 14px;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  white-space: nowrap;
+}
+.tabs button[aria-selected="true"] {
+  color: var(--bone);
+  border-bottom-color: var(--main, var(--fire));
+}
+.stocks {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.stocks li {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  width: 116px;
+  padding: 12px 8px;
+  text-align: center;
+  border-top: 4px solid var(--main);
+  background: color-mix(in srgb, var(--main) 12%, transparent);
+}
+.stocks strong {
+  font-family: var(--display);
+  font-size: 1.05rem;
+  line-height: 1.1;
+}
+.stocks span:last-child {
+  color: var(--ash);
+  font-size: 0.8rem;
+}
+.stock-blank {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  font-family: var(--display);
+  font-size: 2rem;
+  color: var(--ash);
+}
+.best-results,
+.history {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0;
+}
+.best-results li,
+.history li {
+  display: grid;
+  grid-template-columns: 3.4rem minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+.best-results a,
+.history a {
+  text-decoration: none;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 1.2rem;
+}
+.best-results small,
+.history small {
+  display: block;
+}
+.history small a {
+  font-family: var(--text);
+  font-weight: 400;
+  font-size: 0.9rem;
+  color: var(--ash);
+}
+.best-results li:first-child .place {
+  color: var(--gold);
+}
+.history .place {
+  font-size: 1.7rem;
+}
+.rival {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+}
+.rival h3 {
+  margin: 0;
+}
+@media (max-width: 580px) {
+  .player-page {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .player-strip {
+    gap: 8px 22px;
+  }
+  .stocks li {
+    width: calc(50% - 7px);
+  }
+  .rival {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .rival .winbar {
+    grid-column: 2;
+  }
+}
+.tabs {
+  scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar {
+  display: none;
+}

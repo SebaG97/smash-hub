@@ -22,6 +22,7 @@ from app.core.admin import Admin
 from app.games.models import Game
 from app.players.mains import player_mains
 from app.players.models import Player, PlayerAlias
+from app.players.summary import best_results, ranking_place
 
 router = APIRouter(
     prefix="/api/v1",
@@ -123,10 +124,26 @@ class ParticipationView(BaseModel):
     placement: int | None
 
 
+class RankingPlace(BaseModel):
+    slug: str
+    name: str
+    place: int
+
+
+class BestResult(BaseModel):
+    placement: int
+    entrants: int | None
+    tournament_id: UUID
+    tournament_name: str
+    starts_at: datetime | None
+
+
 class PlayerDetail(PlayerView):
     aliases: list[str]
     history: Page[ParticipationView]
     scopes: list["PlayerScope"]
+    ranking: RankingPlace | None = None
+    best_results: list[BestResult] = []
 
 
 class PlayerScope(BaseModel):
@@ -509,6 +526,8 @@ def player(
             "aliases": aliases,
             "history": page_result(history, total, page, page_size),
             "scopes": player_scopes(s, id),
+            "ranking": ranking_place(s, id),
+            "best_results": best_results(s, id),
         }
 
 

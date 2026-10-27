@@ -82,6 +82,7 @@ it("integrates API statistics into the existing profile and links comparisons", 
             },
   );
   render(<PlayerPage id="a" />);
+  fireEvent.click(await screen.findByRole("tab", { name: "Estadísticas" }));
   expect(
     await screen.findByText("Porcentaje de victorias: 66.67 %"),
   ).toBeInTheDocument();
@@ -92,11 +93,12 @@ it("integrates API statistics into the existing profile and links comparisons", 
     screen.getByText("Mejor placement final: No disponible"),
   ).toBeInTheDocument();
   expect(
-    await screen.findByRole("link", { name: /ver Head-to-Head/i }),
-  ).toHaveAttribute("href", "/players/a/vs/b?game_id=game&mode=singles");
-  expect(
     await screen.findByText("Puntuación no disponible · Final"),
   ).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("tab", { name: "Rivales" }));
+  expect(
+    await screen.findByRole("link", { name: /ver Head-to-Head/i }),
+  ).toHaveAttribute("href", "/players/a/vs/b?game_id=game&mode=singles");
   expect(
     vi.mocked(fetch).mock.calls.some(([url]) => String(url).includes("&q=")),
   ).toBe(false);

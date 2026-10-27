@@ -132,9 +132,12 @@ it("shows known tags and historical competition records", async () => {
     ]),
   }));
   render(<PlayerPage id="p1" />);
-  expect(await screen.findByText("Ana · Old")).toBeInTheDocument();
-  expect(screen.getByText(/Tag histórico: Old/)).toBeInTheDocument();
-  expect(screen.getByText("Placement: No disponible")).toBeInTheDocument();
+  fireEvent.click(await screen.findByRole("tab", { name: "Historial" }));
+  expect(screen.getByText("Ana, Old")).toBeInTheDocument();
+  expect(screen.getByText(/como Old/)).toBeInTheDocument();
+  expect(
+    screen.getByRole("link", { name: "Open Paraguay" }),
+  ).toBeInTheDocument();
 });
 it("shows empty state and pagination controls", async () => {
   mock(() => page([]));

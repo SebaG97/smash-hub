@@ -63,6 +63,6 @@ describe("player mains", () => {
       await screen.findByRole("heading", { name: "Mains" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Incineroar")).toBeInTheDocument();
-    expect(screen.getByText("62 % · 31 partidas")).toBeInTheDocument();
+    expect(screen.getByText("62 %, 31 partidas")).toBeInTheDocument();
   });
 });

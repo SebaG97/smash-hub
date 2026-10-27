@@ -2896,6 +2896,55 @@
   },
   "components": {
     "schemas": {
+      "BestResult": {
+        "properties": {
+          "placement": {
+            "type": "integer",
+            "title": "Placement"
+          },
+          "entrants": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entrants"
+          },
+          "tournament_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Tournament Id"
+          },
+          "tournament_name": {
+            "type": "string",
+            "title": "Tournament Name"
+          },
+          "starts_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starts At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "placement",
+          "entrants",
+          "tournament_id",
+          "tournament_name",
+          "starts_at"
+        ],
+        "title": "BestResult"
+      },
       "CreateRequest": {
         "properties": {
           "kind": {
@@ -4207,6 +4256,24 @@
             },
             "type": "array",
             "title": "Scopes"
+          },
+          "ranking": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RankingPlace"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "best_results": {
+            "items": {
+              "$ref": "#/components/schemas/BestResult"
+            },
+            "type": "array",
+            "title": "Best Results",
+            "default": []
           }
         },
         "type": "object",
@@ -4300,6 +4367,29 @@
           "counts"
         ],
         "title": "RankingFlag"
+      },
+      "RankingPlace": {
+        "properties": {
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "place": {
+            "type": "integer",
+            "title": "Place"
+          }
+        },
+        "type": "object",
+        "required": [
+          "slug",
+          "name",
+          "place"
+        ],
+        "title": "RankingPlace"
       },
       "RecalculateRequest": {
         "properties": {
