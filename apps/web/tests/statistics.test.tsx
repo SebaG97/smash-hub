@@ -92,7 +92,7 @@ it("integrates API statistics into the existing profile and links comparisons", 
     screen.getByText("Mejor placement final: No disponible"),
   ).toBeInTheDocument();
   expect(
-    await screen.findByRole("link", { name: /Ver Head-to-Head/ }),
+    await screen.findByRole("link", { name: /ver Head-to-Head/i }),
   ).toHaveAttribute("href", "/players/a/vs/b?game_id=game&mode=singles");
   expect(
     await screen.findByText("Puntuación no disponible · Final"),

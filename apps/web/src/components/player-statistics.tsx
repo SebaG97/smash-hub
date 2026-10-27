@@ -192,7 +192,7 @@ export function PlayerStatistics({
               <>
                 <h3>
                   <Link href={`/players/${id}/vs/${r.opponent.id}?${filters}`}>
-                    {r.opponent.tag} · Ver Head-to-Head ↗
+                    {r.opponent.tag}: ver Head-to-Head
                   </Link>
                 </h3>
                 <p>

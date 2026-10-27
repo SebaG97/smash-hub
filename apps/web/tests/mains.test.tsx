@@ -32,7 +32,7 @@ describe("player mains", () => {
     );
     render(<Players />);
     expect(
-      await screen.findByText("Main: Incineroar (62 %) · Cloud (24 %)"),
+      await screen.findByText("Incineroar 62 %, Cloud 24 %"),
     ).toBeInTheDocument();
   });
 

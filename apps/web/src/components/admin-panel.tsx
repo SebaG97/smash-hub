@@ -9,7 +9,6 @@ export function AdminPanel() {
   const admin = useAdmin();
   return (
     <div className="competition-page">
-      <p className="eyebrow">ORGANIZADORES</p>
       <h1>Panel de administración</h1>
       {!admin ? (
         <>
@@ -28,7 +27,7 @@ export function AdminPanel() {
           <div className="data-grid">
             <article className="data-card">
               <h3>
-                <Link href="/tournaments">Torneos ↗</Link>
+                <Link href="/tournaments">Torneos</Link>
               </h3>
               <p>
                 Importar torneos de Paraguay desde start.gg y marcar cuáles
@@ -37,13 +36,13 @@ export function AdminPanel() {
             </article>
             <article className="data-card">
               <h3>
-                <Link href="/seeding">Seeding ↗</Link>
+                <Link href="/seeding">Seeding</Link>
               </h3>
               <p>Crear seedings, ajustar, publicar o despublicar y exportar.</p>
             </article>
             <article className="data-card">
               <h3>
-                <Link href="/rankings">Rankings ↗</Link>
+                <Link href="/rankings">Rankings</Link>
               </h3>
               <p>
                 Crear rankings, comparar métodos, elegir el oficial y unir IDs.

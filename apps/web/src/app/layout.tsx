@@ -7,11 +7,11 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Smash PY Hub · La comunidad nos mueve",
-    template: "%s · Smash PY Hub",
+    default: "Smash Club Paraguay",
+    template: "%s | Smash Club Paraguay",
   },
   description:
-    "El punto de encuentro de la comunidad competitiva de Smash en Paraguay.",
+    "Ranking, torneos y mains de la escena de Smash Ultimate en Paraguay.",
   icons: { icon: "/smashclublogo.jpg", apple: "/smashclublogo.jpg" },
 };
 export default function RootLayout({
@@ -20,7 +20,7 @@ export default function RootLayout({
   return (
     <html lang="es">
       <head>
-        {/* Oswald: condensed display face close to the club logo lettering. */}
+        {/* Big Shoulders Display: sports signage; Atkinson Hyperlegible: readable text. */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           rel="preconnect"
@@ -29,7 +29,7 @@ export default function RootLayout({
         />
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Big+Shoulders+Display:wght@700;800;900&display=swap"
         />
       </head>
       <body>
@@ -37,12 +37,13 @@ export default function RootLayout({
           Saltar al contenido
         </a>
         <header className="site-header">
-          <Link href="/" className="brand" aria-label="Smash PY Hub, inicio">
+          <Link
+            href="/"
+            className="brand"
+            aria-label="Smash Club Paraguay, inicio"
+          >
             <Logo size={52} className="brand-logo" />
-            <span>
-              SMASH <b>PY</b>
-              <small>COMMUNITY HUB</small>
-            </span>
+            <span>Smash Club Paraguay</span>
           </Link>
           <nav aria-label="Navegación principal">
             {modules.map((m) => (
@@ -52,22 +53,16 @@ export default function RootLayout({
             ))}
           </nav>
           <AdminBadge />
-          <span className="country-badge">
-            PY <span aria-hidden="true">●</span> Paraguay
-          </span>
         </header>
         <main id="contenido">{children}</main>
         <footer>
           <Link className="footer-brand" href="/">
-            SMASH PY HUB<span>Una comunidad. Muchas historias.</span>
+            Smash Club Paraguay
+            <span>Hecho por la comunidad de Smash de Paraguay.</span>
           </Link>
-          <p>
-            Hecho para la escena, desde Paraguay ·{" "}
-            <Link href="/admin" className="footer-admin">
-              Organizadores
-            </Link>
-          </p>
-          <span className="version">FUNDACIÓN · V0.1</span>
+          <Link href="/admin" className="footer-admin">
+            Organizadores
+          </Link>
         </footer>
       </body>
     </html>

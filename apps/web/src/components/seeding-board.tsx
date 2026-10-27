@@ -672,26 +672,22 @@ function PublicBoard({ view }: { view: PublicSeedingView }) {
   const ranking = view.kind === "ranking";
   return (
     <div className="competition-page seeding-page">
-      <p className="eyebrow">
-        {ranking
-          ? `RANKING · ${view.country_code === "PY" ? "PARAGUAY" : view.country_code}`
-          : "SEEDING"}
-      </p>
       <h1>{view.name}</h1>
       <p className="seeding-lead">
         {ranking
-          ? `Período del ${day(view.run?.window_start || view.window_start)} al ${day(view.run?.window_end || view.event_date)} · ${view.seeds.length} jugadores · método: ${view.method_label}`
-          : `Evento el ${day(view.event_date)} · ${view.seeds.length} jugadores`}
-        {view.data_cutoff && ` · datos de start.gg al ${day(view.data_cutoff)}`}
+          ? `${view.seeds.length} jugadores, del ${day(view.run?.window_start || view.window_start)} al ${day(view.run?.window_end || view.event_date)}. Método: ${view.method_label}.`
+          : `${view.seeds.length} jugadores. Evento el ${day(view.event_date)}.`}
+        {view.data_cutoff &&
+          ` Resultados de start.gg hasta el ${day(view.data_cutoff)}.`}
         {view.startgg_event_slug && (
           <>
-            {" · "}
+            {" "}
             <a
               href={`https://www.start.gg/${view.startgg_event_slug}`}
               target="_blank"
               rel="noreferrer"
             >
-              Ver en start.gg ↗
+              Ver el evento en start.gg
             </a>
           </>
         )}
@@ -719,7 +715,7 @@ function PublicBoard({ view }: { view: PublicSeedingView }) {
             <tbody>
               {view.seeds.map((row) => (
                 <Fragment key={row.seed}>
-                  <tr>
+                  <tr data-place={row.seed}>
                     <td>
                       <strong>{row.seed}</strong>
                     </td>
@@ -899,11 +895,9 @@ export function SeedingBoard({
   return (
     <div className="competition-page seeding-page">
       <p className="eyebrow">
-        {ranking
-          ? `RANKING · ${view.country_code === "PY" ? "PARAGUAY" : view.country_code}`
-          : "SEEDING · PROPUESTA PARA LA ORGANIZACIÓN"}
-        {" · "}
-        {view.published ? "PUBLICADO" : "BORRADOR (SOLO ADMIN)"}
+        {view.published
+          ? "Publicado: lo ve cualquier visitante."
+          : "Borrador: solo lo ven los organizadores."}
       </p>
       <h1>{view.name}</h1>
       <p className="seeding-lead">
@@ -927,7 +921,7 @@ export function SeedingBoard({
               target="_blank"
               rel="noreferrer"
             >
-              Ver en start.gg ↗
+              Ver en start.gg
             </a>
           </>
         )}
@@ -1047,7 +1041,10 @@ export function SeedingBoard({
                     : row.seed;
                 return (
                   <Fragment key={row.player_id}>
-                    <tr className={row.override ? "is-manual" : undefined}>
+                    <tr
+                      className={row.override ? "is-manual" : undefined}
+                      data-place={place ?? undefined}
+                    >
                       <td>
                         <strong>{place ?? "—"}</strong>
                         {previewing && !ranking && (
@@ -1300,9 +1297,6 @@ export function SeedingList({
   }, [kind, admin]);
   return (
     <div className="competition-page">
-      <p className="eyebrow">
-        {ranking ? "EL CIRCUITO PARAGUAYO" : "ORGANIZACIÓN DE EVENTOS"}
-      </p>
       <h1>{ranking ? "Rankings" : "Seeding"}</h1>
       {admin && <NewProjectForm kind={kind} admin={admin} />}
       {error && <p role="alert">No se pudieron cargar los datos.</p>}
@@ -1319,7 +1313,7 @@ export function SeedingList({
           <article className="data-card" key={p.slug}>
             <h3>
               <Link href={`/${ranking ? "rankings" : "seeding"}/${p.slug}`}>
-                {p.name} ↗
+                {p.name}
               </Link>
             </h3>
             {admin && !p.published && <span className="tag">borrador</span>}

@@ -183,25 +183,22 @@ export function Collection<T>({
 export function Tournaments() {
   return (
     <div className="competition-page">
-      <p className="eyebrow">LA ESCENA COMPETITIVA</p>
       <h1>Torneos</h1>
       <ImportPanel />
       <Collection<Tournament>
-        title="Torneos importados"
+        title="Todos los torneos"
         path="tournaments"
         search
         render={(t) => (
           <>
             <h3>
-              <Link href={`/tournaments/${t.id}`}>{t.name} ↗</Link>
+              <Link href={`/tournaments/${t.id}`}>{t.name}</Link>
             </h3>
             <p>
-              {date(t.starts_at)} · {status(t.status)}
-            </p>
-            <p>{t.games.join(" · ") || "Videojuego no disponible"}</p>
-            <p>
-              {t.participant_count} participantes · {t.entrant_count}{" "}
-              inscripciones a eventos
+              {date(t.starts_at)}. {t.participant_count} jugadores,{" "}
+              {t.entrant_count} inscripciones en{" "}
+              {t.games.join(", ") || "un videojuego sin datos"}.{" "}
+              {status(t.status)}.
             </p>
             <RankingFlag
               tournamentId={t.id}
@@ -217,7 +214,7 @@ function EventCard(e: Event) {
   return (
     <>
       <h3>
-        <Link href={`/events/${e.id}`}>{e.name} ↗</Link>
+        <Link href={`/events/${e.id}`}>{e.name}</Link>
       </h3>
       <p>
         {e.game} ·{" "}
@@ -314,24 +311,22 @@ export function EventPage({ id }: { id: string }) {
 export function Players() {
   return (
     <div className="competition-page">
-      <p className="eyebrow">IDENTIDADES E HISTORIAS</p>
       <h1>Jugadores</h1>
       <Collection<Player>
         path="players"
-        title="Jugadores importados"
+        title="Todos los jugadores"
         search
         render={(p) => (
           <>
             <h3>
-              <Link href={`/players/${p.id}`}>{p.tag} ↗</Link>{" "}
+              <Link href={`/players/${p.id}`}>{p.tag}</Link>{" "}
               <MainIcons mains={p.mains} />
             </h3>
             {p.mains && p.mains.length > 0 && (
               <p>
-                Main:{" "}
                 {p.mains
-                  .map((m) => `${m.character} (${Math.round(m.share)} %)`)
-                  .join(" · ")}
+                  .map((m) => `${m.character} ${Math.round(m.share)} %`)
+                  .join(", ")}
               </p>
             )}
           </>
@@ -392,7 +387,7 @@ export function PlayerPage({ id }: { id: string }) {
                         {h.tournament_name}
                       </Link>
                     </h3>
-                    <Link href={`/events/${h.event_id}`}>{h.event_name} ↗</Link>
+                    <Link href={`/events/${h.event_id}`}>{h.event_name}</Link>
                     <p>
                       Tag histórico: {h.tag} · {h.entrant_name}
                     </p>

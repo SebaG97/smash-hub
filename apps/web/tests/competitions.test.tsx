@@ -54,9 +54,8 @@ it("shows tournament dates, game, participants and entrants separately", async (
     await screen.findByRole("link", { name: /Open Paraguay/ }),
   ).toHaveAttribute("href", "/tournaments/t1");
   expect(
-    screen.getByText(/4 participantes · 3 inscripciones/),
+    screen.getByText(/4 jugadores, 3 inscripciones en Ultimate/),
   ).toBeInTheDocument();
-  expect(screen.getByText("Ultimate")).toBeInTheDocument();
 });
 it("shows tournament detail and access to event results", async () => {
   mock((url) => (url.includes("/events?") ? page([event]) : tournament));

@@ -25,11 +25,9 @@ export default async function ModulePage({
   if (!item) notFound();
   return (
     <section className="empty-state">
-      <p className="eyebrow">EL HUB ESTÁ CRECIENDO · {item.number}</p>
       <h1>{item.title}</h1>
       <p>{item.description}</p>
       <div className="empty-panel">
-        <span aria-hidden="true">↗</span>
         <h2>El próximo capítulo está en camino.</h2>
         <p>
           Este módulo todavía no está implementado. Aquí aparecerán datos

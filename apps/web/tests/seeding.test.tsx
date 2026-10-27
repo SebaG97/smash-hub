@@ -261,7 +261,9 @@ describe("seeding board", () => {
     );
     render(<SeedingBoard slug="rk" base="rankings" />);
     await screen.findByRole("heading", { name: "Ranking Paraguay" });
-    expect(screen.getByText(/RANKING · PARAGUAY/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Publicado: lo ve cualquier visitante/),
+    ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Cid" })).toBeNull();
     expect(screen.queryByRole("button", { name: /Bajar a/ })).toBeNull();
     fireEvent.click(
