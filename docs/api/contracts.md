@@ -153,3 +153,4 @@ Imágenes para redes (web, PNG 1080×1080): `/og/tournament/{id}`, `/og/ranking/
 - `PUT /api/v1/players/{id}/costume` (admin) recibe `{character, costume}`. 401 sin clave, 404 si el jugador no existe, 422 con un personaje desconocido o un traje fuera de 1–8.
 - `GET /api/v1/insights/tournaments/{id}` acepta `limit` (1–16, por defecto 8); la imagen pide 12.
 - Web: `/renders/{personaje}/{traje}?w=160|320|640` devuelve el render oficial recortado (PNG). Las imágenes de `/og/*` muestran el podio con los 12 primeros.
+- `POST` a `/og/tournament/{id}`, `/og/ranking/{slug}` y `/og/seeding/{slug}` (multipart, clave de organizador en `Authorization`): campos `image-0` a `image-11` reemplazan la imagen de cada fila. 401 sin clave válida, 413 si una pesa más de 5 MB, 422 si no es una imagen. No se guardan.

@@ -1286,3 +1286,48 @@ body {
   height: 84px;
   object-fit: contain;
 }
+.share-image .home-more {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+.share-slots {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0;
+}
+.share-slots li {
+  display: grid;
+  grid-template-columns: 2.4rem 56px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+.share-slots img,
+.share-blank {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+}
+.share-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.share-actions input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.share-actions label:focus-within {
+  outline: 2px solid var(--gold);
+}
+.share-result img {
+  width: min(100%, 540px);
+  height: auto;
+  display: block;
+  margin-bottom: 12px;
+}

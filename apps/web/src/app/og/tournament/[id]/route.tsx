@@ -1,4 +1,5 @@
-import { apiBase, shareImage } from "../../../../lib/og";
+import { apiBase, shareImage, type Art } from "../../../../lib/og";
+import { readUploads } from "../../../../lib/og-uploads";
 
 type Top = {
   placement: number;
@@ -7,12 +8,25 @@ type Top = {
   mains?: { character: string; costume?: number }[];
 };
 
+type Params = { params: Promise<{ id: string }> };
+
 /** Top 12 of a tournament's main event. */
-export async function GET(
+export async function GET(request: Request, { params }: Params) {
+  return tournamentImage(request, (await params).id);
+}
+
+/** Same image with pictures uploaded by an organizer (form fields image-<row>). */
+export async function POST(request: Request, { params }: Params) {
+  const uploads = await readUploads(request);
+  if (uploads instanceof Response) return uploads;
+  return tournamentImage(request, (await params).id, uploads);
+}
+
+async function tournamentImage(
   request: Request,
-  { params }: { params: Promise<{ id: string }> },
+  id: string,
+  uploads?: Map<number, Art>,
 ) {
-  const { id } = await params;
   const api = apiBase(request);
   const get = (path: string) =>
     fetch(`${api}/${path}`)
@@ -42,5 +56,6 @@ export async function GET(
       costume: t.mains?.[0]?.costume,
       detail: t.seed ? `seed ${t.seed}` : undefined,
     })),
+    uploads,
   });
 }

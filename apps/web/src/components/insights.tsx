@@ -5,6 +5,7 @@ import type React from "react";
 import type { Main } from "../lib/api";
 import { Resource } from "./competition-browser";
 import { MainIcons, WinBar, mainColor } from "./mains";
+import { ShareImage } from "./share-image";
 
 type Ref = { id: string; tag: string | null; mains?: Main[] };
 export type Badge = { id: string; name: string; why: string };
@@ -361,15 +362,12 @@ export function TournamentSummaryBlock({ id }: { id: string }) {
               </li>
             ))}
           </ol>
-          <p className="home-more">
-            <a
-              className="primary-button"
-              href={`/og/tournament/${id}`}
-              download={`top8-${id}.png`}
-            >
-              Descargar imagen del top
-            </a>
-          </p>
+          <ShareImage
+            endpoint={`/og/tournament/${id}`}
+            filename={`top-${id}.png`}
+            label="Descargar imagen del top"
+            rowsPath={`insights/tournaments/${id}?limit=12`}
+          />
           {s.upsets.length > 0 && (
             <>
               <h3>Sorpresas</h3>

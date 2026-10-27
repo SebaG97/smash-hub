@@ -4,6 +4,7 @@ import Link from "next/link";
 import type React from "react";
 import { useRouter } from "next/navigation";
 import { MainIcons, WinBar, mainColor } from "./mains";
+import { ShareImage } from "./share-image";
 import {
   adminHeaders,
   clearAdmin,
@@ -711,15 +712,16 @@ function PublicBoard({ view }: { view: PublicSeedingView }) {
           </>
         )}
       </p>
-      <p className="home-more">
-        <a
-          className="primary-button"
-          href={`/og/${ranking ? "ranking" : "seeding"}/${view.slug}`}
-          download={`${view.slug}.png`}
-        >
-          Descargar imagen para redes
-        </a>
-      </p>
+      <ShareImage
+        endpoint={`/og/${ranking ? "ranking" : "seeding"}/${view.slug}`}
+        filename={`${view.slug}.png`}
+        label="Descargar imagen para redes"
+        rows={view.seeds.map((s) => ({
+          place: s.seed,
+          tag: s.gamer_tag,
+          mains: s.mains,
+        }))}
+      />
       {ranking && (view.run?.parameters.min_sets ?? 0) > 0 && (
         <p className="seeding-lead">
           Entran los jugadores con al menos {view.run?.parameters.min_sets} sets

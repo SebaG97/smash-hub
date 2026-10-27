@@ -16,12 +16,41 @@ export type OgRow = {
   costume?: number;
   detail?: string;
 };
-type Art = { src: string; width: number; height: number } | null;
+// fill: an uploaded photo already cropped to its slot (see og-uploads.ts).
+export type Art = {
+  src: string;
+  width: number;
+  height: number;
+  fill?: boolean;
+} | null;
 
 const CONCRETE = "#26221f";
 const SLAB = "#302b27";
 const BONE = "#efe9df";
 const ASH = "#a2988d";
+const INNER = 1000;
+const CARD_WIDTH = Math.floor((INNER - 4 * 15) / 5);
+const SMALL_WIDTH = Math.floor((INNER - 3 * 16) / 4);
+
+/** Visible size of the picture in each row's slot (inside the colored border). */
+export function slotSize(index: number) {
+  if (index === 0) return { width: 550, height: 520 };
+  if (index < 3) return { width: 416, height: 252 };
+  if (index < 8) return { width: CARD_WIDTH, height: 208 };
+  return { width: 38, height: 38 };
+}
+
+function Photo({ art }: { art: NonNullable<Art> }) {
+  return (
+    <img
+      src={art.src}
+      width={art.width}
+      height={art.height}
+      style={{ position: "absolute", top: 0, left: 0 }}
+      alt=""
+    />
+  );
+}
 
 export function apiBase(request: Request) {
   // Inside Docker the web server reaches the API by service name; in production the
@@ -78,9 +107,10 @@ async function art(row: OgRow, width: RenderWidth): Promise<Art> {
   return icon ? { src: icon, width: 200, height: 200 } : null;
 }
 
-async function stock(row: OgRow) {
+async function stock(row: OgRow): Promise<Art> {
   const key = row.main ? characterKey(row.main) : null;
-  return key ? inline(`characters/${key}.svg`) : null;
+  const src = key ? await inline(`characters/${key}.svg`) : null;
+  return src ? { src, width: 200, height: 200 } : null;
 }
 
 function fit(a: NonNullable<Art>, maxWidth: number, maxHeight: number) {
@@ -155,7 +185,8 @@ function PodiumCard({
           background: `${color(row)}${big ? "55" : "3a"}`,
         }}
       />
-      {art && size && (
+      {art?.fill && <Photo art={art} />}
+      {art && !art.fill && size && (
         <img
           src={art.src}
           width={size.width}
@@ -224,7 +255,8 @@ function Card({ row, art, width }: { row: OgRow; art: Art; width: number }) {
           background: `${color(row)}30`,
         }}
       />
-      {art && size && (
+      {art?.fill && <Photo art={art} />}
+      {art && !art.fill && size && (
         <img
           src={art.src}
           width={size.width}
@@ -267,16 +299,9 @@ function Card({ row, art, width }: { row: OgRow; art: Art; width: number }) {
   );
 }
 
-/** 9th to 12th: stock icon, place and tag. */
-function Small({
-  row,
-  icon,
-  width,
-}: {
-  row: OgRow;
-  icon: string | null;
-  width: number;
-}) {
+/** 9th to 12th: stock icon (or the uploaded picture), place and tag. */
+function Small({ row, art, width }: { row: OgRow; art: Art; width: number }) {
+  const size = art && (art.fill ? art : fit(art, 38, 38));
   return (
     <div
       style={{
@@ -291,8 +316,24 @@ function Small({
       }}
     >
       <Place place={row.place} size={34} />
-      {icon ? (
-        <img src={icon} width={38} height={38} alt="" />
+      {art && size ? (
+        <div
+          style={{
+            display: "flex",
+            width: 38,
+            height: 38,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <img
+            src={art.src}
+            width={size.width}
+            height={size.height}
+            style={{ borderRadius: art.fill ? 19 : 0 }}
+            alt=""
+          />
+        </div>
       ) : (
         <div style={{ display: "flex", width: 38 }} />
       )}
@@ -312,21 +353,31 @@ function Small({
 
 export async function shareImage(
   request: Request,
-  { title, subtitle, rows }: { title: string; subtitle: string; rows: OgRow[] },
+  {
+    title,
+    subtitle,
+    rows,
+    uploads = new Map(),
+  }: {
+    title: string;
+    subtitle: string;
+    rows: OgRow[];
+    /** Pictures organizers uploaded, by row index; they replace the render. */
+    uploads?: Map<number, Art>;
+  },
 ) {
+  const pick = (index: number, fallback: () => Promise<Art>) =>
+    uploads.get(index) ?? fallback();
   const podium = rows.slice(0, 3);
   const cards = rows.slice(3, 8);
   const small = rows.slice(8, 12);
   const [fontData, logo, podiumArt, cardArt, smallIcons] = await Promise.all([
     displayFont(),
     inline("smashclublogo.jpg"),
-    Promise.all(podium.map((r) => art(r, 640))),
-    Promise.all(cards.map((r) => art(r, 320))),
-    Promise.all(small.map(stock)),
+    Promise.all(podium.map((r, i) => pick(i, () => art(r, 640)))),
+    Promise.all(cards.map((r, i) => pick(i + 3, () => art(r, 320)))),
+    Promise.all(small.map((r, i) => pick(i + 8, () => stock(r)))),
   ]);
-  const inner = 1000;
-  const cardWidth = Math.floor((inner - 4 * 15) / 5);
-  const smallWidth = Math.floor((inner - 3 * 16) / 4);
   return new ImageResponse(
     <div
       style={{
@@ -391,7 +442,7 @@ export async function shareImage(
               key={`${r.place}-${r.tag}`}
               row={r}
               art={cardArt[i]}
-              width={cardWidth}
+              width={CARD_WIDTH}
             />
           ))}
         </div>
@@ -402,8 +453,8 @@ export async function shareImage(
             <Small
               key={`${r.place}-${r.tag}`}
               row={r}
-              icon={smallIcons[i]}
-              width={smallWidth}
+              art={smallIcons[i]}
+              width={SMALL_WIDTH}
             />
           ))}
         </div>

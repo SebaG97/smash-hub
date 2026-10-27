@@ -1,8 +1,12 @@
 import type { PublicSeedingView } from "./api";
-import { apiBase, shareImage } from "./og";
+import { apiBase, shareImage, type Art } from "./og";
 
 /** Top 12 of a published ranking or seeding; drafts are not public, so they 404. */
-export async function seedingImage(request: Request, slug: string) {
+export async function seedingImage(
+  request: Request,
+  slug: string,
+  uploads?: Map<number, Art>,
+) {
   const response = await fetch(
     `${apiBase(request)}/seeding/${encodeURIComponent(slug)}`,
   ).catch(() => null);
@@ -22,5 +26,6 @@ export async function seedingImage(request: Request, slug: string) {
       costume: s.mains?.[0]?.costume,
       detail: ranking ? `${s.wins ?? 0}–${s.losses ?? 0}` : undefined,
     })),
+    uploads,
   });
 }
