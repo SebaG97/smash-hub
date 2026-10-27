@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import type React from "react";
 import { useRouter } from "next/navigation";
-import { MainIcons } from "./mains";
+import { MainIcons, WinBar, mainColor } from "./mains";
 import {
   adminHeaders,
   clearAdmin,
@@ -687,6 +688,9 @@ function PublicBoard({ view }: { view: PublicSeedingView }) {
   const ranking = view.kind === "ranking";
   return (
     <div className="competition-page seeding-page">
+      <Link className="back-link" href={ranking ? "/rankings" : "/seeding"}>
+        ← {ranking ? "Rankings" : "Seeding"}
+      </Link>
       <h1>{view.name}</h1>
       <p className="seeding-lead">
         {ranking
@@ -730,7 +734,16 @@ function PublicBoard({ view }: { view: PublicSeedingView }) {
             <tbody>
               {view.seeds.map((row) => (
                 <Fragment key={row.seed}>
-                  <tr data-place={row.seed}>
+                  <tr
+                    data-place={row.seed}
+                    style={
+                      mainColor(row.mains)
+                        ? ({
+                            "--main": mainColor(row.mains),
+                          } as React.CSSProperties)
+                        : undefined
+                    }
+                  >
                     <td>
                       <strong>{row.seed}</strong>
                     </td>
@@ -748,7 +761,7 @@ function PublicBoard({ view }: { view: PublicSeedingView }) {
                       ) : (
                         row.gamer_tag
                       )}{" "}
-                      <MainIcons mains={row.mains} size={20} />
+                      <MainIcons mains={row.mains} size={26} />
                     </td>
                     {ranking && (
                       <td>
@@ -759,7 +772,7 @@ function PublicBoard({ view }: { view: PublicSeedingView }) {
                     )}
                     {ranking && (
                       <td>
-                        {row.wins}-{row.losses}
+                        <WinBar wins={row.wins} losses={row.losses} />
                       </td>
                     )}
                   </tr>

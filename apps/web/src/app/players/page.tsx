@@ -1,4 +1,9 @@
 import { Players } from "../../components/competition-browser";
-export default function Page() {
-  return <Players />;
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const { q } = await searchParams;
+  return <Players initialQuery={(q ?? "").slice(0, 120)} />;
 }

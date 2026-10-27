@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import type React from "react";
 import { useEffect, useState } from "react";
 import type { Page, PublicSeedingView, Tournament } from "../lib/api";
-import { MainIcons } from "./mains";
+import { MainIcons, WinBar, mainColor } from "./mains";
 
 const api = (process.env.NEXT_PUBLIC_API_URL || "/api/v1").replace(/\/$/, "");
 
@@ -51,17 +52,24 @@ export function HomeBoard() {
           <>
             <ol className="standings">
               {top.map((row) => (
-                <li key={row.seed}>
+                <li
+                  key={row.seed}
+                  style={
+                    mainColor(row.mains)
+                      ? ({
+                          "--main": mainColor(row.mains),
+                        } as React.CSSProperties)
+                      : undefined
+                  }
+                >
                   <span className="place">{row.seed}</span>
                   <span>
                     <Link href={`/rankings/${ranking!.slug}`}>
                       {row.gamer_tag}
                     </Link>{" "}
-                    <MainIcons mains={row.mains} size={24} />
+                    <MainIcons mains={row.mains} size={30} />
                   </span>
-                  <span className="record">
-                    {row.wins}–{row.losses}
-                  </span>
+                  <WinBar wins={row.wins} losses={row.losses} />
                 </li>
               ))}
             </ol>
@@ -107,9 +115,22 @@ export function HomeBoard() {
             {tournaments ? "Todavía no hay torneos importados." : "Cargando…"}
           </p>
         )}
+        <form className="home-search" action="/players" role="search">
+          <label>
+            Buscar un jugador
+            <input
+              name="q"
+              type="search"
+              placeholder="Tag del jugador"
+              maxLength={120}
+            />
+          </label>
+          <button className="primary-button" type="submit">
+            Buscar
+          </button>
+        </form>
         <p className="home-more">
           <Link href="/tournaments">Todos los torneos</Link>
-          <Link href="/players">Buscar un jugador</Link>
         </p>
       </section>
     </div>

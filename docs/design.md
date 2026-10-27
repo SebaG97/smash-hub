@@ -30,3 +30,7 @@ Tipografía: *Big Shoulders Display* (700–900) para títulos, nombres en tabla
 ## Íconos de personajes
 
 `apps/web/public/characters/*.svg` son los íconos de stock de los 84 personajes de Smash Ultimate, en vectores a color de 200×200. Los aportó el responsable del proyecto el 27/10/2026, a partir de una colección de la comunidad sin licencia incluida. Son arte de Nintendo y se usan con fines comunitarios. Antes de copiarlos se limpiaron: sin declaración XML ni DOCTYPE, sin `id`, cifras a un decimal y `viewBox` agregado donde faltaba; se verificó que no tengan scripts ni enlaces externos. `src/lib/characters.ts` relaciona los nombres de start.gg con los archivos; algunos usan el nombre interno del juego (`gaogaen` = Incineroar, `homura` = Pyra & Mythra, `packun_flower` = Piranha Plant), y los tres Mii comparten `mii_fighter`. Si no hay ícono local (por ejemplo "Random Character"), se usa la imagen de start.gg.
+
+## Pasada de color (Misión 11)
+
+El color sale del propio juego: cada jugador toma el color característico de su main (`src/lib/character-colors.ts`, generado desde los SVG, con 16 elegidos a mano). Se usa en la franja de las filas del ranking y la portada, en el fondo teñido del 1.º y en la cabecera de la ficha. El W-L lleva una barra verde y roja; el menú marca la sección actual; la portada tiene un buscador de jugadores, y las páginas de ranking y seeding tienen enlace para volver.

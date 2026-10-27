@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { AdminBadge } from "../components/admin-panel";
 import { Logo } from "../components/logo";
-import { modules } from "../lib/modules";
+import { NavLinks } from "../components/nav-links";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -45,13 +45,7 @@ export default function RootLayout({
             <Logo size={52} className="brand-logo" />
             <span>Smash Club Paraguay</span>
           </Link>
-          <nav aria-label="Navegación principal">
-            {modules.map((m) => (
-              <Link key={m.slug} href={`/${m.slug}`}>
-                {m.title}
-              </Link>
-            ))}
-          </nav>
+          <NavLinks />
           <AdminBadge />
         </header>
         <main id="contenido">{children}</main>

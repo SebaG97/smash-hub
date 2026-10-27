@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { Main } from "../lib/api";
-import { characterIcon } from "../lib/characters";
+import { characterColor, characterIcon } from "../lib/characters";
 import { problem } from "./seeding-board";
 import { useAdmin } from "../lib/admin";
 
@@ -98,4 +98,34 @@ export function RankingFlag({
       {error && <small role="alert"> {error}</small>}
     </p>
   );
+}
+
+/** Wins and losses as a split bar: green share of sets won, red share lost. */
+export function WinBar({ wins, losses }: { wins?: number; losses?: number }) {
+  const w = wins ?? 0;
+  const l = losses ?? 0;
+  const total = w + l;
+  return (
+    <span
+      className="winbar"
+      title={
+        total ? `${Math.round((100 * w) / total)} % de sets ganados` : undefined
+      }
+    >
+      <span className="winbar-text">
+        {w}–{l}
+      </span>
+      {total > 0 && (
+        <span className="winbar-track" aria-hidden="true">
+          <span style={{ width: `${(100 * w) / total}%` }} />
+        </span>
+      )}
+    </span>
+  );
+}
+
+/** Signature color of a player's first main, for row stripes and the profile. */
+export function mainColor(mains?: Main[]): string | undefined {
+  const first = mains?.[0]?.character;
+  return (first && characterColor(first)) || undefined;
 }

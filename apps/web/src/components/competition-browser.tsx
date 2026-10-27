@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { ImportPanel } from "./import-panel";
-import { characterIcon } from "../lib/characters";
-import { MainIcons, RankingFlag } from "./mains";
+import { characterColor, characterIcon } from "../lib/characters";
+import { MainIcons, RankingFlag, mainColor } from "./mains";
 import { PlayerStatistics } from "./player-statistics";
 import type {
   Page,
@@ -115,14 +115,16 @@ export function Collection<T>({
   title,
   render,
   search = false,
+  initialQuery = "",
 }: {
   path: string;
   title: string;
   render: (item: T) => ReactNode;
   search?: boolean;
+  initialQuery?: string;
 }) {
   const [page, setPage] = useState(1);
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(initialQuery);
   return (
     <section aria-label={title} className="data-section">
       <h2>{title}</h2>
@@ -309,7 +311,7 @@ export function EventPage({ id }: { id: string }) {
     </div>
   );
 }
-export function Players() {
+export function Players({ initialQuery = "" }: { initialQuery?: string }) {
   return (
     <div className="competition-page">
       <h1>Jugadores</h1>
@@ -317,6 +319,7 @@ export function Players() {
         path="players"
         title="Todos los jugadores"
         search
+        initialQuery={initialQuery}
         render={(p) => (
           <>
             <h3>
@@ -344,7 +347,22 @@ export function PlayerPage({ id }: { id: string }) {
       <Resource<PlayerDetail> path={`players/${id}?page=${page}`}>
         {(p) => (
           <>
-            <h1>{p.tag}</h1>
+            <header
+              className="player-hero"
+              style={
+                mainColor(p.mains)
+                  ? ({ "--main": mainColor(p.mains) } as React.CSSProperties)
+                  : undefined
+              }
+            >
+              <MainIcons mains={p.mains?.slice(0, 1)} size={88} />
+              <div>
+                <h1>{p.tag}</h1>
+                {p.mains && p.mains.length > 0 && (
+                  <p>Juega sobre todo {p.mains[0].character}.</p>
+                )}
+              </div>
+            </header>
             {p.mains && p.mains.length > 0 && (
               <section className="player-mains" aria-label="Mains">
                 <h2>Mains</h2>
@@ -359,7 +377,10 @@ export function PlayerPage({ id }: { id: string }) {
                       </strong>
                       <span
                         className="main-bar"
-                        style={{ width: `${Math.max(4, m.share)}%` }}
+                        style={{
+                          width: `${Math.max(4, m.share)}%`,
+                          background: characterColor(m.character) ?? undefined,
+                        }}
                         aria-hidden="true"
                       />
                       <small>

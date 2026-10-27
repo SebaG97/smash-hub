@@ -1,3 +1,5 @@
+import { CHARACTER_COLORS } from "./character-colors";
+
 /**
  * Local stock icons in /public/characters (cleaned SVGs, see docs/design.md).
  * start.gg names map to the game's file names; a few use internal names.
@@ -120,4 +122,9 @@ function key(name: string) {
 export function characterIcon(name: string): string | null {
   const k = key(name);
   return AVAILABLE.has(k) ? `/characters/${k}.svg` : null;
+}
+
+/** Signature color of a character (from its stock icon), or null. */
+export function characterColor(name: string): string | null {
+  return CHARACTER_COLORS[key(name)] ?? null;
 }

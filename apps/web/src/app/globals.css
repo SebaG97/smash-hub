@@ -840,3 +840,85 @@ footer {
   font-size: 1.1rem;
   font-variant-numeric: tabular-nums;
 }
+
+/* ---------------------------------------------------------------- color pass (Mission 11)
+ * Color comes from the game itself: each row and profile takes its main's color.
+ */
+:root {
+  --win: #4fae5c;
+  --loss: #c8493a;
+}
+nav a[aria-current="page"] {
+  color: var(--fire);
+  border-bottom-color: var(--fire);
+}
+.back-link {
+  display: inline-block;
+  margin-bottom: 4px;
+  color: var(--ash);
+  text-decoration: none;
+}
+.back-link:hover {
+  color: var(--bone);
+}
+.winbar {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 70px;
+}
+.winbar-track {
+  display: block;
+  height: 5px;
+  background: var(--loss);
+  overflow: hidden;
+}
+.winbar-track span {
+  display: block;
+  height: 100%;
+  background: var(--win);
+}
+.standings li {
+  border-left: 5px solid var(--main, var(--line));
+  padding-left: 12px;
+}
+.standings li:first-child {
+  background: color-mix(in srgb, var(--main, var(--gold)) 16%, transparent);
+}
+.seeding-table tr[style] td:nth-child(2) {
+  box-shadow: inset 4px 0 0 var(--main);
+}
+.seeding-table tr[data-place="1"] {
+  background: color-mix(in srgb, var(--main, var(--gold)) 14%, transparent);
+}
+.player-hero {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  margin: 8px 0 24px;
+  padding: 18px 20px;
+  border-left: 8px solid var(--main, var(--fire));
+  background: color-mix(in srgb, var(--main, var(--fire)) 14%, transparent);
+}
+.player-hero h1 {
+  margin: 0;
+}
+.player-hero p {
+  margin: 4px 0 0;
+  color: var(--ash);
+}
+.home-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 10px;
+  margin-top: 24px;
+}
+.home-search label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--ash);
+  font-size: 0.9rem;
+  flex: 1 1 200px;
+}
