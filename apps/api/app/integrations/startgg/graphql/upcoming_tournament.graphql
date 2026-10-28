@@ -1,0 +1,10 @@
+query UpcomingTournament($slug: String!) {
+  tournament(slug: $slug) {
+    id name slug startAt city venueName numAttendees isOnline
+    events(limit: 50) {
+      id name slug numEntrants isOnline
+      teamRosterSize { maxPlayers }
+      videogame { id }
+    }
+  }
+}

@@ -1389,3 +1389,47 @@ body {
     grid-column: 3;
   }
 }
+.crossings {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+.crossings li {
+  padding: 12px 14px;
+  background: var(--slab);
+  border-left: 4px solid var(--fire);
+}
+.crossings small {
+  color: var(--ash);
+  display: block;
+}
+.crossings p {
+  margin: 6px 0 0;
+}
+.crossing-pair {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 1.25rem;
+}
+.crossing-pair .place {
+  font-size: 1.4rem;
+}
+.preview-entrants {
+  width: 100%;
+  border-collapse: collapse;
+}
+.preview-entrants th,
+.preview-entrants td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.preview-entrants tr td:first-child {
+  border-left: 4px solid var(--main, transparent);
+}

@@ -57,3 +57,7 @@ La imagen para redes pasa a ser un podio: el 1.º ocupa la mitad izquierda con e
 - **Matchups:** en la pestaña Rivales de la ficha, «Contra cada personaje» con la barra de cada matchup y una oración con el mejor y el peor (desde 5 partidas).
 - **Vista previa al compartir:** al pegar el link de un jugador en WhatsApp o Discord aparece su tarjeta de 1200×630: render del main a la izquierda sobre su color, y a la derecha tag, puesto en el ranking, récord, hasta tres emblemas y su mejor resultado. Torneos y rankings muestran el podio.
 
+## Previa del próximo torneo (Misión 16)
+
+Los «Próximos torneos» de la portada llevan a `/previa/{slug}`: favoritos con el formato de la tabla de posiciones, quiénes vienen en racha, los cruces probables del top 8 en tarjetas (`Losa` con borde fuego) con su historial y el último cruce, rivalidades del cuadro, quiénes no tienen resultados en el hub y la tabla completa de inscritos con seed proyectado, récord y forma de los últimos 60 días. Siempre se aclara si los seeds son el seeding oficial o una proyección del hub.
+

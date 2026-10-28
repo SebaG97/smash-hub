@@ -5,10 +5,10 @@ import time
 from datetime import UTC, datetime
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Path, Query, Request
 from sqlalchemy.orm import Session
 
-from app.insights import engine
+from app.insights import engine, preview
 from app.integrations.startgg.client import ImportFailure, StartGGClient
 from app.players.mains import player_mains
 from app.players.summary import ranking_place
@@ -16,6 +16,8 @@ from app.players.summary import ranking_place
 router = APIRouter(prefix="/api/v1/insights", tags=["insights"])
 CALENDAR_SECONDS = 3600
 _calendar = {"at": 0.0, "items": None}
+PREVIEW_SECONDS = 900
+_previews = {}  # slug -> (monotonic time, payload)
 
 
 def _with_mains(session, items, *keys):
@@ -105,6 +107,7 @@ def calendar(request: Request):
     items = [
         dict(
             name=t["name"],
+            slug=t["slug"].removeprefix("tournament/"),
             url=f"https://www.start.gg/{t['slug']}",
             starts_at=datetime.fromtimestamp(t["startAt"], UTC).isoformat()
             if t.get("startAt")
@@ -118,3 +121,38 @@ def calendar(request: Request):
     ]
     _calendar.update(at=time.monotonic(), items=items)
     return {"items": items}
+
+
+@router.get("/upcoming/{slug}")
+def upcoming(request: Request, slug: str = Path(pattern=r"^[a-z0-9-]{1,120}$")):
+    """Preview of an upcoming tournament: entrants from start.gg, the rest from the hub."""
+    hit = _previews.get(slug)
+    if hit and time.monotonic() - hit[0] < PREVIEW_SECONDS:
+        return hit[1]
+    token = request.app.state.settings.startgg_api_token
+
+    async def fetch():
+        async with StartGGClient(token) as client:
+            return await preview.fetch(client, slug)
+
+    try:
+        tournament, event, entrants = asyncio.run(fetch())
+    except ImportFailure as exc:
+        if "not_found" in str(exc):
+            raise HTTPException(404, "Tournament not found") from None
+        raise HTTPException(502, "start.gg did not answer") from None
+    with Session(request.app.state.engine) as s:
+        order, source = preview.projected_order(s, event and event.get("slug"))
+        ids = preview.hub_players(s, [e["startgg_player_id"] for e in entrants])
+        result = preview.build(
+            engine.cached(s),
+            tournament=tournament,
+            event=event,
+            entrants=entrants,
+            ids=ids,
+            order=order,
+            source=source,
+        )
+        _with_mains(s, result["entrants"], None)
+    _previews[slug] = (time.monotonic(), result)
+    return result

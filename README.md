@@ -132,3 +132,5 @@ Misión 13: emblemas y récords en la ficha de cada jugador, récords y jugador 
 Misión 14: la imagen para redes pasa a ser un podio con los renders oficiales de los mains y el traje que elige el organizador para cada jugador (ADR-015, migración 0011). Opcionalmente, el organizador puede subir sus propias imágenes para cualquier puesto antes de generarla; no se guardan.
 
 Misión 15: página de personajes de la escena (`/personajes`), matchups contra cada personaje en la ficha y vistas previas con imagen al compartir links de jugadores, torneos y rankings.
+
+Misión 16: previa de los próximos torneos (`/previa/{slug}`, desde la portada): inscritos de start.gg, seeds proyectados, favoritos, rachas, cruces probables con su historial y rivalidades.

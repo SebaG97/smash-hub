@@ -166,3 +166,13 @@ Cuentan las partidas de singles de sets elegibles de torneos publicados en las q
 
 Vistas previas (web): las fichas de jugador, torneos, rankings y seedings publicados declaran `og:title`, `og:description` y `og:image` con URLs absolutas del dominio por el que se entró. `/og/player/{id}` es la tarjeta del jugador (PNG 1200×630); torneos y rankings usan la imagen de podio.
 
+## Previa de un torneo (Misión 16)
+
+`GET /api/v1/insights/upcoming/{slug}` (slug de start.gg sin `tournament/`, solo `a-z`, `0-9` y `-`): lee de start.gg el torneo y los inscritos de su evento presencial de singles de Ultimate (el de más inscritos). Es solo lectura y queda 15 minutos en memoria. 404 si start.gg no conoce el torneo, 502 si no responde, 422 con un slug inválido.
+
+- `seeding`: de dónde salen los seeds. `seeding` si hay un seeding publicado de ese evento; si no, `ranking` (el último ranking publicado; los que no están en el ranking van después, ordenados por sets ganados); si no hay ranking, `results`.
+- `entrants`: `[{seed, tag, id (jugador del hub o null), ranked, wins, losses, recent_wins, recent_losses (últimos 60 días de datos), streak, mains}]`.
+- `favorites` (los 4 primeros), `on_fire` (racha actual de 3 sets o más), `crossings` (el top 8 del lado de winners si se cumplen los seeds: 1–8, 4–5, 2–7, 3–6, semifinales y final, con `h2h` y el último cruce), `rivalries` (parejas del cuadro con 3 sets o más entre ellas que no aparecen en los cruces), `newcomers` (inscritos sin sets en el hub).
+
+`/insights/calendar` agrega `slug` a cada torneo; la portada enlaza a `/previa/{slug}`.
+

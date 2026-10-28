@@ -3176,6 +3176,48 @@
           }
         }
       }
+    },
+    "/api/v1/insights/upcoming/{slug}": {
+      "get": {
+        "tags": [
+          "insights"
+        ],
+        "summary": "Upcoming",
+        "description": "Preview of an upcoming tournament: entrants from start.gg, the rest from the hub.",
+        "operationId": "upcoming_api_v1_insights_upcoming__slug__get",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9-]{1,120}$",
+              "title": "Slug"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {

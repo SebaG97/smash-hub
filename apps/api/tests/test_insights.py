@@ -217,3 +217,70 @@ def test_matchups_count_each_opposing_character():
         {"character": "Ryu", "games": 1, "wins": 0, "win_rate": 0.0},
     ]
     assert engine.matchups(scene_games(), "nobody") == []
+
+
+def test_preview_picks_the_offline_ultimate_singles_event():
+    from app.insights.preview import singles_event
+
+    events = [
+        {"id": 1, "numEntrants": 90, "videogame": {"id": 1386}, "isOnline": True},
+        {"id": 2, "numEntrants": 40, "videogame": {"id": 1386}, "teamRosterSize": None},
+        {"id": 3, "numEntrants": 70, "videogame": {"id": 1}, "teamRosterSize": None},
+        {
+            "id": 4,
+            "numEntrants": 20,
+            "videogame": {"id": 1386},
+            "teamRosterSize": {"maxPlayers": 2},
+        },
+        {"id": 5, "numEntrants": 12, "videogame": {"id": 1386}},
+    ]
+    assert singles_event({"events": events})["id"] == 2
+    assert singles_event({"events": events[2:4]}) is None
+
+
+def test_preview_projects_seeds_and_finds_crossings():
+    from uuid import uuid4
+
+    from app.insights import preview
+
+    hub = {str(n): uuid4() for n in range(1, 10)}  # start.gg ids 1..9 are in the hub
+    tags = {hub[k]: f"P{k}" for k in hub}
+    data = Data(tags=tags)
+    # P1 beat P8 three times, P3 and P5 met three times, P4 is on a 3-set streak.
+    data.matches = [match(i, hub["1"], hub["8"]) for i in range(3)]
+    data.matches += [
+        match(10 + i, hub["3" if i else "5"], hub["5" if i else "3"]) for i in range(3)
+    ]
+    data.matches += [match(20 + i, hub["4"], hub["9"]) for i in range(3)]
+    entrants = [{"startgg_player_id": k, "gamer_tag": f"P{k}"} for k in [*hub, "99"]]
+    order = {k: int(k) for k in hub if k != "9"}  # ranking places; 9 and 99 unranked
+    result = preview.build(
+        data,
+        tournament={"name": "Open", "slug": "tournament/open", "startAt": 1794920400},
+        event={"name": "Singles"},
+        entrants=entrants,
+        ids=hub,
+        order=order,
+        source={"source": "ranking", "label": "Ranking"},
+    )
+    assert [p["tag"] for p in result["entrants"]] == [*(f"P{i}" for i in range(1, 10)), "P99"]
+    assert result["entrants"][-1]["id"] is None
+    assert result["tournament"]["slug"] == "open"
+    assert result["tournament"]["starts_at"].startswith("2026-11-17")
+    assert [p["tag"] for p in result["favorites"]] == ["P1", "P2", "P3", "P4"]
+    # Same streak: the better seed first.
+    assert [(p["tag"], p["streak"]) for p in result["on_fire"]] == [("P1", 3), ("P4", 3)]
+    first = result["crossings"][0]
+    assert (first["stage"], first["a"]["tag"], first["b"]["tag"]) == (
+        "Cuartos de winners",
+        "P1",
+        "P8",
+    )
+    assert (first["h2h"]["a_wins"], first["h2h"]["b_wins"]) == (3, 0)
+    assert next(c for c in result["crossings"] if c["a"]["seed"] == 4)["h2h"] is None
+    # P1-P8 is already a crossing, so it is not repeated among the rivalries.
+    assert [(r["a"]["tag"], r["b"]["tag"], r["sets"]) for r in result["rivalries"]] == [
+        ("P3", "P5", 3),
+        ("P4", "P9", 3),
+    ]
+    assert result["newcomers"] == {"count": 4, "tags": ["P2", "P6", "P7", "P99"]}

@@ -75,6 +75,7 @@ type TournamentSummary = {
 };
 type CalendarItem = {
   name: string;
+  slug?: string;
   url: string;
   starts_at: string | null;
   city: string | null;
@@ -417,9 +418,13 @@ export function UpcomingTournaments() {
                       })
                     : ""}
                 </time>
-                <a href={t.url} target="_blank" rel="noreferrer">
-                  {t.name}
-                </a>
+                {t.slug ? (
+                  <Link href={`/previa/${t.slug}`}>{t.name}</Link>
+                ) : (
+                  <a href={t.url} target="_blank" rel="noreferrer">
+                    {t.name}
+                  </a>
+                )}
                 <span>
                   {t.city ?? ""}
                   {t.attendees ? `, ${t.attendees} inscritos` : ""}

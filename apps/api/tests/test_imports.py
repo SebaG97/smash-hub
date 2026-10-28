@@ -298,3 +298,66 @@ def test_ranking_checkbox_excludes_tournament_and_recalculates(db, snapshot):
         assert after["excluded_tournaments"] == ["Imported"]
         listed = client.get("/api/v1/tournaments").json()["items"][0]
         assert listed["counts_for_ranking"] is False
+
+
+def test_upcoming_preview_endpoint_reads_startgg_entrants(db, snapshot, monkeypatch):
+    from app.insights import engine, router
+
+    prepare(db)
+    run(db, snapshot)
+    engine.invalidate()
+    tournament = {
+        "id": 1,
+        "name": "Center Stage",
+        "slug": "tournament/center-stage",
+        "startAt": 1794920400,
+        "city": "Asunción",
+        "events": [
+            {
+                "id": 77,
+                "name": "Ultimate Singles",
+                "slug": "tournament/center-stage/event/singles",
+                "numEntrants": 2,
+                "videogame": {"id": 1386},
+            }
+        ],
+    }
+    entrants = [
+        {"id": 1, "name": "A", "participants": [{"gamerTag": "A", "player": {"id": 100}}]},
+        {"id": 2, "name": "Visita", "participants": [{"gamerTag": "Visita", "player": {"id": 9}}]},
+    ]
+    calls = []
+
+    class FakeClient:
+        def __init__(self, token):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *exc):
+            return False
+
+        async def query(self, name, variables):
+            calls.append(name)
+            if name == "upcoming_tournament":
+                return {"tournament": tournament if variables["slug"] == "center-stage" else None}
+            page = {"pageInfo": {"total": 2, "totalPages": 1}, "nodes": entrants}
+            return {"event": {"entrants": page}}
+
+    monkeypatch.setattr(router, "StartGGClient", FakeClient)
+    monkeypatch.setattr(router, "_previews", {})
+    with client_for(db) as client:
+        body = client.get("/api/v1/insights/upcoming/center-stage").json()
+        assert body["tournament"]["name"] == "Center Stage"
+        assert body["event"] == {"name": "Ultimate Singles", "entrants": 2}
+        assert body["seeding"]["source"] == "results"
+        tags = [(p["seed"], p["tag"], p["id"] is not None) for p in body["entrants"]]
+        assert tags == [(1, "A", True), (2, "Visita", False)]
+        assert body["newcomers"]["tags"] == ["Visita"]
+        # Cached: a second request does not call start.gg again.
+        client.get("/api/v1/insights/upcoming/center-stage")
+        assert calls.count("upcoming_tournament") == 1
+        assert client.get("/api/v1/insights/upcoming/nada").status_code == 404
+        assert client.get("/api/v1/insights/upcoming/Bad_Slug").status_code == 422
+    engine.invalidate()
