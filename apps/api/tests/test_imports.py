@@ -355,9 +355,19 @@ def test_upcoming_preview_endpoint_reads_startgg_entrants(db, snapshot, monkeypa
         tags = [(p["seed"], p["tag"], p["id"] is not None) for p in body["entrants"]]
         assert tags == [(1, "A", True), (2, "Visita", False)]
         assert body["newcomers"]["tags"] == ["Visita"]
-        # Cached: a second request does not call start.gg again.
-        client.get("/api/v1/insights/upcoming/center-stage")
+        # Cached: a second request does not call start.gg again, but the projection is
+        # rebuilt, so publishing or unpublishing a seeding shows up right away.
+        from app.insights import preview
+
+        official = ({"9": 1}, dict(source="seeding", label="Seeding oficial publicado"))
+        with monkeypatch.context() as patch:
+            patch.setattr(preview, "projected_order", lambda s, slug: official)
+            body = client.get("/api/v1/insights/upcoming/center-stage").json()
         assert calls.count("upcoming_tournament") == 1
+        assert body["seeding"]["source"] == "seeding"
+        assert [p["tag"] for p in body["entrants"]] == ["Visita", "A"]
+        body = client.get("/api/v1/insights/upcoming/center-stage").json()
+        assert body["seeding"]["source"] == "results"
         assert client.get("/api/v1/insights/upcoming/nada").status_code == 404
         assert client.get("/api/v1/insights/upcoming/Bad_Slug").status_code == 422
     engine.invalidate()

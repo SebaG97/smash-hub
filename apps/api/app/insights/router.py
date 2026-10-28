@@ -17,7 +17,7 @@ router = APIRouter(prefix="/api/v1/insights", tags=["insights"])
 CALENDAR_SECONDS = 3600
 _calendar = {"at": 0.0, "items": None}
 PREVIEW_SECONDS = 900
-_previews = {}  # slug -> (monotonic time, payload)
+_previews = {}  # slug -> (monotonic time, start.gg tournament, event, entrants)
 VISITOR_SECONDS = 6 * 3600
 _visitors = {}  # start.gg player id -> (monotonic time, payload)
 
@@ -128,21 +128,25 @@ def calendar(request: Request):
 @router.get("/upcoming/{slug}")
 def upcoming(request: Request, slug: str = Path(pattern=r"^[a-z0-9-]{1,120}$")):
     """Preview of an upcoming tournament: entrants from start.gg, the rest from the hub."""
+    # Only the start.gg answer is cached: the projection is rebuilt every time, so
+    # publishing, unpublishing or moving a seeding shows up right away.
     hit = _previews.get(slug)
     if hit and time.monotonic() - hit[0] < PREVIEW_SECONDS:
-        return hit[1]
-    token = request.app.state.settings.startgg_api_token
+        tournament, event, entrants = hit[1]
+    else:
+        token = request.app.state.settings.startgg_api_token
 
-    async def fetch():
-        async with StartGGClient(token) as client:
-            return await preview.fetch(client, slug)
+        async def fetch():
+            async with StartGGClient(token) as client:
+                return await preview.fetch(client, slug)
 
-    try:
-        tournament, event, entrants = asyncio.run(fetch())
-    except ImportFailure as exc:
-        if "not_found" in str(exc):
-            raise HTTPException(404, "Tournament not found") from None
-        raise HTTPException(502, "start.gg did not answer") from None
+        try:
+            tournament, event, entrants = asyncio.run(fetch())
+        except ImportFailure as exc:
+            if "not_found" in str(exc):
+                raise HTTPException(404, "Tournament not found") from None
+            raise HTTPException(502, "start.gg did not answer") from None
+        _previews[slug] = (time.monotonic(), (tournament, event, entrants))
     with Session(request.app.state.engine) as s:
         order, source = preview.projected_order(s, event and event.get("slug"))
         ids = preview.hub_players(s, [e["startgg_player_id"] for e in entrants])
@@ -156,7 +160,6 @@ def upcoming(request: Request, slug: str = Path(pattern=r"^[a-z0-9-]{1,120}$")):
             source=source,
         )
         _with_mains(s, result["entrants"], None)
-    _previews[slug] = (time.monotonic(), result)
     return result
 
 
