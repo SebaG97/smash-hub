@@ -31,6 +31,11 @@ class Tournament(Record, Base):
     counts_for_ranking = Column(Boolean, nullable=False, server_default=text("true"))
     ranking_flag_actor = Column(String(60))
     ranking_flag_at = Column(DateTime(timezone=True))
+    # Organizer decision (Mission 17): false when start.gg's seeds did not reflect the
+    # players' level, so the event yields no upsets or "beat their seed" records.
+    seeding_reliable = Column(Boolean, nullable=False, server_default=text("true"))
+    seeding_flag_actor = Column(String(60))
+    seeding_flag_at = Column(DateTime(timezone=True))
     __table_args__ = (
         UniqueConstraint("community_id", "slug"),
         CheckConstraint(

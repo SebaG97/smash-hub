@@ -361,3 +361,29 @@ def test_upcoming_preview_endpoint_reads_startgg_entrants(db, snapshot, monkeypa
         assert client.get("/api/v1/insights/upcoming/nada").status_code == 404
         assert client.get("/api/v1/insights/upcoming/Bad_Slug").status_code == 422
     engine.invalidate()
+
+
+def test_wrongly_seeded_tournaments_yield_no_seed_records(db, snapshot):
+    from app.competitions.models import Tournament
+    from app.insights import engine
+
+    prepare(db)
+    run(db, snapshot)
+    engine.invalidate()
+    with Session(db) as s:
+        tournament = s.scalar(select(Tournament.id))
+    url = f"/api/v1/tournaments/{tournament}/seeding"
+    summary = f"/api/v1/insights/tournaments/{tournament}"
+    with client_for(db) as client:
+        assert client.get(f"/api/v1/tournaments/{tournament}").json()["seeding_reliable"] is True
+        before = client.get(summary).json()
+        assert client.put(url, json={"reliable": False}).status_code == 401
+        r = client.put(url, json={"reliable": False}, headers=AUTH)
+        assert r.status_code == 200 and r.json()["seeding_reliable"] is False
+        after = client.get(summary).json()
+        assert [p["tag"] for p in after["top"]] == [p["tag"] for p in before["top"]]
+        assert all(p["seed"] is None for p in after["top"])
+        assert after["upsets"] == [] and after["overperformers"] == []
+        client.put(url, json={"reliable": True}, headers=AUTH)
+        assert client.get(summary).json()["top"] == before["top"]
+    engine.invalidate()

@@ -57,6 +57,7 @@ class TournamentView(PublicModel):
     entrant_count: int
     games: list[str]
     counts_for_ranking: bool = True
+    seeding_reliable: bool = True
 
 
 class EventView(PublicModel):
@@ -226,6 +227,7 @@ def tournament_views(s, rows):
                     "location",
                     "synced_at",
                     "counts_for_ranking",
+                    "seeding_reliable",
                 )
             },
             "participant_count": participants.get(r.id, 0),
@@ -577,6 +579,24 @@ def set_costume(request: Request, id: UUID, body: CostumeChoice, actor: Admin):
         player.costumes = costumes
         s.commit()
         return body
+
+
+class SeedingFlag(BaseModel):
+    reliable: bool
+
+
+@router.put("/tournaments/{id}/seeding", response_model=TournamentView)
+def set_seeding_flag(request: Request, id: UUID, body: SeedingFlag, actor: Admin):
+    """Organizer checkbox: a wrongly seeded tournament stops producing upsets."""
+    from app.insights import engine
+
+    with Session(request.app.state.engine) as s:
+        tournament = require_tournament(s, id)
+        tournament.seeding_reliable = body.reliable
+        tournament.seeding_flag_actor, tournament.seeding_flag_at = actor, func.now()
+        s.commit()
+        engine.invalidate()
+        return tournament_views(s, [tournament])[0]
 
 
 class RankingFlag(BaseModel):

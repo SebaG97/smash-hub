@@ -10,6 +10,7 @@ import {
   CostumePicker,
   MainIcons,
   RankingFlag,
+  SeedingFlag,
   WinBar,
   mainColor,
 } from "./mains";
@@ -221,6 +222,10 @@ export function Tournaments() {
               tournamentId={t.id}
               initial={t.counts_for_ranking !== false}
             />
+            <SeedingFlag
+              tournamentId={t.id}
+              initial={t.seeding_reliable !== false}
+            />
           </>
         )}
       />
@@ -264,6 +269,10 @@ export function TournamentPage({ id }: { id: string }) {
               inscripciones a eventos
             </p>
             <p>Fuente: {t.source || "No disponible"}</p>
+            <SeedingFlag
+              tournamentId={id}
+              initial={t.seeding_reliable !== false}
+            />
             <TournamentSummaryBlock id={id} />
             <Collection<Event>
               title="Eventos y resultados"

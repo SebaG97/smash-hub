@@ -87,13 +87,25 @@ def load(session):
     )
     entrant_player = dict(session.execute(select(member.c.entrant_id, member.c.player_id)).all())
     singles = (
-        select(Event.id, Tournament.id, Tournament.name, Tournament.starts_at, Event.num_entrants)
+        select(
+            Event.id,
+            Tournament.id,
+            Tournament.name,
+            Tournament.starts_at,
+            Event.num_entrants,
+            Tournament.seeding_reliable,
+        )
         .join(Tournament, Tournament.id == Event.tournament_id)
         .where(Tournament.published.is_(True), Event.team_size == 1)
     )
-    events = {e: (t, name, starts, n) for e, t, name, starts, n in session.execute(singles)}
+    events, unreliable = {}, set()
+    for e, t, name, starts, n, reliable in session.execute(singles):
+        events[e] = (t, name, starts, n)
+        if not reliable:
+            unreliable.add(e)
     entrants = {
-        e_id: (event_id, seed, place)
+        # Seeds of wrongly seeded tournaments are dropped: no upsets, no "beat the seed".
+        e_id: (event_id, None if event_id in unreliable else seed, place)
         for e_id, event_id, seed, place in session.execute(
             select(
                 EventEntrant.id, EventEntrant.event_id, EventEntrant.seed, EventEntrant.placement

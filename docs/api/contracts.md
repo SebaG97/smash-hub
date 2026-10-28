@@ -176,3 +176,7 @@ Vistas previas (web): las fichas de jugador, torneos, rankings y seedings public
 
 `/insights/calendar` agrega `slug` a cada torneo; la portada enlaza a `/previa/{slug}`.
 
+## Torneos mal seedeados (Misión 17)
+
+`TournamentView` agrega `seeding_reliable` (por defecto `true`). `PUT /api/v1/tournaments/{id}/seeding` (admin) recibe `{reliable}`; queda registrado quién lo cambió y cuándo (`seeding_flag_actor`, `seeding_flag_at`, migración 0012). En un torneo con `reliable: false` los seeds de start.gg no se usan para nada de `/insights`: no genera sorpresas (ni el emblema «David contra Goliat» ni puntos de sorpresa en el jugador del mes) ni «rindió por encima de su seed», y el resumen del torneo muestra `seed: null`. El ranking y el seeding del hub no usan esos seeds, así que no cambian. Cuando un organizador cambia la marca, los récords se recalculan al instante.
+

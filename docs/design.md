@@ -61,3 +61,7 @@ La imagen para redes pasa a ser un podio: el 1.º ocupa la mitad izquierda con e
 
 Los «Próximos torneos» de la portada llevan a `/previa/{slug}`: favoritos con el formato de la tabla de posiciones, quiénes vienen en racha, los cruces probables del top 8 en tarjetas (`Losa` con borde fuego) con su historial y el último cruce, rivalidades del cuadro, quiénes no tienen resultados en el hub y la tabla completa de inscritos con seed proyectado, récord y forma de los últimos 60 días. Siempre se aclara si los seeds son el seeding oficial o una proyección del hub.
 
+## Seeding mal hecho (Misión 17)
+
+En el listado de torneos y en cada torneo, los organizadores tienen la casilla «Seeding mal hecho: no cuenta para sorpresas». El público ve, solo en esos torneos, una línea que explica que el seeding no reflejaba el nivel de los jugadores y que no cuenta para sorpresas ni emblemas. Se decidió marcarlo a mano en vez de recalcular seeds esperados porque, con el seeding nuevo del hub, los torneos de ahora en adelante deberían salir bien seedeados.
+

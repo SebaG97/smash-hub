@@ -798,6 +798,95 @@
         }
       }
     },
+    "/api/v1/tournaments/{id}/seeding": {
+      "put": {
+        "tags": [
+          "competitions"
+        ],
+        "summary": "Set Seeding Flag",
+        "description": "Organizer checkbox: a wrongly seeded tournament stops producing upsets.",
+        "operationId": "set_seeding_flag_api_v1_tournaments__id__seeding_put",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "x-admin-name",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Admin-Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeedingFlag"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TournamentView"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Record not found or unpublished"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/tournaments/{id}/ranking": {
       "put": {
         "tags": [
@@ -4815,6 +4904,19 @@
         "type": "object",
         "title": "RecalculateRequest"
       },
+      "SeedingFlag": {
+        "properties": {
+          "reliable": {
+            "type": "boolean",
+            "title": "Reliable"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reliable"
+        ],
+        "title": "SeedingFlag"
+      },
       "SetView": {
         "properties": {
           "id": {
@@ -5205,6 +5307,11 @@
           "counts_for_ranking": {
             "type": "boolean",
             "title": "Counts For Ranking",
+            "default": true
+          },
+          "seeding_reliable": {
+            "type": "boolean",
+            "title": "Seeding Reliable",
             "default": true
           }
         },

@@ -16,6 +16,7 @@ export type Tournament = {
   source: string | null;
   location: { city?: string; country_code?: string } | null;
   counts_for_ranking?: boolean;
+  seeding_reliable?: boolean;
 };
 export type Event = {
   id: string;

@@ -104,6 +104,64 @@ export function RankingFlag({
   );
 }
 
+/**
+ * Organizers mark tournaments whose start.gg seeding did not reflect the players'
+ * level; they stop producing upsets and "beat their seed" records (and badges).
+ */
+export function SeedingFlag({
+  tournamentId,
+  initial,
+}: {
+  tournamentId: string;
+  initial: boolean;
+}) {
+  const [reliable, setReliable] = useState(initial);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const admin = useAdmin();
+  if (!admin)
+    return reliable ? null : (
+      <p className="ranking-flag">
+        El seeding de este torneo no reflejaba el nivel de los jugadores, así
+        que no cuenta para sorpresas ni emblemas.
+      </p>
+    );
+  return (
+    <p className="ranking-flag">
+      <label>
+        <input
+          type="checkbox"
+          checked={!reliable}
+          disabled={busy}
+          onChange={async (e) => {
+            const next = !e.target.checked;
+            setBusy(true);
+            setError("");
+            const r = await fetch(
+              `${api}/tournaments/${tournamentId}/seeding`,
+              {
+                method: "PUT",
+                headers: {
+                  Authorization: `Bearer ${admin.key}`,
+                  "X-Admin-Name": admin.name,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ reliable: next }),
+              },
+            ).catch(() => null);
+            setBusy(false);
+            if (!r) return setError("No se pudo contactar a la API.");
+            if (!r.ok) return setError(await problem(r));
+            setReliable(next);
+          }}
+        />{" "}
+        Seeding mal hecho: no cuenta para sorpresas
+      </label>
+      {error && <small role="alert"> {error}</small>}
+    </p>
+  );
+}
+
 /** Wins and losses as a split bar: green share of sets won, red share lost. */
 export function WinBar({ wins, losses }: { wins?: number; losses?: number }) {
   const w = wins ?? 0;

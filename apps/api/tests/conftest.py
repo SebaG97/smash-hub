@@ -52,3 +52,13 @@ def db(pg_engine):
         names = ",".join('"' + name + '"' for name in Base.metadata.tables)
         conn.execute(text("TRUNCATE " + names + " CASCADE"))
     return pg_engine
+
+
+@pytest.fixture(autouse=True)
+def fresh_admin_limiter():
+    """Each test starts without failed admin attempts from earlier tests."""
+    from app.core import admin
+
+    admin._failures.clear()
+    yield
+    admin._failures.clear()
