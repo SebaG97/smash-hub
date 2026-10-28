@@ -3,6 +3,9 @@ import path from "node:path";
 import { ImageResponse } from "next/og";
 import { characterColor, characterKey } from "./characters";
 import { render, type RenderWidth } from "./renders";
+import { apiBase } from "./origin";
+
+export { apiBase };
 
 /**
  * Square (1080×1080) share images for Instagram and Discord, laid out as a podium:
@@ -50,14 +53,6 @@ function Photo({ art }: { art: NonNullable<Art> }) {
       alt=""
     />
   );
-}
-
-export function apiBase(request: Request) {
-  // Inside Docker the web server reaches the API by service name; in production the
-  // API lives under the same domain.
-  return (
-    process.env.API_INTERNAL_URL || `${new URL(request.url).origin}/api/v1`
-  ).replace(/\/$/, "");
 }
 
 let font: Promise<ArrayBuffer | null> | null = null;
