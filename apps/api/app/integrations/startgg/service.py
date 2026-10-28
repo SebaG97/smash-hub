@@ -23,6 +23,7 @@ from app.games.models import Character, Game
 from app.integrations.models import DataSource, ExternalMapping, ImportJob
 from app.integrations.startgg.classification import classify
 from app.integrations.startgg.client import ImportFailure, parse_slug
+from app.integrations.startgg.images import tournament_images
 from app.integrations.startgg.snapshot import Snapshot
 from app.players.models import ExternalIdentity, Player, PlayerAlias
 
@@ -324,6 +325,7 @@ class Persister:
                     t.state, str(t.state) if t.state is not None else None
                 ),
                 "location": {"city": t.city, "country_code": t.countryCode},
+                "images": tournament_images(t.images),
             },
             t.model_dump(),
         )

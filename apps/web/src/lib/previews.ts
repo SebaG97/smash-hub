@@ -28,19 +28,23 @@ export async function preview({
   path,
   image,
   square = false,
+  size: given,
 }: {
   title: string;
   description: string;
   path: string;
+  /** A path of this site, or an absolute https URL (start.gg banners). */
   image: string;
   /** Podium images are 1080×1080; player cards are 1200×630. */
   square?: boolean;
+  size?: { width: number; height: number };
 }): Promise<Metadata> {
   const origin = await siteOrigin();
-  const size = square
-    ? { width: 1080, height: 1080 }
-    : { width: 1200, height: 630 };
-  const images = [{ url: `${origin}${image}`, ...size, alt: title }];
+  const size =
+    given ??
+    (square ? { width: 1080, height: 1080 } : { width: 1200, height: 630 });
+  const url = image.startsWith("https://") ? image : `${origin}${image}`;
+  const images = [{ url, ...size, alt: title }];
   return {
     title,
     description,

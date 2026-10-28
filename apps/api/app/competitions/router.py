@@ -51,6 +51,7 @@ class TournamentView(PublicModel):
     ends_at: datetime | None
     status: str | None
     location: dict | None
+    images: dict | None = None
     synced_at: datetime | None
     source: str | None
     participant_count: int
@@ -225,6 +226,7 @@ def tournament_views(s, rows):
                     "ends_at",
                     "status",
                     "location",
+                    "images",
                     "synced_at",
                     "counts_for_ranking",
                     "seeding_reliable",
@@ -579,6 +581,52 @@ def set_costume(request: Request, id: UUID, body: CostumeChoice, actor: Admin):
         player.costumes = costumes
         s.commit()
         return body
+
+
+IMAGE_BATCH = 30
+
+
+@router.post("/tournaments/images")
+def fetch_tournament_images(request: Request, actor: Admin):
+    """Organizer button: read the logo and banner of tournaments imported before Mission 19.
+
+    Read only on start.gg, in batches (about a second per tournament); new imports bring
+    their images already.
+    """
+    import asyncio
+
+    from app.integrations.startgg.client import ImportFailure, StartGGClient
+    from app.integrations.startgg.images import tournament_images
+
+    token = request.app.state.settings.startgg_api_token
+    if token is None:
+        raise HTTPException(503, "Falta el token de start.gg")
+    with Session(request.app.state.engine) as s:
+        missing = select(Tournament).where(
+            Tournament.published.is_(True), Tournament.images.is_(None)
+        )
+        rows = s.scalars(missing.order_by(Tournament.starts_at.desc()).limit(IMAGE_BATCH)).all()
+
+        async def fetch():
+            async with StartGGClient(token) as client:
+                return [
+                    (await client.query("tournament_images", {"slug": r.slug})).get("tournament")
+                    for r in rows
+                ]
+
+        try:
+            found = asyncio.run(fetch()) if rows else []
+        except ImportFailure:
+            raise HTTPException(502, "start.gg no respondió") from None
+        for row, tournament in zip(rows, found, strict=True):
+            row.images = tournament_images((tournament or {}).get("images"))
+        s.commit()
+        remaining = s.scalar(select(func.count()).select_from(missing.subquery()))
+        return {
+            "updated": sum(bool(r.images) for r in rows),
+            "checked": len(rows),
+            "remaining": remaining,
+        }
 
 
 class SeedingFlag(BaseModel):

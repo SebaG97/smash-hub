@@ -432,3 +432,63 @@ def test_startgg_player_endpoint_is_cached_and_validated(monkeypatch):
         assert calls == ["70916"]
         assert client.get("/api/v1/insights/startgg-players/404").status_code == 404
         assert client.get("/api/v1/insights/startgg-players/abc").status_code == 422
+
+
+def test_tournament_images_come_with_the_import_and_can_be_backfilled(db, snapshot, monkeypatch):
+    from app.competitions.models import Tournament
+    from app.integrations.startgg import client as startgg_client
+    from app.integrations.startgg.images import tournament_images
+
+    assert tournament_images(
+        [
+            {"type": "banner", "url": "https://b"},
+            {"type": "profile", "url": "http://insecure"},
+            {"type": "other", "url": "https://x"},
+        ]
+    ) == {"banner": "https://b"}
+    prepare(db)
+    run(db, snapshot)
+    logo = "https://images.start.gg/images/tournament/100/logo.png"
+    with client_for(db) as client:
+        listed = client.get("/api/v1/tournaments").json()["items"][0]
+        assert listed["images"]["profile"] == logo
+        assert listed["images"]["banner"].endswith("/banner.png")
+    # Tournaments imported before images were kept: an organizer button reads them.
+    with Session(db) as s:
+        s.get(Tournament, listed["id"]).images = None
+        s.commit()
+    asked = []
+
+    class FakeClient:
+        def __init__(self, token):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *exc):
+            return False
+
+        async def query(self, name, variables):
+            asked.append((name, variables))
+            return {"tournament": {"id": 1, "images": [{"type": "profile", "url": logo}]}}
+
+    monkeypatch.setattr(startgg_client, "StartGGClient", FakeClient)
+    settings = Settings(
+        _env_file=None,
+        database_url="postgresql://unused:unused@localhost/test",
+        admin_token=KEY,
+        startgg_api_token="token",
+    )
+    with TestClient(create_app(settings, engine=db)) as client:
+        url = "/api/v1/tournaments/images"
+        assert client.post(url).status_code == 401
+        r = client.post(url, headers=AUTH).json()
+        assert r == {"updated": 1, "checked": 1, "remaining": 0}
+        assert asked == [("tournament_images", {"slug": "fixture-open"})]
+        assert client.get(f"/api/v1/tournaments/{listed['id']}").json()["images"] == {
+            "profile": logo
+        }
+        # Nothing left to read: start.gg is not asked again.
+        assert client.post(url, headers=AUTH).json()["checked"] == 0
+        assert len(asked) == 1

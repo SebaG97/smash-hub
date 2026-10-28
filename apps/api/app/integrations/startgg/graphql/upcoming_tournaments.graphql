@@ -3,6 +3,7 @@ query UpcomingTournaments($country: String!, $videogame: ID!) {
                       filter: {countryCode: $country, videogameIds: [$videogame], upcoming: true}}) {
     nodes {
       id name slug startAt city venueName numAttendees isOnline
+      images { type url }
       events(limit: 20) {
         id name slug numEntrants isOnline
         teamRosterSize { maxPlayers }

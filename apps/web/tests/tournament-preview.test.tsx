@@ -35,6 +35,10 @@ it("shows favorites, streaks, crossings and projected seeds", async () => {
           city: "Asunción",
           venue: null,
           attendees: 76,
+          images: {
+            profile: "https://images.start.gg/logo.png",
+            banner: "https://images.start.gg/banner.png",
+          },
         },
         event: { name: "Ultimate Singles", entrants: 3 },
         seeding: { source: "seeding", label: "Seeding oficial publicado (CS)" },
@@ -75,6 +79,11 @@ it("shows favorites, streaks, crossings and projected seeds", async () => {
   expect(
     screen.getByRole("heading", { name: "Inscritos y seeds" }),
   ).toBeInTheDocument();
+  // start.gg banner on top; the logo only shows when there is no banner.
+  expect(
+    screen.getByRole("img", { name: "Banner de Center Stage 2026" }),
+  ).toHaveAttribute("src", "https://images.start.gg/banner.png");
+  expect(document.querySelector(".tournament-logo")).toBeNull();
   expect(
     screen.getByRole("columnheader", { name: "Seed" }),
   ).toBeInTheDocument();

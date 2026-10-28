@@ -1,6 +1,7 @@
 query Tournament($slug: String!) {
   tournament(slug: $slug) {
     id name slug startAt endAt state city countryCode
+    images { type url }
     events(limit: 500) { id }
   }
 }

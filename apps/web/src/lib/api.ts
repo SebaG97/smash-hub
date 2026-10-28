@@ -15,6 +15,7 @@ export type Tournament = {
   entrant_count: number;
   source: string | null;
   location: { city?: string; country_code?: string } | null;
+  images?: { profile?: string; banner?: string } | null;
   counts_for_ranking?: boolean;
   seeding_reliable?: boolean;
 };

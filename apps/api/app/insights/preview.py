@@ -14,6 +14,7 @@ from sqlalchemy import select
 
 from app.insights import engine
 from app.integrations.startgg.client import ImportFailure
+from app.integrations.startgg.images import tournament_images
 from app.players.models import ExternalIdentity
 from app.seeding import startgg as seeding_startgg
 
@@ -200,6 +201,7 @@ def build(data, *, tournament, event, entrants, ids, order, source):
             city=tournament.get("city"),
             venue=tournament.get("venueName"),
             attendees=tournament.get("numAttendees"),
+            images=tournament_images(tournament.get("images")),
         ),
         event=dict(name=event["name"], entrants=len(entrants)) if event else None,
         seeding=source,

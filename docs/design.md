@@ -69,3 +69,6 @@ En el listado de torneos y en cada torneo, los organizadores tienen la casilla �
 
 En la previa, «Sin resultados en el hub» lista a cada inscrito sin sets importados con el botón «Ver datos de start.gg». Al abrirlo se cargan, solo para ese jugador, su récord de sets presenciales del último año, cuántos torneos jugó, dónde juega, sus mains, sus tres mejores resultados y sus últimos torneos (con enlace a start.gg), en una tarjeta `Losa` con borde oro.
 
+## Logos y banners (Misión 19)
+
+Los torneos muestran su arte de start.gg: el banner arriba de la ficha del torneo y de la previa (ancho completo, bordes redondeados, recortado a 2:1), y el logo cuadrado al lado del nombre en el listado de torneos, en «Próximos torneos» de la portada y en la lista de próximos torneos de Seeding. Si un torneo no tiene banner, el logo va junto al título. Al compartir el link de una previa, la vista previa usa el banner. Las fotos de los jugadores de start.gg no se usan.

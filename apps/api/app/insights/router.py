@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.insights import engine, preview, visitors
 from app.integrations.startgg.client import ImportFailure, StartGGClient
+from app.integrations.startgg.images import tournament_images
 from app.players.mains import player_mains
 from app.players.summary import ranking_place
 
@@ -129,6 +130,7 @@ def calendar(request: Request):
             city=t.get("city"),
             venue=t.get("venueName"),
             attendees=t.get("numAttendees"),
+            images=tournament_images(t.get("images")),
             event=_event(preview.singles_event(t)),
         )
         for t in ((data.get("tournaments") or {}).get("nodes") or [])

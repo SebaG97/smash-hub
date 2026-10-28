@@ -164,6 +164,7 @@ def test_calendar_keeps_offline_paraguay_events(monkeypatch):
                             "venueName": None,
                             "numAttendees": 40,
                             "isOnline": False,
+                            "images": [{"type": "banner", "url": "https://images.start.gg/b.png"}],
                             "events": [
                                 {
                                     "name": "Ultimate Singles",
@@ -196,6 +197,7 @@ def test_calendar_keeps_offline_paraguay_events(monkeypatch):
     assert [i["name"] for i in first["items"]] == ["Center Stage 2026"]
     assert first["items"][0]["url"] == "https://www.start.gg/tournament/center-stage-2026"
     assert first["items"][0]["starts_at"].startswith("2026-11-17")
+    assert first["items"][0]["images"] == {"banner": "https://images.start.gg/b.png"}
     # The singles event, ready to create its seeding.
     assert first["items"][0]["event"] == {
         "name": "Ultimate Singles",

@@ -6,6 +6,7 @@ import type { Main } from "../lib/api";
 import { Resource } from "./competition-browser";
 import { MainIcons, WinBar, mainColor } from "./mains";
 import { ShareImage } from "./share-image";
+import { TournamentLogo, type TournamentImages } from "./tournament-art";
 
 type Ref = { id: string; tag: string | null; mains?: Main[] };
 export type Badge = { id: string; name: string; why: string };
@@ -76,6 +77,7 @@ type TournamentSummary = {
 type CalendarItem = {
   name: string;
   slug?: string;
+  images?: TournamentImages;
   url: string;
   starts_at: string | null;
   city: string | null;
@@ -422,9 +424,18 @@ export function UpcomingTournaments() {
                     : ""}
                 </time>
                 {t.slug ? (
-                  <Link href={`/previa/${t.slug}`}>{t.name}</Link>
+                  <Link className="with-logo" href={`/previa/${t.slug}`}>
+                    <TournamentLogo images={t.images} size={28} />
+                    {t.name}
+                  </Link>
                 ) : (
-                  <a href={t.url} target="_blank" rel="noreferrer">
+                  <a
+                    className="with-logo"
+                    href={t.url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <TournamentLogo images={t.images} size={28} />
                     {t.name}
                   </a>
                 )}

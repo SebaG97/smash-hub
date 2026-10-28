@@ -184,3 +184,10 @@ Vistas previas (web): las fichas de jugador, torneos, rankings y seedings public
 
 `GET /api/v1/insights/startgg-players/{player_id}` (id numérico de start.gg): un año de resultados de start.gg de un inscrito sin datos en el hub, para extranjeros o locales que nunca jugaron un torneo importado. Lee los sets del jugador con la misma consulta del seeding (solo lectura) y queda 6 horas en memoria. Devuelve `{player_id, tag, country (el país donde más juega), since, wins, losses (sets presenciales de Ultimate contados con las reglas de ADR-009/010), tournaments, recent (últimos 5), best (3 mejores ubicaciones), mains}`. 404 si start.gg no conoce al jugador, 502 si no responde, 422 con un id inválido. `entrants[]` de la previa agrega `startgg_player_id`.
 
+## Logos y banners de los torneos (Misión 19)
+
+`TournamentView` agrega `images`: `{profile, banner}` con los links de start.gg (`images.start.gg`; el hub no guarda las imágenes, solo los links). `profile` es el logo cuadrado y `banner` el banner 2:1; falta la clave si el torneo no la tiene. `null` significa que todavía no se leyó (torneos importados antes de la migración 0013). Las importaciones nuevas y las reimportaciones los traen solas.
+
+`POST /api/v1/tournaments/images` (admin) lee de start.gg, de a 30 y solo lectura, los torneos publicados con `images: null`, del más nuevo al más viejo, y devuelve `{updated, checked, remaining}`. Un torneo sin imágenes queda como `{}` y no se vuelve a pedir. 503 sin token de start.gg, 502 si start.gg no responde.
+
+`/insights/calendar` y la previa (`tournament.images`) traen el mismo `{profile, banner}`.

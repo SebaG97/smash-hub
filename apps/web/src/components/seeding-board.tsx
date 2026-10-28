@@ -5,6 +5,7 @@ import type React from "react";
 import { useRouter } from "next/navigation";
 import { MainIcons, WinBar, mainColor } from "./mains";
 import { ShareImage } from "./share-image";
+import { TournamentLogo, type TournamentImages } from "./tournament-art";
 import {
   adminHeaders,
   clearAdmin,
@@ -1222,6 +1223,7 @@ function localDay(offsetDays: number) {
 type UpcomingEvent = {
   name: string;
   url: string;
+  images?: TournamentImages;
   starts_at: string | null;
   city: string | null;
   event: {
@@ -1260,6 +1262,7 @@ function UpcomingEvents({
           const seeding = done.get(event.slug);
           return (
             <li key={event.slug}>
+              <TournamentLogo images={t.images} size={44} />
               <span>
                 <strong>{t.name}</strong>
                 <small>

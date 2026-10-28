@@ -6,6 +6,11 @@ import type React from "react";
 import type { Main } from "../lib/api";
 import { Resource } from "./competition-browser";
 import { MainIcons, WinBar, mainColor } from "./mains";
+import {
+  TournamentBanner,
+  TournamentLogo,
+  type TournamentImages,
+} from "./tournament-art";
 
 type Person = {
   // Only set when the hub's seeding of this event is published.
@@ -41,6 +46,7 @@ export type TournamentPreview = {
     city: string | null;
     venue: string | null;
     attendees: number | null;
+    images?: TournamentImages;
   };
   event: { name: string; entrants: number } | null;
   seeding: { source: "seeding" | "none"; label: string };
@@ -113,7 +119,16 @@ export function TournamentPreviewPage({ slug }: { slug: string }) {
           const official = d.seeding.source === "seeding";
           return (
             <>
-              <h1>Previa: {d.tournament.name}</h1>
+              <TournamentBanner
+                images={d.tournament.images}
+                name={d.tournament.name}
+              />
+              <h1 className="tournament-title">
+                {!d.tournament.images?.banner && (
+                  <TournamentLogo images={d.tournament.images} size={64} />
+                )}
+                Previa: {d.tournament.name}
+              </h1>
               <p className="seeding-lead">
                 {[
                   day(d.tournament.starts_at, true),

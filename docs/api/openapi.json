@@ -798,6 +798,73 @@
         }
       }
     },
+    "/api/v1/tournaments/images": {
+      "post": {
+        "tags": [
+          "competitions"
+        ],
+        "summary": "Fetch Tournament Images",
+        "description": "Organizer button: read the logo and banner of tournaments imported before Mission 19.\n\nRead only on start.gg, in batches (about a second per tournament); new imports bring\ntheir images already.",
+        "operationId": "fetch_tournament_images_api_v1_tournaments_images_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "x-admin-name",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Admin-Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "404": {
+            "description": "Record not found or unpublished"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/tournaments/{id}/seeding": {
       "put": {
         "tags": [
@@ -5307,6 +5374,18 @@
               }
             ],
             "title": "Location"
+          },
+          "images": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Images"
           },
           "synced_at": {
             "anyOf": [

@@ -24,6 +24,8 @@ class Tournament(Record, Base):
     published = Column(Boolean, nullable=False, server_default=text("false"))
     status = Column(String(30))
     location = Column(JSON)
+    # start.gg logo and banner links (Mission 19); NULL until read, {} when it has none.
+    images = Column(JSON(none_as_null=True))
     synced_at = Column(DateTime(timezone=True))
     starts_at = Column(DateTime(timezone=True))
     ends_at = Column(DateTime(timezone=True))

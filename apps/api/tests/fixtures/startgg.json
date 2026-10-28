@@ -8,6 +8,10 @@
     "endAt": 1700100000,
     "city": "Asunción",
     "countryCode": "PY",
+    "images": [
+      {"type": "profile", "url": "https://images.start.gg/images/tournament/100/logo.png"},
+      {"type": "banner", "url": "https://images.start.gg/images/tournament/100/banner.png"}
+    ],
     "events": [
       {
         "id": 10

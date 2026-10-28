@@ -18,8 +18,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `Previa: ${d.tournament.name}`,
     description: `${d.event?.entrants ?? 0} inscritos.${favorites ? ` Favoritos: ${favorites}.` : ""}`,
     path: `/previa/${slug}`,
-    image: "/smashclublogo.jpg",
-    square: true,
+    // The start.gg banner when the tournament has one (1600×800), else the club logo.
+    ...(d.tournament.images?.banner
+      ? {
+          image: d.tournament.images.banner,
+          size: { width: 1600, height: 800 },
+        }
+      : { image: "/smashclublogo.jpg", square: true }),
   });
 }
 

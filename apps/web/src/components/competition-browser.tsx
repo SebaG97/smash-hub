@@ -15,6 +15,11 @@ import {
   mainColor,
 } from "./mains";
 import { PlayerStatistics } from "./player-statistics";
+import {
+  TournamentBanner,
+  TournamentImagesButton,
+  TournamentLogo,
+} from "./tournament-art";
 import type {
   Page,
   Tournament,
@@ -203,13 +208,15 @@ export function Tournaments() {
     <div className="competition-page">
       <h1>Torneos</h1>
       <ImportPanel />
+      <TournamentImagesButton />
       <Collection<Tournament>
         title="Todos los torneos"
         path="tournaments"
         search
         render={(t) => (
           <>
-            <h3>
+            <h3 className="tournament-title">
+              <TournamentLogo images={t.images} />
               <Link href={`/tournaments/${t.id}`}>{t.name}</Link>
             </h3>
             <p>
@@ -255,7 +262,13 @@ export function TournamentPage({ id }: { id: string }) {
       <Resource<Tournament> path={`tournaments/${id}`}>
         {(t) => (
           <>
-            <h1>{t.name}</h1>
+            <TournamentBanner images={t.images} name={t.name} />
+            <h1 className="tournament-title">
+              {!t.images?.banner && (
+                <TournamentLogo images={t.images} size={64} />
+              )}
+              {t.name}
+            </h1>
             <p>
               {date(t.starts_at)} · {status(t.status)}
             </p>

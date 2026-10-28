@@ -102,6 +102,7 @@ class Tournament(ExternalModel):
     state: int | None = None
     city: str | None = None
     countryCode: str | None = None
+    images: list[dict] = []
     events: list[Identity]
 
 

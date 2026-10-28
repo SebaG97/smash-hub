@@ -1489,3 +1489,34 @@ body {
   margin: 0;
   padding-left: 18px;
 }
+
+/* Tournament art from start.gg (Mission 19) */
+.tournament-banner {
+  display: block;
+  width: 100%;
+  max-height: 340px;
+  aspect-ratio: 2 / 1;
+  object-fit: cover;
+  border-radius: 10px;
+  margin: 12px 0 4px;
+}
+.tournament-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.tournament-logo {
+  flex: none;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--surface);
+}
+.recent .with-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.recent li:has(.tournament-logo) {
+  align-items: center;
+}
