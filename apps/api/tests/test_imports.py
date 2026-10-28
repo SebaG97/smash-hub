@@ -351,9 +351,9 @@ def test_upcoming_preview_endpoint_reads_startgg_entrants(db, snapshot, monkeypa
         body = client.get("/api/v1/insights/upcoming/center-stage").json()
         assert body["tournament"]["name"] == "Center Stage"
         assert body["event"] == {"name": "Ultimate Singles", "entrants": 2}
-        assert body["seeding"]["source"] == "results"
+        assert body["seeding"]["source"] == "none"
         tags = [(p["seed"], p["tag"], p["id"] is not None) for p in body["entrants"]]
-        assert tags == [(1, "A", True), (2, "Visita", False)]
+        assert tags == [(None, "A", True), (None, "Visita", False)]
         assert body["newcomers"]["tags"] == ["Visita"]
         # Cached: a second request does not call start.gg again, but the projection is
         # rebuilt, so publishing or unpublishing a seeding shows up right away.
@@ -365,9 +365,9 @@ def test_upcoming_preview_endpoint_reads_startgg_entrants(db, snapshot, monkeypa
             body = client.get("/api/v1/insights/upcoming/center-stage").json()
         assert calls.count("upcoming_tournament") == 1
         assert body["seeding"]["source"] == "seeding"
-        assert [p["tag"] for p in body["entrants"]] == ["Visita", "A"]
+        assert [(p["seed"], p["tag"]) for p in body["entrants"]] == [(1, "Visita"), (2, "A")]
         body = client.get("/api/v1/insights/upcoming/center-stage").json()
-        assert body["seeding"]["source"] == "results"
+        assert body["seeding"]["source"] == "none"
         assert client.get("/api/v1/insights/upcoming/nada").status_code == 404
         assert client.get("/api/v1/insights/upcoming/Bad_Slug").status_code == 422
     engine.invalidate()

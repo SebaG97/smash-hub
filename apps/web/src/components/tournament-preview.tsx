@@ -8,7 +8,8 @@ import { Resource } from "./competition-browser";
 import { MainIcons, WinBar, mainColor } from "./mains";
 
 type Person = {
-  seed: number;
+  // Only set when the hub's seeding of this event is published.
+  seed: number | null;
   tag: string;
   id: string | null;
   startgg_player_id?: string;
@@ -20,7 +21,7 @@ type Person = {
   streak?: number;
   mains?: Main[];
 };
-type Ref = { id: string | null; tag: string; seed: number };
+type Ref = { id: string | null; tag: string; seed: number | null };
 type HeadToHead = {
   a_wins: number;
   b_wins: number;
@@ -42,7 +43,7 @@ export type TournamentPreview = {
     attendees: number | null;
   };
   event: { name: string; entrants: number } | null;
-  seeding: { source: "seeding" | "ranking" | "results"; label: string };
+  seeding: { source: "seeding" | "none"; label: string };
   entrants: Person[];
   favorites: Person[];
   on_fire: Person[];
@@ -70,6 +71,14 @@ function day(value: string | null, long = false) {
 function tint(mains?: Main[]) {
   const color = mainColor(mains);
   return color ? ({ "--main": color } as React.CSSProperties) : undefined;
+}
+
+function key(p: {
+  id: string | null;
+  tag: string;
+  startgg_player_id?: string;
+}) {
+  return p.startgg_player_id ?? p.id ?? p.tag;
 }
 
 function Tag({ p }: { p: { id: string | null; tag: string } }) {
@@ -100,168 +109,181 @@ export function TournamentPreviewPage({ slug }: { slug: string }) {
         <Link href="/">← Inicio</Link>
       </p>
       <Resource<TournamentPreview> path={`insights/upcoming/${slug}`}>
-        {(d) => (
-          <>
-            <h1>Previa: {d.tournament.name}</h1>
-            <p className="seeding-lead">
-              {[
-                day(d.tournament.starts_at, true),
-                d.tournament.venue,
-                d.tournament.city,
-              ]
-                .filter(Boolean)
-                .join(", ")}
-              .{" "}
-              {d.event
-                ? `${d.event.entrants} inscritos en ${d.event.name}.`
-                : "Todavía no tiene un evento de singles de Ultimate."}{" "}
-              <a href={d.tournament.url} target="_blank" rel="noreferrer">
-                Ver en start.gg
-              </a>
-            </p>
-            {d.entrants.length === 0 ? (
-              <p>Todavía no hay inscritos.</p>
-            ) : (
-              <>
-                <section aria-labelledby="favorites-title">
-                  <h2 id="favorites-title">Favoritos</h2>
-                  <ol className="standings">
-                    {d.favorites.map((p) => (
-                      <li key={p.seed} style={tint(p.mains)}>
-                        <span className="place">{p.seed}</span>
-                        <span>
-                          <Tag p={p} /> <MainIcons mains={p.mains} size={28} />
-                        </span>
-                        <WinBar wins={p.wins} losses={p.losses} />
-                      </li>
-                    ))}
-                  </ol>
-                </section>
-                {d.on_fire.length > 0 && (
-                  <section aria-labelledby="fire-title">
-                    <h2 id="fire-title">Vienen en racha</h2>
-                    <ol className="leaders">
-                      {d.on_fire.map((p) => (
-                        <li key={p.seed} style={tint(p.mains)}>
-                          <span className="who">
-                            <MainIcons mains={p.mains?.slice(0, 1)} size={26} />
-                            <Tag p={p} />
-                          </span>
-                          <span>
-                            {p.streak} sets ganados seguidos, seed {p.seed}
-                          </span>
-                        </li>
-                      ))}
-                    </ol>
-                  </section>
-                )}
-                {d.crossings.length > 0 && (
-                  <section aria-labelledby="crossings-title">
-                    <h2 id="crossings-title">Cruces probables</h2>
-                    <p className="seeding-lead">
-                      Si se cumplen los seeds, así se cruza el top 8 del lado de
-                      winners.
-                    </p>
-                    <ul className="crossings">
-                      {d.crossings.map((c) => (
-                        <li key={`${c.a.seed}-${c.b.seed}`}>
-                          <small>{c.stage}</small>
-                          <span className="crossing-pair">
-                            <span className="place">{c.a.seed}</span>
-                            <Tag p={c.a} />
-                            <span>vs</span>
-                            <span className="place">{c.b.seed}</span>
-                            <Tag p={c.b} />
-                          </span>
-                          <H2H a={c.a} b={c.b} h2h={c.h2h} />
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                )}
-                {d.rivalries.length > 0 && (
-                  <section aria-labelledby="rivalries-title">
-                    <h2 id="rivalries-title">Rivalidades en el cuadro</h2>
-                    <ul className="crossings">
-                      {d.rivalries.map((r) => (
-                        <li key={`${r.a.seed}-${r.b.seed}`}>
-                          <small>{r.sets} sets entre ellos</small>
-                          <H2H a={r.a} b={r.b} h2h={r.h2h} />
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                )}
-                {d.newcomers.count > 0 && (
-                  <section aria-labelledby="new-title">
-                    <h2 id="new-title">Sin resultados en el hub</h2>
-                    <p className="seeding-lead">
-                      {d.newcomers.count}{" "}
-                      {d.newcomers.count === 1
-                        ? "inscrito no tiene"
-                        : "inscritos no tienen"}{" "}
-                      sets en los torneos importados: es su primer torneo o
-                      vienen de afuera. Sus datos se pueden ver desde start.gg.
-                    </p>
-                    <ul className="visitors">
-                      {d.entrants
-                        .filter((p) => !p.wins && !p.losses)
-                        .map((p) => (
-                          <Visitor key={p.seed} person={p} />
+        {(d) => {
+          const official = d.seeding.source === "seeding";
+          return (
+            <>
+              <h1>Previa: {d.tournament.name}</h1>
+              <p className="seeding-lead">
+                {[
+                  day(d.tournament.starts_at, true),
+                  d.tournament.venue,
+                  d.tournament.city,
+                ]
+                  .filter(Boolean)
+                  .join(", ")}
+                .{" "}
+                {d.event
+                  ? `${d.event.entrants} inscritos en ${d.event.name}.`
+                  : "Todavía no tiene un evento de singles de Ultimate."}{" "}
+                <a href={d.tournament.url} target="_blank" rel="noreferrer">
+                  Ver en start.gg
+                </a>
+              </p>
+              {d.entrants.length === 0 ? (
+                <p>Todavía no hay inscritos.</p>
+              ) : (
+                <>
+                  {d.favorites.length > 0 && (
+                    <section aria-labelledby="favorites-title">
+                      <h2 id="favorites-title">Favoritos</h2>
+                      <ol className="standings">
+                        {d.favorites.map((p) => (
+                          <li key={key(p)} style={tint(p.mains)}>
+                            <span className="place">{p.seed}</span>
+                            <span>
+                              <Tag p={p} />{" "}
+                              <MainIcons mains={p.mains} size={28} />
+                            </span>
+                            <WinBar wins={p.wins} losses={p.losses} />
+                          </li>
                         ))}
-                    </ul>
-                  </section>
-                )}
-                <section aria-labelledby="entrants-title">
-                  <h2 id="entrants-title">Inscritos y seeds proyectados</h2>
-                  <p className="seeding-lead">
-                    {d.seeding.label}.
-                    {d.seeding.source !== "seeding" &&
-                      " Es una proyección del hub, no el seeding oficial del torneo."}
-                  </p>
-                  <table className="preview-entrants">
-                    <thead>
-                      <tr>
-                        <th scope="col">Seed</th>
-                        <th scope="col">Jugador</th>
-                        <th scope="col">Récord</th>
-                        <th scope="col">Últimos 60 días</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {d.entrants.map((p) => (
-                        <tr key={p.seed} style={tint(p.mains)}>
-                          <td className="place">{p.seed}</td>
-                          <td>
+                      </ol>
+                    </section>
+                  )}
+                  {d.on_fire.length > 0 && (
+                    <section aria-labelledby="fire-title">
+                      <h2 id="fire-title">Vienen en racha</h2>
+                      <ol className="leaders">
+                        {d.on_fire.map((p) => (
+                          <li key={key(p)} style={tint(p.mains)}>
                             <span className="who">
                               <MainIcons
                                 mains={p.mains?.slice(0, 1)}
-                                size={24}
+                                size={26}
                               />
                               <Tag p={p} />
                             </span>
-                          </td>
-                          <td>
-                            {p.wins || p.losses ? (
-                              <WinBar wins={p.wins} losses={p.losses} />
-                            ) : (
-                              "–"
-                            )}
-                          </td>
-                          <td>
-                            {p.recent_wins || p.recent_losses
-                              ? `${p.recent_wins}–${p.recent_losses}`
-                              : "–"}
-                          </td>
+                            <span>
+                              {p.streak} sets ganados seguidos
+                              {p.seed ? `, seed ${p.seed}` : ""}
+                            </span>
+                          </li>
+                        ))}
+                      </ol>
+                    </section>
+                  )}
+                  {d.crossings.length > 0 && (
+                    <section aria-labelledby="crossings-title">
+                      <h2 id="crossings-title">Cruces probables</h2>
+                      <p className="seeding-lead">
+                        Si se cumplen los seeds, así se cruza el top 8 del lado
+                        de winners.
+                      </p>
+                      <ul className="crossings">
+                        {d.crossings.map((c) => (
+                          <li key={`${c.a.seed}-${c.b.seed}`}>
+                            <small>{c.stage}</small>
+                            <span className="crossing-pair">
+                              <span className="place">{c.a.seed}</span>
+                              <Tag p={c.a} />
+                              <span>vs</span>
+                              <span className="place">{c.b.seed}</span>
+                              <Tag p={c.b} />
+                            </span>
+                            <H2H a={c.a} b={c.b} h2h={c.h2h} />
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  )}
+                  {d.rivalries.length > 0 && (
+                    <section aria-labelledby="rivalries-title">
+                      <h2 id="rivalries-title">Rivalidades en el cuadro</h2>
+                      <ul className="crossings">
+                        {d.rivalries.map((r) => (
+                          <li key={`${key(r.a)}-${key(r.b)}`}>
+                            <small>{r.sets} sets entre ellos</small>
+                            <H2H a={r.a} b={r.b} h2h={r.h2h} />
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  )}
+                  {d.newcomers.count > 0 && (
+                    <section aria-labelledby="new-title">
+                      <h2 id="new-title">Sin resultados en el hub</h2>
+                      <p className="seeding-lead">
+                        {d.newcomers.count}{" "}
+                        {d.newcomers.count === 1
+                          ? "inscrito no tiene"
+                          : "inscritos no tienen"}{" "}
+                        sets en los torneos importados: es su primer torneo o
+                        vienen de afuera. Sus datos se pueden ver desde
+                        start.gg.
+                      </p>
+                      <ul className="visitors">
+                        {d.entrants
+                          .filter((p) => !p.wins && !p.losses)
+                          .map((p) => (
+                            <Visitor key={key(p)} person={p} />
+                          ))}
+                      </ul>
+                    </section>
+                  )}
+                  <section aria-labelledby="entrants-title">
+                    <h2 id="entrants-title">
+                      {official ? "Inscritos y seeds" : "Inscritos"}
+                    </h2>
+                    <p className="seeding-lead">
+                      {d.seeding.label}.
+                      {!official &&
+                        " Los seeds, los favoritos y los cruces aparecen cuando se publique."}
+                    </p>
+                    <table className="preview-entrants">
+                      <thead>
+                        <tr>
+                          {official && <th scope="col">Seed</th>}
+                          <th scope="col">Jugador</th>
+                          <th scope="col">Récord</th>
+                          <th scope="col">Últimos 60 días</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </section>
-              </>
-            )}
-          </>
-        )}
+                      </thead>
+                      <tbody>
+                        {d.entrants.map((p) => (
+                          <tr key={key(p)} style={tint(p.mains)}>
+                            {official && <td className="place">{p.seed}</td>}
+                            <td>
+                              <span className="who">
+                                <MainIcons
+                                  mains={p.mains?.slice(0, 1)}
+                                  size={24}
+                                />
+                                <Tag p={p} />
+                              </span>
+                            </td>
+                            <td>
+                              {p.wins || p.losses ? (
+                                <WinBar wins={p.wins} losses={p.losses} />
+                              ) : (
+                                "–"
+                              )}
+                            </td>
+                            <td>
+                              {p.recent_wins || p.recent_losses
+                                ? `${p.recent_wins}–${p.recent_losses}`
+                                : "–"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </section>
+                </>
+              )}
+            </>
+          );
+        }}
       </Resource>
     </div>
   );
@@ -322,7 +344,7 @@ function Visitor({ person }: { person: Person }) {
   return (
     <li>
       <span className="who">
-        <span className="place">{person.seed}</span>
+        {person.seed && <span className="place">{person.seed}</span>}
         <strong>{person.tag}</strong>
       </span>
       {person.startgg_player_id && (

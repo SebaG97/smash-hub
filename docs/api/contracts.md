@@ -168,11 +168,11 @@ Vistas previas (web): las fichas de jugador, torneos, rankings y seedings public
 
 ## Previa de un torneo (Misión 16)
 
-`GET /api/v1/insights/upcoming/{slug}` (slug de start.gg sin `tournament/`, solo `a-z`, `0-9` y `-`): lee de start.gg el torneo y los inscritos de su evento presencial de singles de Ultimate (el de más inscritos). Es solo lectura y queda 15 minutos en memoria. 404 si start.gg no conoce el torneo, 502 si no responde, 422 con un slug inválido.
+`GET /api/v1/insights/upcoming/{slug}` (slug de start.gg sin `tournament/`, solo `a-z`, `0-9` y `-`): lee de start.gg el torneo y los inscritos de su evento presencial de singles de Ultimate (el de más inscritos). Es solo lectura; la respuesta de start.gg queda 15 minutos en memoria y lo demás se arma en cada pedido, así que publicar o despublicar el seeding se ve al instante. 404 si start.gg no conoce el torneo, 502 si no responde, 422 con un slug inválido.
 
-- `seeding`: de dónde salen los seeds. `seeding` si hay un seeding publicado de ese evento; si no, `ranking` (el último ranking publicado; los que no están en el ranking van después, ordenados por sets ganados); si no hay ranking, `results`.
+- `seeding`: `seeding` si hay un seeding del hub publicado para ese evento; si no, `none`. Sin seeding oficial no hay proyección: todos los `seed` son `null`, `favorites` y `crossings` vienen vacíos y los inscritos se ordenan por sets ganados en el hub.
 - `entrants`: `[{seed, tag, id (jugador del hub o null), ranked, wins, losses, recent_wins, recent_losses (últimos 60 días de datos), streak, mains}]`.
-- `favorites` (los 4 primeros), `on_fire` (racha actual de 3 sets o más), `crossings` (el top 8 del lado de winners si se cumplen los seeds: 1–8, 4–5, 2–7, 3–6, semifinales y final, con `h2h` y el último cruce), `rivalries` (parejas del cuadro con 3 sets o más entre ellas que no aparecen en los cruces), `newcomers` (inscritos sin sets en el hub).
+- `favorites` (los 4 primeros seeds), `on_fire` (racha actual de 3 sets o más), `crossings` (el top 8 del lado de winners si se cumplen los seeds: 1–8, 4–5, 2–7, 3–6, semifinales y final, con `h2h` y el último cruce), `rivalries` (parejas del cuadro con 3 sets o más entre ellas que no aparecen en los cruces), `newcomers` (inscritos sin sets en el hub).
 
 `/insights/calendar` agrega `slug` a cada torneo; la portada enlaza a `/previa/{slug}`.
 

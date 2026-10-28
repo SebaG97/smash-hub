@@ -1,8 +1,9 @@
 """Preview of an upcoming tournament (Mission 16).
 
 Entrants come from start.gg (read only); everything else from the hub's imported results:
-projected seeds, favorites, who is on a streak, likely top-8 crossings with their
-head-to-head, the bracket's classic rivalries and first-timers.
+the official seeds, favorites and likely top-8 crossings with their head-to-head (only once
+the hub's seeding of the event is published), who is on a streak, the bracket's classic
+rivalries and first-timers.
 """
 
 from collections import Counter
@@ -53,9 +54,10 @@ async def fetch(client, slug):
 
 
 def projected_order(session, event_slug):
-    """{start.gg player id: position} and where it comes from.
+    """{start.gg player id: seed} and where it comes from.
 
-    A published seeding of this very event wins; otherwise the latest published ranking.
+    Only a published seeding of this very event counts: without one the preview shows no
+    seeds at all, so readers never mistake a projection for the official bracket.
     """
     from app.seeding import service
     from app.seeding.models import SeedingProject
@@ -78,15 +80,7 @@ def projected_order(session, event_slug):
         return {r["player_id"]: r["seed"] for r in rows}, dict(
             source="seeding", label=f"Seeding oficial publicado ({seeding.name})"
         )
-    ranking = session.scalar(
-        published.where(SeedingProject.kind == "ranking").order_by(SeedingProject.event_date.desc())
-    )
-    if ranking is not None:
-        rows = [r for r in service.view(session, ranking)["seeds"] if r.get("eligible", True)]
-        return {r["player_id"]: place for place, r in enumerate(rows, 1)}, dict(
-            source="ranking", label=f"Proyectados con el {ranking.name}"
-        )
-    return {}, dict(source="results", label="Proyectados por sets ganados en el hub")
+    return {}, dict(source="none", label="Todavía no hay un seeding oficial publicado")
 
 
 def hub_players(session, startgg_ids):
@@ -142,6 +136,7 @@ def build(data, *, tournament, event, entrants, ids, order, source):
         for sgg in (e["startgg_player_id"] for e in entrants)
         if sgg in ids
     }
+    official = source["source"] == "seeding"
     unranked = len(order) + 1
     rows = sorted(
         entrants,
@@ -152,11 +147,11 @@ def build(data, *, tournament, event, entrants, ids, order, source):
         ),
     )
     people = []
-    for seed, e in enumerate(rows, 1):
+    for place, e in enumerate(rows, 1):
         player = ids.get(e["startgg_player_id"])
         people.append(
             dict(
-                seed=seed,
+                seed=place if official else None,
                 tag=e["gamer_tag"],
                 id=str(player) if player else None,
                 startgg_player_id=e["startgg_player_id"],
@@ -164,9 +159,10 @@ def build(data, *, tournament, event, entrants, ids, order, source):
                 **(stats.get(e["startgg_player_id"]) or {}),
             )
         )
-    by_seed = {p["seed"]: p for p in people}
+    position = {p["startgg_player_id"]: place for place, p in enumerate(people)}
+    by_seed = {p["seed"]: p for p in people if p["seed"]}
     crossings = []
-    for stage, a, b in CROSSINGS:
+    for stage, a, b in CROSSINGS if official else ():
         pa, pb = by_seed.get(a), by_seed.get(b)
         if not pa or not pb or len(people) < 8:
             continue
@@ -185,12 +181,12 @@ def build(data, *, tournament, event, entrants, ids, order, source):
             break
         if pair in shown:
             continue
-        a, b = sorted((hub[x] for x in pair), key=lambda p: p["seed"])
+        a, b = sorted((hub[x] for x in pair), key=lambda p: position[p["startgg_player_id"]])
         h2h = head_to_head(data, ids_of(a), ids_of(b))
         rivalries.append(dict(a=ref(a), b=ref(b), sets=n, h2h=h2h))
     on_fire = sorted(
         (p for p in people if p.get("streak", 0) >= 3),
-        key=lambda p: (-p["streak"], p["seed"]),
+        key=lambda p: (-p["streak"], position[p["startgg_player_id"]]),
     )[:5]
     newcomers = [p for p in people if not p.get("wins") and not p.get("losses")]
     return dict(
@@ -208,7 +204,7 @@ def build(data, *, tournament, event, entrants, ids, order, source):
         event=dict(name=event["name"], entrants=len(entrants)) if event else None,
         seeding=source,
         entrants=people,
-        favorites=people[:4],
+        favorites=people[:4] if official else [],
         on_fire=on_fire,
         crossings=crossings,
         rivalries=rivalries,

@@ -37,7 +37,7 @@ it("shows favorites, streaks, crossings and projected seeds", async () => {
           attendees: 76,
         },
         event: { name: "Ultimate Singles", entrants: 3 },
-        seeding: { source: "ranking", label: "Proyectados con el Ranking" },
+        seeding: { source: "seeding", label: "Seeding oficial publicado (CS)" },
         entrants: [
           { ...wesker, ranked: true, wins: 84, losses: 13, streak: 9 },
           { ...zio, ranked: true, wins: 56, losses: 23, streak: 0 },
@@ -72,7 +72,12 @@ it("shows favorites, streaks, crossings and projected seeds", async () => {
   ).toBeInTheDocument();
   expect(screen.getByText("Final de winners")).toBeInTheDocument();
   expect(screen.getByText("Wesker 9–3 Zio")).toBeInTheDocument();
-  expect(screen.getByText(/Es una proyección del hub/)).toBeInTheDocument();
+  expect(
+    screen.getByRole("heading", { name: "Inscritos y seeds" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("columnheader", { name: "Seed" }),
+  ).toBeInTheDocument();
   // Players without a hub profile are listed without a link.
   expect(screen.queryByRole("link", { name: "Chag" })).not.toBeInTheDocument();
   expect(screen.getByText(/1 inscrito no tiene sets/)).toBeInTheDocument();
@@ -130,12 +135,15 @@ it("loads start.gg data of an entrant without hub results on demand", async () =
               attendees: 1,
             },
             event: { name: "Ultimate Singles", entrants: 1 },
-            seeding: { source: "results", label: "Proyectados" },
+            seeding: {
+              source: "none",
+              label: "Todavía no hay un seeding oficial publicado",
+            },
             entrants: [
               {
                 id: null,
                 tag: "Chag",
-                seed: 1,
+                seed: null,
                 ranked: false,
                 startgg_player_id: "70916",
               },
@@ -149,6 +157,17 @@ it("loads start.gg data of an entrant without hub results on demand", async () =
   }));
   vi.stubGlobal("fetch", fetchMock);
   render(<TournamentPreviewPage slug="cs" />);
+  // Without the official seeding there are no seeds, favorites or crossings.
+  expect(
+    await screen.findByRole("heading", { name: "Inscritos" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole("columnheader", { name: "Seed" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("heading", { name: "Favoritos" }),
+  ).not.toBeInTheDocument();
+  expect(screen.getByText(/aparecen cuando se publique/)).toBeInTheDocument();
   fireEvent.click(
     await screen.findByRole("button", { name: "Ver datos de start.gg" }),
   );

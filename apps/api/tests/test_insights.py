@@ -253,7 +253,7 @@ def test_preview_projects_seeds_and_finds_crossings():
     ]
     data.matches += [match(20 + i, hub["4"], hub["9"]) for i in range(3)]
     entrants = [{"startgg_player_id": k, "gamer_tag": f"P{k}"} for k in [*hub, "99"]]
-    order = {k: int(k) for k in hub if k != "9"}  # ranking places; 9 and 99 unranked
+    order = {k: int(k) for k in hub if k != "9"}  # official seeds; 9 and 99 not in it
     result = preview.build(
         data,
         tournament={"name": "Open", "slug": "tournament/open", "startAt": 1794920400},
@@ -261,7 +261,7 @@ def test_preview_projects_seeds_and_finds_crossings():
         entrants=entrants,
         ids=hub,
         order=order,
-        source={"source": "ranking", "label": "Ranking"},
+        source={"source": "seeding", "label": "Seeding oficial"},
     )
     assert [p["tag"] for p in result["entrants"]] == [*(f"P{i}" for i in range(1, 10)), "P99"]
     assert result["entrants"][-1]["id"] is None
@@ -284,6 +284,21 @@ def test_preview_projects_seeds_and_finds_crossings():
         ("P4", "P9", 3),
     ]
     assert result["newcomers"] == {"count": 4, "tags": ["P2", "P6", "P7", "P99"]}
+
+    # Without a published official seeding there are no seeds, favorites or crossings.
+    unofficial = preview.build(
+        data,
+        tournament={"name": "Open", "slug": "tournament/open"},
+        event={"name": "Singles"},
+        entrants=entrants,
+        ids=hub,
+        order={},
+        source={"source": "none", "label": "Sin seeding"},
+    )
+    assert all(p["seed"] is None for p in unofficial["entrants"])
+    assert unofficial["favorites"] == [] and unofficial["crossings"] == []
+    assert [(p["tag"], p["streak"]) for p in unofficial["on_fire"]] == [("P1", 3), ("P4", 3)]
+    assert [(r["a"]["tag"], r["sets"]) for r in unofficial["rivalries"]][0] == ("P1", 3)
 
 
 def provider_set(n, *, me_won, entrants=100, placement=5, online=False, day=10, country="MX"):
