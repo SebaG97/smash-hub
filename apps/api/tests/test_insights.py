@@ -284,3 +284,76 @@ def test_preview_projects_seeds_and_finds_crossings():
         ("P4", "P9", 3),
     ]
     assert result["newcomers"] == {"count": 4, "tags": ["P2", "P6", "P7", "P99"]}
+
+
+def provider_set(n, *, me_won, entrants=100, placement=5, online=False, day=10, country="MX"):
+    """A start.gg set node between player 7 ("Chag") and an opponent."""
+    ts = int(datetime(2026, 9, day, 20, tzinfo=UTC).timestamp())
+    return {
+        "id": n,
+        "state": 3,
+        "completedAt": ts,
+        "winnerId": 1 if me_won else 2,
+        "displayScore": "2 - 1",
+        "event": {
+            "id": 500 + day,
+            "numEntrants": entrants,
+            "isOnline": online,
+            "startAt": ts,
+            "videogame": {"id": 1386},
+            "tournament": {
+                "name": f"Open {day}",
+                "slug": f"tournament/open-{day}",
+                "countryCode": country,
+            },
+        },
+        "slots": [
+            {
+                "entrant": {
+                    "id": 1,
+                    "name": "ISG | Chag",
+                    "standing": {"placement": placement},
+                    "participants": [{"player": {"id": 7}}],
+                },
+                "standing": {"stats": {"score": {"value": 2 if me_won else 1}}},
+            },
+            {
+                "entrant": {
+                    "id": 2,
+                    "name": "Rival",
+                    "standing": {"placement": 9},
+                    "participants": [{"player": {"id": 8}}],
+                },
+                "standing": {"stats": {"score": {"value": 1 if me_won else 2}}},
+            },
+        ],
+    }
+
+
+def test_visitor_summary_from_startgg_sets():
+    from app.insights.visitors import summarize
+
+    nodes = [
+        provider_set(1, me_won=True, day=10, placement=1, entrants=150),
+        provider_set(2, me_won=True, day=10, placement=1, entrants=150),
+        provider_set(3, me_won=False, day=20, placement=5, entrants=343, country="SV"),
+        provider_set(4, me_won=True, day=25, online=True),  # online: not counted
+        provider_set(5, me_won=True, day=26, placement=2, entrants=40),
+    ]
+    result = summarize(
+        nodes,
+        7,
+        start=datetime(2025, 10, 1, tzinfo=UTC),
+        end=datetime(2026, 10, 1, tzinfo=UTC),
+        mains=[{"character": "Min Min", "icon": None, "games": 9, "share": 90.0}],
+    )
+    assert (result["tag"], result["country"]) == ("ISG | Chag", "MX")
+    assert (result["wins"], result["losses"], result["tournaments"]) == (3, 1, 3)
+    assert [e["tournament"] for e in result["recent"]] == ["Open 26", "Open 20", "Open 10"]
+    assert [(e["placement"], e["entrants"]) for e in result["best"]] == [
+        (1, 150),
+        (2, 40),
+        (5, 343),
+    ]
+    assert result["recent"][0]["url"] == "https://www.start.gg/tournament/open-26"
+    assert result["mains"][0]["character"] == "Min Min"

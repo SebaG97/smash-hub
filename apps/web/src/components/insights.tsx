@@ -98,8 +98,11 @@ const BADGE_TONE: Record<string, string> = {
 };
 
 function day(value: string | null) {
-  return value
-    ? new Date(value).toLocaleDateString("es-PY", {
+  // A bare date (2026-10-19) is read as UTC midnight, the previous day in Asunción.
+  const at =
+    value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00Z` : value;
+  return at
+    ? new Date(at).toLocaleDateString("es-PY", {
         timeZone: "America/Asuncion",
         day: "numeric",
         month: "short",

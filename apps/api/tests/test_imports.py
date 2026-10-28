@@ -387,3 +387,38 @@ def test_wrongly_seeded_tournaments_yield_no_seed_records(db, snapshot):
         client.put(url, json={"reliable": True}, headers=AUTH)
         assert client.get(summary).json()["top"] == before["top"]
     engine.invalidate()
+
+
+def test_startgg_player_endpoint_is_cached_and_validated(monkeypatch):
+    from app.insights import router, visitors
+
+    calls = []
+
+    class FakeClient:
+        def __init__(self, token):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *exc):
+            return False
+
+    async def fake_fetch(client, player_id):
+        calls.append(player_id)
+        if player_id == "404":
+            from app.integrations.startgg.client import ImportFailure
+
+            raise ImportFailure("startgg_player_not_found")
+        return {"player_id": player_id, "wins": 1, "losses": 0}
+
+    monkeypatch.setattr(router, "StartGGClient", FakeClient)
+    monkeypatch.setattr(visitors, "fetch", fake_fetch)
+    monkeypatch.setattr(router, "_visitors", {})
+    settings = Settings(_env_file=None, database_url="postgresql://unused:unused@localhost/x")
+    with TestClient(create_app(settings)) as client:
+        assert client.get("/api/v1/insights/startgg-players/70916").json()["wins"] == 1
+        client.get("/api/v1/insights/startgg-players/70916")
+        assert calls == ["70916"]
+        assert client.get("/api/v1/insights/startgg-players/404").status_code == 404
+        assert client.get("/api/v1/insights/startgg-players/abc").status_code == 422

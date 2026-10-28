@@ -65,3 +65,7 @@ Los «Próximos torneos» de la portada llevan a `/previa/{slug}`: favoritos con
 
 En el listado de torneos y en cada torneo, los organizadores tienen la casilla «Seeding mal hecho: no cuenta para sorpresas». El público ve, solo en esos torneos, una línea que explica que el seeding no reflejaba el nivel de los jugadores y que no cuenta para sorpresas ni emblemas. Se decidió marcarlo a mano en vez de recalcular seeds esperados porque, con el seeding nuevo del hub, los torneos de ahora en adelante deberían salir bien seedeados.
 
+## Jugadores de afuera (Misión 18)
+
+En la previa, «Sin resultados en el hub» lista a cada inscrito sin sets importados con el botón «Ver datos de start.gg». Al abrirlo se cargan, solo para ese jugador, su récord de sets presenciales del último año, cuántos torneos jugó, dónde juega, sus mains, sus tres mejores resultados y sus últimos torneos (con enlace a start.gg), en una tarjeta `Losa` con borde oro.
+

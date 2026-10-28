@@ -159,6 +159,7 @@ def build(data, *, tournament, event, entrants, ids, order, source):
                 seed=seed,
                 tag=e["gamer_tag"],
                 id=str(player) if player else None,
+                startgg_player_id=e["startgg_player_id"],
                 ranked=e["startgg_player_id"] in order,
                 **(stats.get(e["startgg_player_id"]) or {}),
             )

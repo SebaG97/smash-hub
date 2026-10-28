@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import type React from "react";
 import type { Main } from "../lib/api";
 import { Resource } from "./competition-browser";
@@ -10,6 +11,7 @@ type Person = {
   seed: number;
   tag: string;
   id: string | null;
+  startgg_player_id?: string;
   ranked: boolean;
   wins?: number;
   losses?: number;
@@ -50,8 +52,12 @@ export type TournamentPreview = {
 };
 
 function day(value: string | null, long = false) {
-  return value
-    ? new Date(value).toLocaleDateString("es-PY", {
+  // A bare date (2026-10-19) is read as UTC midnight, which is the previous day in
+  // Asunción; noon keeps it on the right day.
+  const at =
+    value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00Z` : value;
+  return at
+    ? new Date(at).toLocaleDateString("es-PY", {
         timeZone: "America/Asuncion",
         weekday: long ? "long" : undefined,
         day: "numeric",
@@ -189,18 +195,21 @@ export function TournamentPreviewPage({ slug }: { slug: string }) {
                 {d.newcomers.count > 0 && (
                   <section aria-labelledby="new-title">
                     <h2 id="new-title">Sin resultados en el hub</h2>
-                    <p>
+                    <p className="seeding-lead">
                       {d.newcomers.count}{" "}
                       {d.newcomers.count === 1
                         ? "inscrito no tiene"
                         : "inscritos no tienen"}{" "}
-                      sets en los torneos importados (primer torneo, o jugadores
-                      de afuera): {d.newcomers.tags.join(", ")}
-                      {d.newcomers.count > d.newcomers.tags.length
-                        ? " y más"
-                        : ""}
-                      .
+                      sets en los torneos importados: es su primer torneo o
+                      vienen de afuera. Sus datos se pueden ver desde start.gg.
                     </p>
+                    <ul className="visitors">
+                      {d.entrants
+                        .filter((p) => !p.wins && !p.losses)
+                        .map((p) => (
+                          <Visitor key={p.seed} person={p} />
+                        ))}
+                    </ul>
                   </section>
                 )}
                 <section aria-labelledby="entrants-title">
@@ -255,5 +264,128 @@ export function TournamentPreviewPage({ slug }: { slug: string }) {
         )}
       </Resource>
     </div>
+  );
+}
+
+type VisitorData = {
+  player_id: string;
+  tag: string | null;
+  country: string | null;
+  since: string;
+  wins: number;
+  losses: number;
+  tournaments: number;
+  recent: VisitorEvent[];
+  best: VisitorEvent[];
+  mains: Main[];
+};
+type VisitorEvent = {
+  tournament: string;
+  url: string | null;
+  entrants: number | null;
+  placement: number | null;
+  date: string;
+  country: string | null;
+};
+
+const COUNTRIES = new Intl.DisplayNames(["es"], { type: "region" });
+
+function country(code: string | null) {
+  if (!code) return null;
+  try {
+    return COUNTRIES.of(code) ?? code;
+  } catch {
+    return code;
+  }
+}
+
+function EventLine({ e }: { e: VisitorEvent }) {
+  const name = e.url ? (
+    <a href={e.url} target="_blank" rel="noreferrer">
+      {e.tournament}
+    </a>
+  ) : (
+    e.tournament
+  );
+  return (
+    <li>
+      {e.placement ? `${e.placement}.º` : "Jugó"}
+      {e.entrants ? ` de ${e.entrants}` : ""} en {name}
+      {e.country ? ` (${country(e.country)})` : ""}, {day(e.date)}
+    </li>
+  );
+}
+
+/** An entrant without hub results: their last year on start.gg, loaded on demand. */
+function Visitor({ person }: { person: Person }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <li>
+      <span className="who">
+        <span className="place">{person.seed}</span>
+        <strong>{person.tag}</strong>
+      </span>
+      {person.startgg_player_id && (
+        <button
+          type="button"
+          className="link-button"
+          aria-expanded={open}
+          onClick={() => setOpen(!open)}
+        >
+          {open ? "Ocultar" : "Ver datos de start.gg"}
+        </button>
+      )}
+      {open && person.startgg_player_id && (
+        <div className="visitor-card">
+          <Resource<VisitorData>
+            path={`insights/startgg-players/${person.startgg_player_id}`}
+          >
+            {(v) =>
+              v.wins + v.losses === 0 ? (
+                <p className="seeding-lead">
+                  No jugó torneos presenciales de Ultimate en el último año.
+                </p>
+              ) : (
+                <>
+                  <p>
+                    {v.country && (
+                      <>Juega sobre todo en {country(v.country)}. </>
+                    )}
+                    <strong>
+                      {v.wins}–{v.losses}
+                    </strong>{" "}
+                    en sets presenciales y {v.tournaments}{" "}
+                    {v.tournaments === 1 ? "torneo" : "torneos"} desde el{" "}
+                    {day(v.since)}.{" "}
+                    {v.mains.length > 0 && (
+                      <span className="who">
+                        Mains: <MainIcons mains={v.mains} size={24} />{" "}
+                        {v.mains.map((m) => m.character).join(", ")}
+                      </span>
+                    )}
+                  </p>
+                  {v.best.length > 0 && (
+                    <>
+                      <h3>Mejores resultados</h3>
+                      <ul>
+                        {v.best.map((e) => (
+                          <EventLine key={`b-${e.url}-${e.date}`} e={e} />
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                  <h3>Últimos torneos</h3>
+                  <ul>
+                    {v.recent.map((e) => (
+                      <EventLine key={`r-${e.url}-${e.date}`} e={e} />
+                    ))}
+                  </ul>
+                </>
+              )
+            }
+          </Resource>
+        </div>
+      )}
+    </li>
   );
 }

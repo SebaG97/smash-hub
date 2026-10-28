@@ -8,7 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Path, Query, Request
 from sqlalchemy.orm import Session
 
-from app.insights import engine, preview
+from app.insights import engine, preview, visitors
 from app.integrations.startgg.client import ImportFailure, StartGGClient
 from app.players.mains import player_mains
 from app.players.summary import ranking_place
@@ -18,6 +18,8 @@ CALENDAR_SECONDS = 3600
 _calendar = {"at": 0.0, "items": None}
 PREVIEW_SECONDS = 900
 _previews = {}  # slug -> (monotonic time, payload)
+VISITOR_SECONDS = 6 * 3600
+_visitors = {}  # start.gg player id -> (monotonic time, payload)
 
 
 def _with_mains(session, items, *keys):
@@ -155,4 +157,26 @@ def upcoming(request: Request, slug: str = Path(pattern=r"^[a-z0-9-]{1,120}$")):
         )
         _with_mains(s, result["entrants"], None)
     _previews[slug] = (time.monotonic(), result)
+    return result
+
+
+@router.get("/startgg-players/{player_id}")
+def startgg_player(request: Request, player_id: str = Path(pattern=r"^\d{1,20}$")):
+    """A year of start.gg results for an entrant the hub has no data for (read only)."""
+    hit = _visitors.get(player_id)
+    if hit and time.monotonic() - hit[0] < VISITOR_SECONDS:
+        return hit[1]
+    token = request.app.state.settings.startgg_api_token
+
+    async def fetch():
+        async with StartGGClient(token) as client:
+            return await visitors.fetch(client, player_id)
+
+    try:
+        result = asyncio.run(fetch())
+    except ImportFailure as exc:
+        if "not_found" in str(exc):
+            raise HTTPException(404, "Player not found") from None
+        raise HTTPException(502, "start.gg did not answer") from None
+    _visitors[player_id] = (time.monotonic(), result)
     return result

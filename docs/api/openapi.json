@@ -3307,6 +3307,48 @@
           }
         }
       }
+    },
+    "/api/v1/insights/startgg-players/{player_id}": {
+      "get": {
+        "tags": [
+          "insights"
+        ],
+        "summary": "Startgg Player",
+        "description": "A year of start.gg results for an entrant the hub has no data for (read only).",
+        "operationId": "startgg_player_api_v1_insights_startgg_players__player_id__get",
+        "parameters": [
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{1,20}$",
+              "title": "Player Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {

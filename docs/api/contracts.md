@@ -180,3 +180,7 @@ Vistas previas (web): las fichas de jugador, torneos, rankings y seedings public
 
 `TournamentView` agrega `seeding_reliable` (por defecto `true`). `PUT /api/v1/tournaments/{id}/seeding` (admin) recibe `{reliable}`; queda registrado quién lo cambió y cuándo (`seeding_flag_actor`, `seeding_flag_at`, migración 0012). En un torneo con `reliable: false` los seeds de start.gg no se usan para nada de `/insights`: no genera sorpresas (ni el emblema «David contra Goliat» ni puntos de sorpresa en el jugador del mes) ni «rindió por encima de su seed», y el resumen del torneo muestra `seed: null`. El ranking y el seeding del hub no usan esos seeds, así que no cambian. Cuando un organizador cambia la marca, los récords se recalculan al instante.
 
+## Jugadores de afuera en la previa (Misión 18)
+
+`GET /api/v1/insights/startgg-players/{player_id}` (id numérico de start.gg): un año de resultados de start.gg de un inscrito sin datos en el hub, para extranjeros o locales que nunca jugaron un torneo importado. Lee los sets del jugador con la misma consulta del seeding (solo lectura) y queda 6 horas en memoria. Devuelve `{player_id, tag, country (el país donde más juega), since, wins, losses (sets presenciales de Ultimate contados con las reglas de ADR-009/010), tournaments, recent (últimos 5), best (3 mejores ubicaciones), mains}`. 404 si start.gg no conoce al jugador, 502 si no responde, 422 con un id inválido. `entrants[]` de la previa agrega `startgg_player_id`.
+

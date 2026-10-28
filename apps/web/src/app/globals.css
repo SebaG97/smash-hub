@@ -1433,3 +1433,32 @@ body {
 .preview-entrants tr td:first-child {
   border-left: 4px solid var(--main, transparent);
 }
+.visitors {
+  list-style: none;
+  padding: 0;
+}
+.visitors > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+.visitors .place {
+  min-width: 2rem;
+}
+.visitor-card {
+  flex-basis: 100%;
+  padding: 12px 14px;
+  background: var(--slab);
+  border-left: 4px solid var(--gold);
+}
+.visitor-card h3 {
+  margin: 12px 0 4px;
+}
+.visitor-card ul {
+  margin: 0;
+  padding-left: 18px;
+}

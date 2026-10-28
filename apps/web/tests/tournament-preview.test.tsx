@@ -1,6 +1,6 @@
 import React from "react";
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { TournamentPreviewPage } from "../src/components/tournament-preview";
 
 afterEach(() => {
@@ -41,7 +41,13 @@ it("shows favorites, streaks, crossings and projected seeds", async () => {
         entrants: [
           { ...wesker, ranked: true, wins: 84, losses: 13, streak: 9 },
           { ...zio, ranked: true, wins: 56, losses: 23, streak: 0 },
-          { id: null, tag: "Chag", seed: 3, ranked: false },
+          {
+            id: null,
+            tag: "Chag",
+            seed: 3,
+            ranked: false,
+            startgg_player_id: "70916",
+          },
         ],
         favorites: [
           { ...wesker, ranked: true, wins: 84, losses: 13, streak: 9 },
@@ -85,4 +91,72 @@ it("explains a missing tournament", async () => {
   expect(await screen.findByRole("alert")).toHaveTextContent(
     "No se encontró este registro.",
   );
+});
+
+it("loads start.gg data of an entrant without hub results on demand", async () => {
+  const fetchMock = vi.fn(async (url: string) => ({
+    ok: true,
+    json: async () =>
+      url.includes("startgg-players/70916")
+        ? {
+            player_id: "70916",
+            tag: "ISG | Chag",
+            country: "MX",
+            since: "2025-10-28",
+            wins: 291,
+            losses: 91,
+            tournaments: 60,
+            mains: [{ character: "Min Min", games: 9, share: 90 }],
+            best: [
+              {
+                tournament: "Pound Cake",
+                url: "https://www.start.gg/tournament/pound-cake",
+                entrants: 150,
+                placement: 1,
+                date: "2026-10-19",
+                country: "CO",
+              },
+            ],
+            recent: [],
+          }
+        : {
+            tournament: {
+              name: "Center Stage 2026",
+              slug: "cs",
+              url: "https://www.start.gg/tournament/cs",
+              starts_at: null,
+              city: null,
+              venue: null,
+              attendees: 1,
+            },
+            event: { name: "Ultimate Singles", entrants: 1 },
+            seeding: { source: "results", label: "Proyectados" },
+            entrants: [
+              {
+                id: null,
+                tag: "Chag",
+                seed: 1,
+                ranked: false,
+                startgg_player_id: "70916",
+              },
+            ],
+            favorites: [],
+            on_fire: [],
+            crossings: [],
+            rivalries: [],
+            newcomers: { count: 1, tags: ["Chag"] },
+          },
+  }));
+  vi.stubGlobal("fetch", fetchMock);
+  render(<TournamentPreviewPage slug="cs" />);
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Ver datos de start.gg" }),
+  );
+  expect(await screen.findByText("291–91")).toBeInTheDocument();
+  expect(screen.getByText(/Juega sobre todo en México/)).toBeInTheDocument();
+  // Bare dates stay on their day in Asunción.
+  expect(screen.getByText(/1\.º de 150 en/)).toHaveTextContent(
+    "1.º de 150 en Pound Cake (Colombia), 19 oct. 2026",
+  );
+  expect(fetchMock).toHaveBeenCalledTimes(2);
 });
