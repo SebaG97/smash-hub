@@ -234,7 +234,8 @@ def test_view_is_public_and_explains_data(project):
             "2026-01-01"
         )
         assert body["merges"] == [{"from_player_id": "9", "to_player_id": "4", "tag": "Dot"}]
-        assert client.get("/api/v1/seeding", headers=AUTH).json()[0]["slug"] == "cs"
+        listed = client.get("/api/v1/seeding", headers=AUTH).json()[0]
+        assert (listed["slug"], listed["startgg_event_slug"]) == ("cs", "tournament/t/event/e")
         assert client.get("/api/v1/seeding/nope", headers=AUTH).status_code == 404
 
 

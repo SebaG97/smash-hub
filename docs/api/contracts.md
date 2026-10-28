@@ -174,7 +174,7 @@ Vistas previas (web): las fichas de jugador, torneos, rankings y seedings public
 - `entrants`: `[{seed, tag, id (jugador del hub o null), ranked, wins, losses, recent_wins, recent_losses (últimos 60 días de datos), streak, mains}]`.
 - `favorites` (los 4 primeros seeds), `on_fire` (racha actual de 3 sets o más), `crossings` (el top 8 del lado de winners si se cumplen los seeds: 1–8, 4–5, 2–7, 3–6, semifinales y final, con `h2h` y el último cruce), `rivalries` (parejas del cuadro con 3 sets o más entre ellas que no aparecen en los cruces), `newcomers` (inscritos sin sets en el hub).
 
-`/insights/calendar` agrega `slug` a cada torneo; la portada enlaza a `/previa/{slug}`.
+`/insights/calendar` agrega `slug` a cada torneo; la portada enlaza a `/previa/{slug}`. También agrega `event` (`{name, slug, url, entrants}`, el evento presencial de singles de Ultimate con más inscritos, o `null`), y `GET /api/v1/seeding` devuelve `startgg_event_slug` de cada proyecto: con eso la página de seeding ofrece crear el seeding de un próximo torneo sin pegar el link.
 
 ## Torneos mal seedeados (Misión 17)
 

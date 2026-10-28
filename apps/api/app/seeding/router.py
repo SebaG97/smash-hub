@@ -154,6 +154,7 @@ def projects(
                 name=p.name,
                 kind=p.kind,
                 country_code=p.country_code,
+                startgg_event_slug=p.startgg_event_slug,
                 event_date=p.event_date,
                 window_start=p.window_start,
                 published=p.published,

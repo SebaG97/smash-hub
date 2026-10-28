@@ -28,7 +28,20 @@ function file(name: string, type: string, size = 10) {
   return new File(["x".repeat(size)], name, { type });
 }
 
-it("readers only get the download link", () => {
+it("readers do not get the share image", () => {
+  const { container } = render(
+    <ShareImage
+      endpoint="/og/ranking/rk"
+      filename="rk.png"
+      label="Bajar"
+      rows={rows}
+    />,
+  );
+  expect(container).toBeEmptyDOMElement();
+});
+
+it("organizers get the download link", () => {
+  saveAdmin({ key: "k", name: "Org" });
   render(
     <ShareImage
       endpoint="/og/ranking/rk"
@@ -41,9 +54,6 @@ it("readers only get the download link", () => {
     "href",
     "/og/ranking/rk",
   );
-  expect(
-    screen.queryByRole("button", { name: "Personalizar imagen" }),
-  ).not.toBeInTheDocument();
 });
 
 it("organizers replace renders with their own pictures", async () => {

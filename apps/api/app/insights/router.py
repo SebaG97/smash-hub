@@ -89,6 +89,18 @@ def tournament(request: Request, id: UUID, limit: int = Query(8, ge=1, le=16)):
         return summary
 
 
+def _event(event):
+    """The singles event a seeding is made for: its start.gg path and link."""
+    if not event or not event.get("slug"):
+        return None
+    return dict(
+        name=event["name"],
+        slug=event["slug"],
+        url=f"https://www.start.gg/{event['slug']}",
+        entrants=event.get("numEntrants"),
+    )
+
+
 @router.get("/calendar")
 def calendar(request: Request):
     """Upcoming offline tournaments in Paraguay from start.gg, cached for an hour."""
@@ -117,6 +129,7 @@ def calendar(request: Request):
             city=t.get("city"),
             venue=t.get("venueName"),
             attendees=t.get("numAttendees"),
+            event=_event(preview.singles_event(t)),
         )
         for t in ((data.get("tournaments") or {}).get("nodes") or [])
         if not t.get("isOnline") and t.get("slug", "").startswith("tournament/")

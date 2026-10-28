@@ -1219,12 +1219,91 @@ function localDay(offsetDays: number) {
   );
 }
 
+type UpcomingEvent = {
+  name: string;
+  url: string;
+  starts_at: string | null;
+  city: string | null;
+  event: {
+    name: string;
+    slug: string;
+    url: string;
+    entrants: number | null;
+  } | null;
+};
+
+/** Upcoming tournaments from start.gg, to start their seeding in one click. */
+function UpcomingEvents({
+  existing,
+  onPick,
+}: {
+  existing: SeedingProjectSummary[];
+  onPick: (t: UpcomingEvent) => void;
+}) {
+  const [items, setItems] = useState<UpcomingEvent[] | null>(null);
+  useEffect(() => {
+    fetch(`${api}/insights/calendar`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error())))
+      .then((d: { items: UpcomingEvent[] }) =>
+        setItems(d.items.filter((t) => t.event)),
+      )
+      .catch(() => setItems([]));
+  }, []);
+  if (!items?.length) return null;
+  const done = new Map(existing.map((p) => [p.startgg_event_slug, p.slug]));
+  return (
+    <section className="seeding-upcoming" aria-labelledby="upcoming-title">
+      <h2 id="upcoming-title">Próximos torneos</h2>
+      <ul>
+        {items.map((t) => {
+          const event = t.event!;
+          const seeding = done.get(event.slug);
+          return (
+            <li key={event.slug}>
+              <span>
+                <strong>{t.name}</strong>
+                <small>
+                  {[
+                    t.starts_at && day(t.starts_at),
+                    t.city,
+                    event.entrants != null
+                      ? `${event.entrants} inscritos`
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </small>
+              </span>
+              <a href={event.url} target="_blank" rel="noreferrer">
+                Ver en start.gg
+              </a>
+              {seeding ? (
+                <Link href={`/seeding/${seeding}`}>Abrir su seeding</Link>
+              ) : (
+                <button
+                  type="button"
+                  className="link-button"
+                  onClick={() => onPick(t)}
+                >
+                  Usar este torneo
+                </button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
 function NewProjectForm({
   kind,
   admin,
+  existing = [],
 }: {
   kind: "seeding" | "ranking";
   admin: Admin;
+  existing?: SeedingProjectSummary[];
 }) {
   const router = useRouter();
   const ranking = kind === "ranking";
@@ -1236,86 +1315,105 @@ function NewProjectForm({
   const [to, setTo] = useState(() => localDay(0));
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const pick = (t: UpcomingEvent) => {
+    setName(`${t.name} · ${t.event!.name}`.slice(0, 200));
+    setEventUrl(t.event!.url);
+    if (t.starts_at) {
+      // Data up to the event day, starting a year before it (Asunción days).
+      const date = new Date(t.starts_at).toLocaleDateString("en-CA", {
+        timeZone: "America/Asuncion",
+      });
+      setTo(date);
+      setFrom(
+        new Date(Date.parse(`${date}T12:00:00Z`) - 365 * 86400000)
+          .toISOString()
+          .slice(0, 10),
+      );
+    }
+  };
   return (
-    <form
-      className="seeding-admin seeding-new"
-      onSubmit={async (e) => {
-        e.preventDefault();
-        setBusy(true);
-        setError("");
-        const r = await send(admin, "POST", "", {
-          kind,
-          name: name.trim(),
-          event_url: ranking ? undefined : eventUrl.trim(),
-          country: ranking ? country.trim() : undefined,
-          window_start: fromInput(from),
-          end: fromInput(to),
-        }).catch(() => null);
-        setBusy(false);
-        if (!r) return setError("No se pudo contactar a la API.");
-        if (!r.ok) return setError(await problem(r));
-        const created = (await r.json()) as { slug: string };
-        router.push(`/${ranking ? "rankings" : "seeding"}/${created.slug}`);
-      }}
-    >
-      <strong>{ranking ? "Nuevo ranking" : "Nuevo seeding"}</strong>
-      <label>
-        Nombre
-        <input
-          value={name}
-          minLength={3}
-          maxLength={200}
-          onChange={(e) => setName(e.target.value)}
-          placeholder={
-            ranking ? "Ranking Paraguay 2027" : "Torneo · Ultimate Singles"
-          }
-          required
-        />
-      </label>
-      {ranking ? (
+    <>
+      {!ranking && <UpcomingEvents existing={existing} onPick={pick} />}
+      <form
+        className="seeding-admin seeding-new"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setBusy(true);
+          setError("");
+          const r = await send(admin, "POST", "", {
+            kind,
+            name: name.trim(),
+            event_url: ranking ? undefined : eventUrl.trim(),
+            country: ranking ? country.trim() : undefined,
+            window_start: fromInput(from),
+            end: fromInput(to),
+          }).catch(() => null);
+          setBusy(false);
+          if (!r) return setError("No se pudo contactar a la API.");
+          if (!r.ok) return setError(await problem(r));
+          const created = (await r.json()) as { slug: string };
+          router.push(`/${ranking ? "rankings" : "seeding"}/${created.slug}`);
+        }}
+      >
+        <strong>{ranking ? "Nuevo ranking" : "Nuevo seeding"}</strong>
         <label>
-          País (código)
+          Nombre
           <input
-            value={country}
-            maxLength={2}
-            onChange={(e) => setCountry(e.target.value.toUpperCase())}
+            value={name}
+            minLength={3}
+            maxLength={200}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={
+              ranking ? "Ranking Paraguay 2027" : "Torneo · Ultimate Singles"
+            }
             required
           />
         </label>
-      ) : (
+        {ranking ? (
+          <label>
+            País (código)
+            <input
+              value={country}
+              maxLength={2}
+              onChange={(e) => setCountry(e.target.value.toUpperCase())}
+              required
+            />
+          </label>
+        ) : (
+          <label>
+            Link del evento en start.gg
+            <input
+              value={eventUrl}
+              onChange={(e) => setEventUrl(e.target.value)}
+              placeholder="https://www.start.gg/tournament/…/event/…"
+              required
+            />
+          </label>
+        )}
         <label>
-          Link del evento en start.gg
+          {ranking ? "Desde" : "Datos desde"}
           <input
-            value={eventUrl}
-            onChange={(e) => setEventUrl(e.target.value)}
-            placeholder="https://www.start.gg/tournament/…/event/…"
+            type="date"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
             required
           />
         </label>
-      )}
-      <label>
-        {ranking ? "Desde" : "Datos desde"}
-        <input
-          type="date"
-          value={from}
-          onChange={(e) => setFrom(e.target.value)}
-          required
-        />
-      </label>
-      <label>
-        {ranking ? "Hasta (exclusivo)" : "Fecha del evento"}
-        <input
-          type="date"
-          value={to}
-          onChange={(e) => setTo(e.target.value)}
-          required
-        />
-      </label>
-      <button className="primary-button" disabled={busy}>
-        {busy ? "Creando…" : "Crear y bajar datos"}
-      </button>
-      {error && <p role="alert">{error}</p>}
-    </form>
+        <label>
+          {ranking ? "Hasta (exclusivo)" : "Fecha del evento"}
+          <input
+            type="date"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            required
+          />
+        </label>
+        <button className="primary-button" disabled={busy}>
+          {busy ? "Creando…" : "Crear y bajar datos"}
+        </button>
+        {error && <p role="alert">{error}</p>}
+      </form>
+    </>
   );
 }
 
@@ -1337,7 +1435,9 @@ export function SeedingList({
   return (
     <div className="competition-page">
       <h1>{ranking ? "Rankings" : "Seeding"}</h1>
-      {admin && <NewProjectForm kind={kind} admin={admin} />}
+      {admin && (
+        <NewProjectForm kind={kind} admin={admin} existing={items ?? []} />
+      )}
       {error && <p role="alert">No se pudieron cargar los datos.</p>}
       {!items && !error && <p role="status">Cargando…</p>}
       {items && items.length === 0 && (

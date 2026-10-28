@@ -21,8 +21,9 @@ function thumbnail(main?: Main) {
 }
 
 /**
- * Download link for a share image. Organizers can also replace the render of any
- * place with their own picture; uploads are used for that image only, never stored.
+ * Download link for a share image, only for organizers (readers never see it). They can
+ * also replace the render of any place with their own picture; uploads are used for that
+ * image only, never stored.
  */
 export function ShareImage({
   endpoint,
@@ -40,24 +41,23 @@ export function ShareImage({
 }) {
   const admin = useAdmin();
   const [open, setOpen] = useState(false);
+  if (!admin) return null;
   return (
     <div className="share-image">
       <p className="home-more">
         <a className="primary-button" href={endpoint} download={filename}>
           {label}
         </a>
-        {admin && (
-          <button
-            type="button"
-            className="link-button"
-            aria-expanded={open}
-            onClick={() => setOpen(!open)}
-          >
-            {open ? "Cerrar personalización" : "Personalizar imagen"}
-          </button>
-        )}
+        <button
+          type="button"
+          className="link-button"
+          aria-expanded={open}
+          onClick={() => setOpen(!open)}
+        >
+          {open ? "Cerrar personalización" : "Personalizar imagen"}
+        </button>
       </p>
-      {admin && open && (
+      {open && (
         <Editor
           endpoint={endpoint}
           filename={filename}

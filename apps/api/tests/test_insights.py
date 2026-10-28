@@ -164,6 +164,21 @@ def test_calendar_keeps_offline_paraguay_events(monkeypatch):
                             "venueName": None,
                             "numAttendees": 40,
                             "isOnline": False,
+                            "events": [
+                                {
+                                    "name": "Ultimate Singles",
+                                    "slug": "tournament/center-stage-2026/event/singles",
+                                    "numEntrants": 40,
+                                    "videogame": {"id": 1386},
+                                },
+                                {
+                                    "name": "Doubles",
+                                    "slug": "tournament/center-stage-2026/event/doubles",
+                                    "numEntrants": 50,
+                                    "videogame": {"id": 1386},
+                                    "teamRosterSize": {"maxPlayers": 2},
+                                },
+                            ],
                         },
                         {"name": "Online weekly", "slug": "tournament/weekly", "isOnline": True},
                     ]
@@ -181,6 +196,13 @@ def test_calendar_keeps_offline_paraguay_events(monkeypatch):
     assert [i["name"] for i in first["items"]] == ["Center Stage 2026"]
     assert first["items"][0]["url"] == "https://www.start.gg/tournament/center-stage-2026"
     assert first["items"][0]["starts_at"].startswith("2026-11-17")
+    # The singles event, ready to create its seeding.
+    assert first["items"][0]["event"] == {
+        "name": "Ultimate Singles",
+        "slug": "tournament/center-stage-2026/event/singles",
+        "url": "https://www.start.gg/tournament/center-stage-2026/event/singles",
+        "entrants": 40,
+    }
     assert len(calls) == 1  # cached for an hour
     assert calls[0] == ("upcoming_tournaments", {"country": "PY", "videogame": "1386"})
 

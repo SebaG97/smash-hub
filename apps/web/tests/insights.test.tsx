@@ -6,6 +6,7 @@ import {
   RecordsPage,
   TournamentSummaryBlock,
 } from "../src/components/insights";
+import { clearAdmin, saveAdmin } from "../src/lib/admin";
 
 afterEach(() => {
   cleanup();
@@ -123,7 +124,8 @@ it("lists community records with the player of the month", async () => {
   );
 });
 
-it("summarizes a tournament with its share image", async () => {
+it("summarizes a tournament with its share image for organizers", async () => {
+  saveAdmin({ key: "k", name: "Org" });
   mock(() => ({
     entrants: 51,
     top: [
@@ -139,4 +141,5 @@ it("summarizes a tournament with its share image", async () => {
   ).toHaveAttribute("href", "/og/tournament/t1");
   expect(screen.getByText("seed 4, terminó 1.º")).toBeInTheDocument();
   expect(screen.queryByText("Sorpresas")).not.toBeInTheDocument();
+  clearAdmin();
 });

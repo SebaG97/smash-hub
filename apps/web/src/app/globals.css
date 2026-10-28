@@ -630,6 +630,33 @@ footer {
   align-items: end;
   gap: 14px;
 }
+.seeding-upcoming h2 {
+  font-size: 1.1rem;
+  margin: 0 0 8px;
+}
+.seeding-upcoming ul {
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.seeding-upcoming li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 18px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border-radius: 8px;
+}
+.seeding-upcoming li > span {
+  display: grid;
+  flex: 1 1 260px;
+}
+.seeding-upcoming small {
+  opacity: 0.75;
+}
 .seeding-admin > p {
   margin: 0;
   width: 100%;

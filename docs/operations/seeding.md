@@ -78,7 +78,7 @@ En producción, desde la consola de `api`: `python -m app.runtime seeding --allo
 
 Con la clave de organizadores:
 
-- **Nuevo seeding** (`/seeding`): nombre, link del evento de start.gg y fechas. Al crearlo empieza a bajar los datos.
+- **Nuevo seeding** (`/seeding`): nombre, link del evento de start.gg y fechas. Al crearlo empieza a bajar los datos. Arriba del formulario, **Próximos torneos** lista los torneos presenciales de Paraguay que vienen en start.gg: **Usar este torneo** completa el nombre, el link del evento de singles y las fechas (desde un año antes hasta el día del torneo); si ese evento ya tiene seeding aparece **Abrir su seeding**. Cada uno tiene su enlace a start.gg, y el link se puede seguir pegando a mano.
 - **Nuevo ranking** (`/rankings`): nombre, país (por ejemplo `PY`) y período.
 - **Identidades** (en cada página): fusionar un ID de start.gg con un jugador de la lista, marcar inscripciones duplicadas y deshacer ambas cosas. La sección sugiere IDs con el mismo tag; nunca fusiona sola (ADR-006). Ojo con homónimos, como «RT/ZN | Cherry» de Colombia frente a Cherry! de Paraguay.
 

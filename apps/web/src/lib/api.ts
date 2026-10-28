@@ -147,6 +147,7 @@ export type SeedingProjectSummary = {
   name: string;
   kind: "seeding" | "ranking";
   country_code: string | null;
+  startgg_event_slug?: string | null;
   event_date: string;
   window_start: string;
   published?: boolean;

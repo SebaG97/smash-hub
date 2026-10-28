@@ -1,6 +1,13 @@
 query UpcomingTournaments($country: String!, $videogame: ID!) {
   tournaments(query: {page: 1, perPage: 12, sortBy: "startAt asc",
                       filter: {countryCode: $country, videogameIds: [$videogame], upcoming: true}}) {
-    nodes { id name slug startAt city venueName numAttendees isOnline }
+    nodes {
+      id name slug startAt city venueName numAttendees isOnline
+      events(limit: 20) {
+        id name slug numEntrants isOnline
+        teamRosterSize { maxPlayers }
+        videogame { id }
+      }
+    }
   }
 }
