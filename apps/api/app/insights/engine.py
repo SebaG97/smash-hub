@@ -67,6 +67,16 @@ class Data:
     tags: dict = field(default_factory=dict)
     finishes: list = field(default_factory=list)  # (player, placement, entrants, tournament...)
     picks: dict = field(default_factory=dict)  # player -> Counter(character -> games)
+    games: list = field(default_factory=list)  # Game of eligible singles sets
+
+
+@dataclass
+class Game:
+    """One game with both characters known: (player, character) per side and the winner."""
+
+    a: tuple
+    b: tuple
+    winner: object
 
 
 def load(session):
@@ -99,6 +109,7 @@ def load(session):
         sides[set_id].append((entrant_id, won))
     games = defaultdict(dict)  # set -> game number -> winning entrant
     picks = defaultdict(Counter)
+    selections = defaultdict(list)  # (set, game number) -> [(entrant, character)]
     from app.games.models import Character
 
     for set_id, number, entrant_id, won, character in session.execute(
@@ -114,6 +125,7 @@ def load(session):
     ):
         if won:
             games[set_id][number] = entrant_id
+        selections[(set_id, number)].append((entrant_id, character))
         player = entrant_player.get(entrant_id)
         if player and character != "Random Character":
             picks[player][character] += 1
@@ -152,6 +164,16 @@ def load(session):
             )
         )
     data.matches.sort(key=lambda m: (m.at, m.id))
+    eligible = {m.id for m in data.matches}
+    for (set_id, number), sides_picked in selections.items():
+        if str(set_id) not in eligible or len(sides_picked) != 2:
+            continue
+        (ea, ca), (eb, cb) = sides_picked
+        pa, pb = entrant_player.get(ea), entrant_player.get(eb)
+        winner = games.get(set_id, {}).get(number)
+        if not pa or not pb or winner not in (ea, eb) or "Random Character" in (ca, cb):
+            continue
+        data.games.append(Game(a=(pa, ca), b=(pb, cb), winner=entrant_player[winner]))
     for entrant_id, (event_id, seed, place) in entrants.items():
         player = entrant_player.get(entrant_id)
         tournament_id, name, starts, size = events[event_id]
@@ -476,3 +498,60 @@ def tournament_summary(data, tournament_id, limit=8):
             for f in over[:3]
         ],
     )
+
+
+# ---------------------------------------------------------------- characters
+
+
+def character_stats(data, top=3):
+    """Characters of the scene: games, share, game win rate and who plays them most."""
+    usage, wins = Counter(), Counter()
+    by_player, player_wins = defaultdict(Counter), defaultdict(Counter)
+    for g in data.games:
+        for player, character in (g.a, g.b):
+            usage[character] += 1
+            by_player[character][player] += 1
+            if g.winner == player:
+                wins[character] += 1
+                player_wins[character][player] += 1
+    total = sum(usage.values())
+    return [
+        dict(
+            character=character,
+            games=n,
+            share=round(100 * n / total, 1),
+            win_rate=round(100 * wins[character] / n, 1),
+            players=len(by_player[character]),
+            top_players=[
+                dict(
+                    id=str(p),
+                    tag=data.tags.get(p),
+                    games=k,
+                    win_rate=round(100 * player_wins[character][p] / k, 1),
+                )
+                for p, k in sorted(by_player[character].items(), key=lambda x: (-x[1], str(x[0])))[
+                    :top
+                ]
+            ],
+        )
+        for character, n in sorted(usage.items(), key=lambda x: (-x[1], x[0]))
+    ]
+
+
+def matchups(data, player):
+    """Games against each opposing character, most played first."""
+    games, wins = Counter(), Counter()
+    for g in data.games:
+        for (p, _), (_, theirs) in ((g.a, g.b), (g.b, g.a)):
+            if p == player:
+                games[theirs] += 1
+                wins[theirs] += g.winner == player
+    return [
+        dict(
+            character=character,
+            games=n,
+            wins=wins[character],
+            win_rate=round(100 * wins[character] / n, 1),
+        )
+        for character, n in sorted(games.items(), key=lambda x: (-x[1], x[0]))
+    ]

@@ -3023,6 +3023,68 @@
         }
       }
     },
+    "/api/v1/insights/players/{id}/matchups": {
+      "get": {
+        "tags": [
+          "insights"
+        ],
+        "summary": "Player Matchups",
+        "description": "Record against each opposing character, from per-game start.gg selections.",
+        "operationId": "player_matchups_api_v1_insights_players__id__matchups_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/insights/characters": {
+      "get": {
+        "tags": [
+          "insights"
+        ],
+        "summary": "Characters",
+        "description": "Characters played in the scene's singles games and their most frequent players.",
+        "operationId": "characters_api_v1_insights_characters_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/insights/records": {
       "get": {
         "tags": [

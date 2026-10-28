@@ -154,3 +154,15 @@ Imágenes para redes (web, PNG 1080×1080): `/og/tournament/{id}`, `/og/ranking/
 - `GET /api/v1/insights/tournaments/{id}` acepta `limit` (1–16, por defecto 8); la imagen pide 12.
 - Web: `/renders/{personaje}/{traje}?w=160|320|640` devuelve el render oficial recortado (PNG). Las imágenes de `/og/*` muestran el podio con los 12 primeros.
 - `POST` a `/og/tournament/{id}`, `/og/ranking/{slug}` y `/og/seeding/{slug}` (multipart, clave de organizador en `Authorization`): campos `image-0` a `image-11` reemplazan la imagen de cada fila. 401 sin clave válida, 413 si una pesa más de 5 MB, 422 si no es una imagen. No se guardan.
+
+## Personajes, matchups y vistas previas (Misión 15)
+
+| GET | Respuesta |
+| --- | --- |
+| `/api/v1/insights/characters` | `{games, items: [{character, games, share, win_rate, players, top_players: [{id, tag, games, win_rate, mains}]}]}`, de más a menos jugado |
+| `/api/v1/insights/players/{id}/matchups` | `{items: [{character, games, wins, win_rate}]}`: partidas contra cada personaje rival |
+
+Cuentan las partidas de singles de sets elegibles de torneos publicados en las que start.gg informa el personaje de los dos lados (sin «Random Character»). Los porcentajes son de partidas, no de sets. `games` en `/characters` es el total de partidas; la suma de `items[].games` lo duplica porque cada partida tiene dos personajes.
+
+Vistas previas (web): las fichas de jugador, torneos, rankings y seedings publicados declaran `og:title`, `og:description` y `og:image` con URLs absolutas del dominio por el que se entró. `/og/player/{id}` es la tarjeta del jugador (PNG 1200×630); torneos y rankings usan la imagen de podio.
+

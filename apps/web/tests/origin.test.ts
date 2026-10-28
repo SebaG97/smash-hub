@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { apiBase, publicOrigin } from "../src/lib/origin";
+import { apiBase, apiFor, publicOrigin } from "../src/lib/origin";
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -30,5 +30,12 @@ it("prefers the internal API URL when it is configured", () => {
   vi.stubEnv("API_INTERNAL_URL", "http://api:8000/api/v1/");
   expect(apiBase(new Request("http://0.0.0.0:3000/x"))).toBe(
     "http://api:8000/api/v1",
+  );
+});
+
+it("builds the API address for page metadata from an origin", () => {
+  vi.stubEnv("API_INTERNAL_URL", "");
+  expect(apiFor("https://smash.example.org")).toBe(
+    "https://smash.example.org/api/v1",
   );
 });

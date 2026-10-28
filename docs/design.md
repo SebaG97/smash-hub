@@ -50,3 +50,10 @@ El color sale del propio juego: cada jugador toma el color característico de su
 ## Imagen de podio (Misión 14)
 
 La imagen para redes pasa a ser un podio: el 1.º ocupa la mitad izquierda con el render oficial de su main sobre el color del personaje; el 2.º y el 3.º van a la derecha, medianos; del 4.º al 8.º, tarjetas con medio cuerpo; del 9.º al 12.º, una fila chica con el ícono de stock. Los nombres van sobre una banda de concreto al pie de cada tarjeta, con el número de puesto inclinado. Los organizadores eligen el traje de cada jugador desde su ficha (sección «Traje en las imágenes», visible solo con la clave). Renders: smashbros.com, ver ADR-015. Con «Personalizar imagen» el organizador puede reemplazar el render de cualquier puesto por una foto propia (llena la tarjeta) o un PNG recortado (va como el render).
+
+## Personajes y vistas previas (Misión 15)
+
+- **Personajes** (`/personajes`, en el menú): una fila por personaje con su ícono, número de partidas y % de uso, la barra de victorias y los tres jugadores que más lo usan. Tiene un buscador.
+- **Matchups:** en la pestaña Rivales de la ficha, «Contra cada personaje» con la barra de cada matchup y una oración con el mejor y el peor (desde 5 partidas).
+- **Vista previa al compartir:** al pegar el link de un jugador en WhatsApp o Discord aparece su tarjeta de 1200×630: render del main a la izquierda sobre su color, y a la derecha tag, puesto en el ranking, récord, hasta tres emblemas y su mejor resultado. Torneos y rankings muestran el podio.
+

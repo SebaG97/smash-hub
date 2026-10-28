@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
+import { PlayerMatchups } from "./characters";
 import { ImportPanel } from "./import-panel";
 import { PlayerAchievements, TournamentSummaryBlock } from "./insights";
 import { characterColor, characterIcon } from "../lib/characters";
@@ -549,12 +550,15 @@ export function PlayerPage({ id }: { id: string }) {
               />
             )}
             {tab === "rivales" && (
-              <PlayerStatistics
-                key={`rivals-${id}`}
-                id={id}
-                scopes={p.scopes || []}
-                section="rivals"
-              />
+              <>
+                <PlayerStatistics
+                  key={`rivals-${id}`}
+                  id={id}
+                  scopes={p.scopes || []}
+                  section="rivals"
+                />
+                <PlayerMatchups id={id} />
+              </>
             )}
             {tab === "historial" && (
               <>

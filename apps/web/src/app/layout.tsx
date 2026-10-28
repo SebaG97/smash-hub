@@ -3,17 +3,36 @@ import Link from "next/link";
 import { AdminBadge } from "../components/admin-panel";
 import { Logo } from "../components/logo";
 import { NavLinks } from "../components/nav-links";
+import { siteOrigin } from "../lib/previews";
 import "./globals.css";
 
-export const metadata: Metadata = {
-  title: {
-    default: "Smash Club Paraguay",
-    template: "%s | Smash Club Paraguay",
-  },
-  description:
-    "Ranking, torneos y mains de la escena de Smash Ultimate en Paraguay.",
-  icons: { icon: "/smashclublogo.jpg", apple: "/smashclublogo.jpg" },
-};
+const description =
+  "Ranking, torneos y mains de la escena de Smash Ultimate en Paraguay.";
+
+export async function generateMetadata(): Promise<Metadata> {
+  // Absolute URLs for link previews, from the host the visitor used.
+  const origin = await siteOrigin();
+  return {
+    metadataBase: new URL(origin),
+    title: {
+      default: "Smash Club Paraguay",
+      template: "%s | Smash Club Paraguay",
+    },
+    description,
+    icons: { icon: "/smashclublogo.jpg", apple: "/smashclublogo.jpg" },
+    openGraph: {
+      siteName: "Smash Club Paraguay",
+      title: "Smash Club Paraguay",
+      description,
+      locale: "es_PY",
+      type: "website",
+      images: [
+        { url: `${origin}/smashclublogo.jpg`, alt: "Smash Club Paraguay" },
+      ],
+    },
+    twitter: { card: "summary" },
+  };
+}
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {

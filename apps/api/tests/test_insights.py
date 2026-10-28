@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from app.insights import engine
-from app.insights.engine import Data, Match, tier, upset_factor
+from app.insights.engine import Data, Game, Match, tier, upset_factor
 
 START = datetime(2026, 9, 1, 18, tzinfo=UTC)
 
@@ -183,3 +183,37 @@ def test_calendar_keeps_offline_paraguay_events(monkeypatch):
     assert first["items"][0]["starts_at"].startswith("2026-11-17")
     assert len(calls) == 1  # cached for an hour
     assert calls[0] == ("upcoming_tournaments", {"country": "PY", "videogame": "1386"})
+
+
+def scene_games():
+    """Ana (Ryu) and Beto (Ken / Ryu) over four games, Caro (Ken) once."""
+    return Data(
+        tags={"a": "Ana", "b": "Beto", "c": "Caro"},
+        games=[
+            Game(a=("a", "Ryu"), b=("b", "Ken"), winner="a"),
+            Game(a=("a", "Ryu"), b=("b", "Ken"), winner="a"),
+            Game(a=("b", "Ken"), b=("a", "Ryu"), winner="b"),
+            Game(a=("a", "Ryu"), b=("b", "Ryu"), winner="b"),
+            Game(a=("c", "Ken"), b=("a", "Ryu"), winner="c"),
+        ],
+    )
+
+
+def test_character_stats():
+    stats = engine.character_stats(scene_games())
+    assert [
+        (c["character"], c["games"], c["share"], c["win_rate"], c["players"]) for c in stats
+    ] == [
+        ("Ryu", 6, 60.0, 50.0, 2),
+        ("Ken", 4, 40.0, 50.0, 2),
+    ]
+    assert stats[0]["top_players"][0] == {"id": "a", "tag": "Ana", "games": 5, "win_rate": 40.0}
+    assert [p["tag"] for p in stats[1]["top_players"]] == ["Beto", "Caro"]
+
+
+def test_matchups_count_each_opposing_character():
+    assert engine.matchups(scene_games(), "a") == [
+        {"character": "Ken", "games": 4, "wins": 2, "win_rate": 50.0},
+        {"character": "Ryu", "games": 1, "wins": 0, "win_rate": 0.0},
+    ]
+    assert engine.matchups(scene_games(), "nobody") == []

@@ -44,6 +44,22 @@ def player(request: Request, id: UUID):
         return engine.player_insights(data, id, place)
 
 
+@router.get("/players/{id}/matchups")
+def player_matchups(request: Request, id: UUID):
+    """Record against each opposing character, from per-game start.gg selections."""
+    with Session(request.app.state.engine) as s:
+        return {"items": engine.matchups(engine.cached(s), id)}
+
+
+@router.get("/characters")
+def characters(request: Request):
+    """Characters played in the scene's singles games and their most frequent players."""
+    with Session(request.app.state.engine) as s:
+        items = engine.character_stats(engine.cached(s))
+        _with_mains(s, [p for item in items for p in item["top_players"]], None)
+        return {"items": items, "games": sum(i["games"] for i in items) // 2}
+
+
 @router.get("/records")
 def records(request: Request):
     with Session(request.app.state.engine) as s:

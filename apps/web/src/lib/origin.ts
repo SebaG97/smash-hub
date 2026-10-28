@@ -1,21 +1,29 @@
 /**
- * Public origin of the request. Behind a proxy (DigitalOcean) request.url carries the
+ * Public origin of a request. Behind a proxy (DigitalOcean) request.url carries the
  * server's own bind address (http://0.0.0.0:3000), so the forwarded host is used.
  */
-export function publicOrigin(request: Request) {
-  const host =
-    request.headers.get("x-forwarded-host") ?? request.headers.get("host");
-  if (!host) return new URL(request.url).origin;
+export function originFromHeaders(headers: Headers, fallback: string) {
+  const host = headers.get("x-forwarded-host") ?? headers.get("host");
+  if (!host) return fallback;
   const proto =
-    request.headers.get("x-forwarded-proto")?.split(",")[0].trim() ||
-    new URL(request.url).protocol.replace(":", "");
+    headers.get("x-forwarded-proto")?.split(",")[0].trim() ||
+    new URL(fallback).protocol.replace(":", "");
   return `${proto}://${host.split(",")[0].trim()}`;
 }
 
-export function apiBase(request: Request) {
+export function publicOrigin(request: Request) {
+  return originFromHeaders(request.headers, new URL(request.url).origin);
+}
+
+export function apiFor(origin: string) {
   // Inside Docker the web server reaches the API by service name; in production the
   // API lives under the same public domain.
-  return (
-    process.env.API_INTERNAL_URL || `${publicOrigin(request)}/api/v1`
-  ).replace(/\/$/, "");
+  return (process.env.API_INTERNAL_URL || `${origin}/api/v1`).replace(
+    /\/$/,
+    "",
+  );
+}
+
+export function apiBase(request: Request) {
+  return apiFor(publicOrigin(request));
 }

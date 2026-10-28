@@ -1326,3 +1326,66 @@ body {
   display: block;
   margin-bottom: 12px;
 }
+.character-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0;
+}
+.character-rows {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.character-rows li {
+  display: grid;
+  grid-template-columns:
+    2.6rem 48px minmax(10rem, 1.3fr) minmax(8rem, 1fr)
+    minmax(0, 1.6fr);
+  align-items: center;
+  gap: 14px;
+  padding: 10px 0 10px 10px;
+  border-bottom: 1px solid var(--line);
+  border-left: 4px solid var(--main, transparent);
+}
+.character-name,
+.character-rate {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.character-name strong {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 1.25rem;
+}
+.character-rows small,
+.matchup-record small {
+  color: var(--ash);
+}
+.character-players {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+.character-players a {
+  text-decoration: none;
+  font-weight: 700;
+}
+.matchup-record {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.matchup-summary strong {
+  color: var(--bone);
+}
+@media (max-width: 720px) {
+  .character-rows li {
+    grid-template-columns: 2.2rem 40px minmax(0, 1fr);
+  }
+  .character-rate,
+  .character-players {
+    grid-column: 3;
+  }
+}

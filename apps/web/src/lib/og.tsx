@@ -477,3 +477,184 @@ export async function shareImage(
     },
   );
 }
+
+export type PlayerCardData = {
+  tag: string;
+  main?: string | null;
+  costume?: number;
+  ranking?: { name: string; place: number } | null;
+  wins?: number;
+  losses?: number;
+  badges: string[];
+  best?: { placement: number; tournament: string; entrants: number | null };
+};
+
+/** 1200×630 link preview for a player: render of the main, ranking, record, badges. */
+export async function playerCard(data: PlayerCardData) {
+  const row: OgRow = {
+    place: 0,
+    tag: data.tag,
+    main: data.main,
+    costume: data.costume,
+  };
+  const [fontData, logo, picture] = await Promise.all([
+    displayFont(),
+    inline("smashclublogo.jpg"),
+    art(row, 640),
+  ]);
+  const size = picture && fit(picture, 470, 660);
+  const sets = (data.wins ?? 0) + (data.losses ?? 0);
+  return new ImageResponse(
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        background: CONCRETE,
+        color: BONE,
+        fontFamily: fontData ? "Display" : undefined,
+      }}
+    >
+      <div
+        style={{
+          position: "relative",
+          display: "flex",
+          width: 480,
+          height: 630,
+          overflow: "hidden",
+          background: SLAB,
+          borderRight: `10px solid ${color(row)}`,
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: "flex",
+            background: `${color(row)}55`,
+          }}
+        />
+        {picture && size && (
+          <img
+            src={picture.src}
+            width={size.width}
+            height={size.height}
+            style={{
+              position: "absolute",
+              left: Math.round((470 - size.width) / 2),
+              top: 30,
+            }}
+            alt=""
+          />
+        )}
+      </div>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          width: 720,
+          padding: "44px 48px",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          {logo && (
+            <img
+              src={logo}
+              width={52}
+              height={52}
+              style={{ borderRadius: 26 }}
+              alt=""
+            />
+          )}
+          <div style={{ display: "flex", fontSize: 28, color: ASH }}>
+            Smash Club Paraguay
+          </div>
+        </div>
+        <div
+          style={{
+            display: "flex",
+            fontSize: data.tag.length > 12 ? 76 : 104,
+            lineHeight: 1,
+            marginTop: 30,
+          }}
+        >
+          {data.tag}
+        </div>
+        {data.ranking && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-end",
+              gap: 14,
+              marginTop: 18,
+            }}
+          >
+            <div style={{ display: "flex", fontSize: 32, color: ASH }}>N.º</div>
+            <Place place={data.ranking.place} size={72} />
+            <div style={{ display: "flex", fontSize: 32, color: ASH }}>
+              {`del ${data.ranking.name}`}
+            </div>
+          </div>
+        )}
+        {sets > 0 && (
+          <div style={{ display: "flex", fontSize: 34, marginTop: 16 }}>
+            {`${data.wins}–${data.losses} en sets, ${Math.round(
+              (100 * (data.wins ?? 0)) / sets,
+            )} % ganados`}
+          </div>
+        )}
+        {data.badges.length > 0 && (
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 10,
+              marginTop: 22,
+              width: 624,
+            }}
+          >
+            {data.badges.slice(0, 3).map((b) => (
+              <div
+                key={b}
+                style={{
+                  display: "flex",
+                  fontSize: 26,
+                  padding: "6px 14px",
+                  background: SLAB,
+                  borderLeft: "5px solid #f3a81f",
+                }}
+              >
+                {b}
+              </div>
+            ))}
+          </div>
+        )}
+        {data.best && (
+          <div
+            style={{
+              display: "flex",
+              marginTop: "auto",
+              fontSize: 28,
+              color: ASH,
+            }}
+          >
+            {`Mejor resultado: ${data.best.placement}.º en ${data.best.tournament}${
+              data.best.entrants ? ` (${data.best.entrants} jugadores)` : ""
+            }`}
+          </div>
+        )}
+      </div>
+    </div>,
+    {
+      width: 1200,
+      height: 630,
+      fonts: fontData
+        ? [{ name: "Display", data: fontData, weight: 800, style: "normal" }]
+        : undefined,
+      headers: { "Cache-Control": "public, max-age=600" },
+    },
+  );
+}

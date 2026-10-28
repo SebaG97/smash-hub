@@ -107,6 +107,30 @@ def test_mains_in_player_list_and_detail(db, snapshot):
         ]
 
 
+def test_character_stats_and_matchups_from_imported_games(db, snapshot):
+    from app.insights import engine
+
+    prepare(db)
+    snapshot["events"][0]["sets"][0]["games"] = games((11, 1, 2), (11, 1, 2), (12, 5, 2))
+    run(db, snapshot)
+    engine.invalidate()
+    with Session(db) as s:
+        player = s.scalar(
+            select(ExternalIdentity.player_id).where(ExternalIdentity.external_id == "player:100")
+        )
+    with client_for(db) as client:
+        body = client.get("/api/v1/insights/characters").json()
+        assert body["games"] == 3
+        assert [(i["character"], i["games"], i["win_rate"]) for i in body["items"]] == [
+            ("C2", 3, 33.3),
+            ("C1", 2, 100.0),
+            ("C5", 1, 0.0),
+        ]
+        matchups = client.get(f"/api/v1/insights/players/{player}/matchups").json()["items"]
+        assert matchups == [{"character": "C2", "games": 3, "wins": 2, "win_rate": 66.7}]
+    engine.invalidate()
+
+
 def test_organizers_choose_the_costume_of_each_main(db, snapshot):
     prepare(db)
     snapshot["events"][0]["sets"][0]["games"] = games((11, 1, 2), (11, 1, 2), (12, 5, 2))

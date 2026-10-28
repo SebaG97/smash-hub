@@ -130,3 +130,5 @@ Misión 08: vista pública limpia (seedings como borradores hasta publicarlos, r
 Misión 13: emblemas y récords en la ficha de cada jugador, récords y jugador del mes en `/estadisticas` y la portada, resumen de cada torneo, calendario de próximos torneos desde start.gg e imágenes para redes del top de torneos y rankings (ADR-014).
 
 Misión 14: la imagen para redes pasa a ser un podio con los renders oficiales de los mains y el traje que elige el organizador para cada jugador (ADR-015, migración 0011). Opcionalmente, el organizador puede subir sus propias imágenes para cualquier puesto antes de generarla; no se guardan.
+
+Misión 15: página de personajes de la escena (`/personajes`), matchups contra cada personaje en la ficha y vistas previas con imagen al compartir links de jugadores, torneos y rankings.

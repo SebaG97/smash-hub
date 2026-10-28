@@ -18,15 +18,21 @@ export const modules = [
     description: "El recorrido competitivo, temporada a temporada.",
   },
   {
+    slug: "personajes",
+    title: "Personajes",
+    number: "04",
+    description: "Qué se juega en la escena y quién lo juega mejor.",
+  },
+  {
     slug: "estadisticas",
     title: "Estadísticas",
-    number: "04",
+    number: "05",
     description: "Enfrentamientos y resultados con contexto.",
   },
   {
     slug: "seeding",
     title: "Seeding",
-    number: "05",
+    number: "06",
     description: "Propuestas de seeds explicadas para cada evento.",
   },
 ] as const;
