@@ -1,4 +1,3 @@
-import { BackendStatus } from "../components/backend-status";
 import { HomeBoard } from "../components/home-board";
 import { HomeSpotlight } from "../components/home-spotlight";
 import { Logo } from "../components/logo";
@@ -18,9 +17,6 @@ export default function Home() {
       </section>
       <HomeSpotlight />
       <HomeBoard />
-      <div className="home-status">
-        <BackendStatus />
-      </div>
     </div>
   );
 }

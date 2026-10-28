@@ -2,7 +2,6 @@ import React from "react";
 import { afterEach, describe, it, expect, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import Home from "../src/app/page";
-import { BackendStatus } from "../src/components/backend-status";
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -78,24 +77,5 @@ describe("public foundation", () => {
     expect(
       await screen.findByRole("link", { name: "Center Stage 2026" }),
     ).toHaveAttribute("href", "https://start.gg/tournament/center-stage-2026");
-  });
-  it("reports readiness", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({ status: "ready" }),
-      }),
-    );
-    render(<BackendStatus />);
-    expect(await screen.findByText("Backend disponible")).toBeInTheDocument();
-  });
-  it("handles connection errors without exposing details", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("secret")));
-    render(<BackendStatus />);
-    expect(
-      await screen.findByText("Backend no disponible"),
-    ).toBeInTheDocument();
-    expect(screen.queryByText("secret")).not.toBeInTheDocument();
   });
 });

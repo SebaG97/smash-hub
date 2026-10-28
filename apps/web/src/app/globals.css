@@ -383,11 +383,6 @@ footer {
   gap: 14px;
   align-items: center;
 }
-.home-status {
-  margin-top: 48px;
-  color: var(--ash);
-  font-size: 0.9rem;
-}
 
 /* Standings: the loud element. */
 .standings {
