@@ -13,6 +13,7 @@ from app.integrations.startgg.client import ImportFailure, StartGGClient
 from app.integrations.startgg.images import tournament_images
 from app.players.mains import player_mains
 from app.players.summary import ranking_place
+from app.teams import service as teams
 
 router = APIRouter(prefix="/api/v1/insights", tags=["insights"])
 CALENDAR_SECONDS = 3600
@@ -24,16 +25,20 @@ _visitors = {}  # start.gg player id -> (monotonic time, payload)
 
 
 def _with_mains(session, items, *keys):
-    """Attach the first main of every player referenced in items (dicts with id/tag)."""
+    """Attach the first main and the approved prefix (Mission 22) of every player referenced
+    in items (dicts with id/tag)."""
     people = []
     for item in items:
         for key in keys:
             ref = item.get(key) if key else item
             if ref and ref.get("id"):
                 people.append(ref)
-    mains = player_mains(session, list({UUID(p["id"]) for p in people}), limit=1)
+    ids = list({UUID(p["id"]) for p in people})
+    mains = player_mains(session, ids, limit=1)
+    prefixes = teams.display(session, ids) if ids else {}
     for p in people:
         p["mains"] = mains.get(UUID(p["id"]), [])
+        p["prefix"] = (prefixes.get(UUID(p["id"])) or {}).get("prefix")
     return items
 
 

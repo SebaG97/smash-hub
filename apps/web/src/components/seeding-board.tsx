@@ -4,6 +4,7 @@ import Link from "next/link";
 import type React from "react";
 import { useRouter } from "next/navigation";
 import { MainIcons, WinBar, mainColor } from "./mains";
+import { Prefix } from "./prefix";
 import { ShareImage } from "./share-image";
 import { TournamentLogo, type TournamentImages } from "./tournament-art";
 import {
@@ -760,6 +761,7 @@ function PublicBoard({ view }: { view: PublicSeedingView }) {
                       <strong>{row.seed}</strong>
                     </td>
                     <td>
+                      <Prefix prefix={row.prefix} />
                       {ranking ? (
                         <button
                           className="link-button"

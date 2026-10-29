@@ -206,3 +206,18 @@ Un torneo puede tener varios eventos de singles: el principal y uno amateur, una
 ## Jugador del mes por región (Misión 21, ADR-016)
 
 `player_of_month` de `/insights/records` pasa a ser `{month: "YYYY-MM", label, in_progress, months, regions}` con `regions: [{region: "central" | "cde", name, winner, runners}]`. `winner` es `{id, tag, mains, points, results: [{tournament, tournament_id, placement, entrants, seed, upsets, top10_wins, points}]}` (sus 3 mejores torneos) o `null` si la región no tuvo torneos; `runners` son los dos siguientes con sus puntos. `GET /api/v1/insights/player-of-month?month=YYYY-MM` devuelve lo mismo para otro mes (404 si ese mes no hubo torneos, 422 con un mes inválido). Emblema nuevo `mes` («Jugador del mes») por ganar un mes terminado.
+
+## Prefijos y equipos (Misión 22)
+
+start.gg trae el prefijo de cada inscripción («BG», «GO»…). Se guarda por inscripción (`tournament_participants.prefix`, migración 0015) y el prefijo de un jugador es el último que usó en sus 3 torneos más recientes. Como es texto libre (hay chistes y ofensas), **solo se muestra si un organizador lo aprobó** en `team_prefixes`:
+
+- `team`: es un equipo, con página propia. La migración aprueba BG, RN, GO, META, LEGEND y MGK.
+- `alias`: es una variante de otro equipo («G0» → GO) y se muestra con el nombre de ese equipo.
+- `shown`: se muestra junto al tag, sin página.
+- `hidden` o sin revisar: no se muestra nunca.
+
+Los prefijos se comparan sin mayúsculas, espacios repetidos, barras ni corchetes («[SP]» = «sp»).
+
+- `PlayerView` y las filas de `/insights` (récords, resumen de torneo, previa, jugador del mes, personajes) y del ranking y seeding públicos agregan `prefix` (el nombre aprobado o `null`). `PlayerDetail` agrega `team` (clave de su página).
+- `GET /api/v1/teams` y `GET /api/v1/teams/{key}`: `{key, name, members: [{id, tag, ranking, wins, losses, mains}], titles, top8, ranked (en el top 20), results}` con los eventos principales del último año.
+- Admin: `GET /api/v1/prefixes` lista todos los prefijos vistos (sin revisar primero) y `tournaments_to_read`; `PUT /api/v1/prefixes/{key}` recibe `{status, name, team}`; `POST /api/v1/prefixes/fetch` lee de start.gg, de a 8 torneos y solo lectura, los prefijos de los torneos importados antes de la Misión 22.

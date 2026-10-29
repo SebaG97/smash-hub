@@ -26,6 +26,8 @@ class Tournament(Record, Base):
     location = Column(JSON)
     # start.gg logo and banner links (Mission 19); NULL until read, {} when it has none.
     images = Column(JSON(none_as_null=True))
+    # Mission 22: whether the participants' prefixes were read (imports before it did not).
+    prefixes_read = Column(Boolean, nullable=False, server_default=text("false"))
     synced_at = Column(DateTime(timezone=True))
     starts_at = Column(DateTime(timezone=True))
     ends_at = Column(DateTime(timezone=True))
@@ -53,6 +55,8 @@ class TournamentParticipant(Record, Base):
     external_id = Column(String(200), unique=True)
     manual_locked = Column(Boolean, nullable=False, server_default=text("false"))
     tag_snapshot = Column(String(120), nullable=False)
+    # start.gg prefix typed at this registration ("BG", "GO"…), as is (Mission 22).
+    prefix = Column(String(80))
     __table_args__ = (
         UniqueConstraint("tournament_id", "player_id"),
         UniqueConstraint("id", "tournament_id"),

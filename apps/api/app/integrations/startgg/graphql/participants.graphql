@@ -2,7 +2,7 @@
   tournament(id: $id) {
     participants(query: {page: $page, perPage: $perPage}) {
       pageInfo { total totalPages }
-      nodes { id gamerTag player { id } }
+      nodes { id gamerTag prefix player { id } }
     }
   }
 }

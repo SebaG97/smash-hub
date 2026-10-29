@@ -1560,3 +1560,34 @@ body {
 .event-tabs small {
   color: var(--ash);
 }
+
+/* Team prefixes and teams (Mission 22) */
+.tag-prefix {
+  margin-right: 0.35em;
+  color: var(--ash);
+  font-size: 0.85em;
+  font-weight: 600;
+  text-decoration: none;
+}
+a.tag-prefix:hover {
+  color: var(--fire);
+}
+.tag-prefix::after {
+  content: " |";
+  opacity: 0.6;
+}
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: 16px;
+}
+.team-grid h2 a {
+  text-decoration: none;
+}
+.prefix-review {
+  margin-top: 40px;
+}
+.prefix-review select,
+.prefix-review input {
+  max-width: 100%;
+}

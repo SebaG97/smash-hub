@@ -24,6 +24,7 @@ from app.games.models import Character, Game
 from app.players.mains import player_mains
 from app.players.models import Player, PlayerAlias
 from app.players.summary import best_results, ranking_place
+from app.teams import service as teams
 
 router = APIRouter(
     prefix="/api/v1",
@@ -120,6 +121,8 @@ class PlayerView(PublicModel):
     tag: str
     # Most used characters in singles games reported to start.gg (may be empty).
     mains: list[MainView] = []
+    # Mission 22: team or prefix of their latest tournaments, when organizers approved it.
+    prefix: str | None = None
 
 
 class ParticipationView(BaseModel):
@@ -149,6 +152,7 @@ class BestResult(BaseModel):
 
 
 class PlayerDetail(PlayerView):
+    team: str | None = None  # key of their team page, if the prefix is a team
     aliases: list[str]
     history: Page[ParticipationView]
     scopes: list["PlayerScope"]
@@ -489,7 +493,16 @@ def players(
             )
         rows, total = paginate(s, stmt.order_by(Player.tag, Player.id), page, page_size)
         mains = player_mains(s, [r.id for r in rows], limit=2)
-        items = [{"id": r.id, "tag": r.tag, "mains": mains.get(r.id, [])} for r in rows]
+        prefixes = teams.display(s, [r.id for r in rows])
+        items = [
+            {
+                "id": r.id,
+                "tag": r.tag,
+                "mains": mains.get(r.id, []),
+                "prefix": (prefixes.get(r.id) or {}).get("prefix"),
+            }
+            for r in rows
+        ]
         return page_result(items, total, page, page_size)
 
 
@@ -538,6 +551,8 @@ def player(
             "id": row.id,
             "tag": row.tag,
             "mains": player_mains(s, [id], limit=5).get(id, []),
+            "prefix": (teams.display(s, [id]).get(id) or {}).get("prefix"),
+            "team": (teams.display(s, [id]).get(id) or {}).get("team"),
             "aliases": aliases,
             "history": page_result(history, total, page, page_size),
             "scopes": player_scopes(s, id),

@@ -76,3 +76,7 @@ Los torneos muestran su arte de start.gg: el banner arriba de la ficha del torne
 ## Eventos amateur (Misión 20)
 
 En un torneo con más de un evento de singles, «Resultados» muestra una pestaña por evento (nombre, «Principal» o «Secundario» e inscritos). El secundario tiene su propio podio, sorpresas e imagen del top, y una línea aclara que no cuenta para el ranking ni para títulos. En la lista de eventos, los organizadores tienen la casilla «Evento principal: cuenta para el ranking y los títulos» con la marca «(automático)» mientras decide la regla, y «Volver a automático» después de cambiarla. En la ficha del jugador, un mejor resultado en un evento secundario se lee «Torneo · Evento».
+
+## Equipos (Misión 22)
+
+El prefijo aprobado va antes del tag, más chico y en gris, separado por una barra («BG | Wesker»). En la ficha del jugador lleva a la página del equipo. `/equipos` muestra una tarjeta por equipo con títulos, top 8 y cuántos tiene en el top 20, y sus primeros seis jugadores ordenados por ranking. `/equipos/{clave}` muestra el plantel completo y sus top 8 recientes. Los organizadores ven abajo la lista de prefijos para revisar, con los nuevos primero, un selector de decisión y el botón para traer los prefijos de los torneos viejos.

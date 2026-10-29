@@ -144,3 +144,5 @@ Misión 19: logos y banners de start.gg en torneos, previas y calendarios (migra
 Misión 20: eventos principales y secundarios (amateur, ladder, pre) por torneo: solo los principales suman para el ranking y los títulos; pestañas por evento y casilla de organizadores (migración 0014).
 
 Misión 21: jugador del mes por rendimiento (posición según tamaño, superar el seed y sorpresas) y por región, Gran Asunción y Ciudad del Este, con historial mes por mes (ADR-016).
+
+Misión 22: prefijos de start.gg («BG | Wesker») y página de equipos (`/equipos`); los organizadores aprueban, unen u ocultan cada prefijo antes de que se muestre (migración 0015).

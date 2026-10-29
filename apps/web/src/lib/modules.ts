@@ -24,15 +24,21 @@ export const modules = [
     description: "Qué se juega en la escena y quién lo juega mejor.",
   },
   {
+    slug: "equipos",
+    title: "Equipos",
+    number: "05",
+    description: "Los equipos de la escena, sus jugadores y resultados.",
+  },
+  {
     slug: "estadisticas",
     title: "Estadísticas",
-    number: "05",
+    number: "06",
     description: "Enfrentamientos y resultados con contexto.",
   },
   {
     slug: "seeding",
     title: "Seeding",
-    number: "06",
+    number: "07",
     description: "Propuestas de seeds explicadas para cada evento.",
   },
 ] as const;

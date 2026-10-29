@@ -30,8 +30,10 @@ from app.seeding.models import (
     SeedingRun,
     SeedingSet,
 )
+from app.teams.models import TeamPrefix
 
 __all__ = [
+    "TeamPrefix",
     "SeedingAuditEntry",
     "SeedingEntrant",
     "SeedingOverride",

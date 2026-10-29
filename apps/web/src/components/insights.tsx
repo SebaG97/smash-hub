@@ -6,10 +6,16 @@ import type React from "react";
 import type { Main } from "../lib/api";
 import { Resource } from "./competition-browser";
 import { MainIcons, mainColor } from "./mains";
+import { Prefix } from "./prefix";
 import { ShareImage } from "./share-image";
 import { TournamentLogo, type TournamentImages } from "./tournament-art";
 
-type Ref = { id: string; tag: string | null; mains?: Main[] };
+type Ref = {
+  id: string;
+  tag: string | null;
+  mains?: Main[];
+  prefix?: string | null;
+};
 export type Badge = { id: string; name: string; why: string };
 export type PlayerInsights = {
   records: {
@@ -137,6 +143,7 @@ function PlayerLink({ p, size = 26 }: { p: Ref; size?: number }) {
   return (
     <span className="who">
       <MainIcons mains={p.mains?.slice(0, 1)} size={size} />
+      <Prefix prefix={p.prefix} />
       <Link href={`/players/${p.id}`}>{p.tag}</Link>
     </span>
   );
@@ -307,6 +314,7 @@ function MonthRegionCard({ m, r }: { m: PlayerOfMonth; r: MonthRegion }) {
         {w ? (
           <>
             <h3>
+              <Prefix prefix={w.prefix} />
               <Link href={`/players/${w.id}`}>{w.tag}</Link>
             </h3>
             <p>
@@ -501,6 +509,7 @@ export function TournamentSummaryBlock({ id }: { id: string }) {
               <li key={p.id} style={tint(p.mains)}>
                 <span className="place">{p.placement}</span>
                 <span>
+                  <Prefix prefix={p.prefix} />
                   <Link href={`/players/${p.id}`}>{p.tag}</Link>{" "}
                   <MainIcons mains={p.mains} size={28} />
                 </span>

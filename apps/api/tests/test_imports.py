@@ -511,3 +511,90 @@ def test_tournament_images_come_with_the_import_and_can_be_backfilled(db, snapsh
         # Nothing left to read: start.gg is not asked again.
         assert client.post(url, headers=AUTH).json()["checked"] == 0
         assert len(asked) == 1
+
+
+def test_prefixes_need_approval_and_make_teams(db, snapshot, monkeypatch):
+    from app.competitions.models import Tournament, TournamentParticipant
+    from app.teams import router as teams_router
+    from app.teams.service import clean_prefix
+
+    assert clean_prefix("  [SP] ") == "SP" and clean_prefix(" | ") is None
+    prepare(db)
+    snapshot["participants"][0]["prefix"] = "BG"  # an approved team (migration 0015)
+    snapshot["participants"][1]["prefix"] = "  [Joke]  "  # never reviewed: not shown
+    snapshot["participants"][2]["prefix"] = "g0"  # a misspelt GO
+    run(db, snapshot)
+    from app.teams.models import TeamPrefix
+
+    with Session(db) as s:  # as migration 0015 seeds them (tests truncate every table)
+        s.add_all(TeamPrefix(key=k, status="team", name=k.upper()) for k in ("bg", "go"))
+        s.commit()
+    with Session(db) as s:
+        ids = dict(
+            s.execute(select(ExternalIdentity.external_id, ExternalIdentity.player_id)).all()
+        )
+    bg, joke, go = (str(ids[f"player:{n}"]) for n in (100, 101, 102))
+
+    def prefix_of(client, player):
+        return client.get(f"/api/v1/players/{player}").json()["prefix"]
+
+    with client_for(db) as client:
+        assert prefix_of(client, bg) == "BG"
+        assert client.get(f"/api/v1/players/{bg}").json()["team"] == "bg"
+        assert prefix_of(client, joke) is None and prefix_of(client, go) is None
+        assert client.get("/api/v1/prefixes").status_code == 401
+        review = client.get("/api/v1/prefixes", headers=AUTH).json()
+        assert [p["key"] for p in review["items"]][:2] == ["g0", "joke"]  # unreviewed first
+        assert review["tournaments_to_read"] == 0
+        # Organizers hide the joke and join "g0" to GO.
+        r = client.put("/api/v1/prefixes/joke", json={"status": "hidden"}, headers=AUTH)
+        assert r.json()["status"] == "hidden"
+        bad = client.put("/api/v1/prefixes/g0", json={"status": "alias", "team": "x"}, headers=AUTH)
+        assert bad.status_code == 422
+        client.put("/api/v1/prefixes/g0", json={"status": "alias", "team": "GO"}, headers=AUTH)
+        assert prefix_of(client, joke) is None and prefix_of(client, go) == "GO"
+        listed = client.get("/api/v1/players?page_size=100").json()["items"]
+        assert {p["id"]: p["prefix"] for p in listed}[go] == "GO"
+        teams = {t["key"]: t for t in client.get("/api/v1/teams").json()["items"]}
+        assert [m["id"] for m in teams["bg"]["members"]] == [bg]
+        assert [m["id"] for m in teams["go"]["members"]] == [go]
+        assert client.get("/api/v1/teams/go").json()["name"] == "GO"
+        assert client.get("/api/v1/teams/nope").status_code == 404
+        # GO cannot stop being a team while "g0" is joined to it.
+        r = client.put("/api/v1/prefixes/go", json={"status": "hidden"}, headers=AUTH)
+        assert r.status_code == 422
+
+    # Tournaments imported before prefixes were kept: an organizer button reads them.
+    with Session(db) as s:
+        s.execute(TournamentParticipant.__table__.update().values(prefix=None))
+        s.execute(Tournament.__table__.update().values(prefixes_read=False))
+        s.commit()
+
+    class FakeClient:
+        def __init__(self, token):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *exc):
+            return False
+
+        async def pages(self, document, root, connection, external_id, variables=None):
+            assert (document, external_id) == ("participants", "100")
+            return [
+                dict(p, prefix="BG" if p["id"] == 1 else None) for p in snapshot["participants"]
+            ]
+
+    monkeypatch.setattr(teams_router, "StartGGClient", FakeClient)
+    settings = Settings(
+        _env_file=None,
+        database_url="postgresql://unused:unused@localhost/test",
+        admin_token=KEY,
+        startgg_api_token="token",
+    )
+    with TestClient(create_app(settings, engine=db)) as client:
+        assert client.post("/api/v1/prefixes/fetch").status_code == 401
+        r = client.post("/api/v1/prefixes/fetch", headers=AUTH).json()
+        assert r == {"checked": 1, "with_prefix": 1, "remaining": 0}
+        assert prefix_of(client, bg) == "BG" and prefix_of(client, go) is None

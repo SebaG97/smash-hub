@@ -10,6 +10,7 @@ export function generateStaticParams() {
           "tournaments",
           "estadisticas",
           "personajes",
+          "equipos",
           "seeding",
           "rankings",
         ].includes(m.slug),

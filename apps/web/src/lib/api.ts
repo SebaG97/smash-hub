@@ -66,7 +66,13 @@ export type Main = {
   games: number;
   share: number;
 };
-export type Player = { id: string; tag: string; mains?: Main[] };
+export type Player = {
+  id: string;
+  tag: string;
+  mains?: Main[];
+  /** Approved team or prefix (Mission 22). */
+  prefix?: string | null;
+};
 export type History = {
   tournament_id: string;
   tournament_name: string;
@@ -77,6 +83,8 @@ export type History = {
   placement: number | null;
 };
 export type PlayerDetail = Player & {
+  /** Key of their team page when the prefix is a team. */
+  team?: string | null;
   aliases: string[];
   history: Page<History>;
   scopes: Scope[];
@@ -232,6 +240,7 @@ export type PublicSeedingView = {
   seeds: {
     seed: number;
     gamer_tag: string;
+    prefix?: string | null;
     mains?: Main[];
     wins?: number;
     losses?: number;

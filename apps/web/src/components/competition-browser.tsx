@@ -16,6 +16,7 @@ import {
   mainColor,
 } from "./mains";
 import { PlayerStatistics } from "./player-statistics";
+import { Prefix } from "./prefix";
 import {
   TournamentBanner,
   TournamentImagesButton,
@@ -362,6 +363,7 @@ export function Players({ initialQuery = "" }: { initialQuery?: string }) {
         render={(p) => (
           <>
             <h3>
+              <Prefix prefix={p.prefix} />
               <Link href={`/players/${p.id}`}>{p.tag}</Link>{" "}
               <MainIcons mains={p.mains} />
             </h3>
@@ -537,7 +539,20 @@ export function PlayerPage({ id }: { id: string }) {
           <header className="player-hero">
             <MainIcons mains={p.mains?.slice(0, 1)} size={96} />
             <div>
-              <h1>{p.tag}</h1>
+              <h1>
+                {p.prefix &&
+                  (p.team ? (
+                    <Link
+                      className="tag-prefix"
+                      href={`/equipos/${encodeURIComponent(p.team)}`}
+                    >
+                      {p.prefix}
+                    </Link>
+                  ) : (
+                    <Prefix prefix={p.prefix} />
+                  ))}
+                {p.tag}
+              </h1>
               {p.mains && p.mains.length > 0 && (
                 <p>Juega sobre todo {p.mains[0].character}.</p>
               )}

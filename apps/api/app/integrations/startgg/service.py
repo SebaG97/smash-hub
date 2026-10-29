@@ -26,6 +26,7 @@ from app.integrations.startgg.client import ImportFailure, parse_slug
 from app.integrations.startgg.images import tournament_images
 from app.integrations.startgg.snapshot import Snapshot
 from app.players.models import ExternalIdentity, Player, PlayerAlias
+from app.teams.service import clean_prefix
 
 
 def now():
@@ -264,6 +265,7 @@ class Persister:
             self.s.add(identity)
         if identity:
             identity.synced_at = now()
+        prefix = clean_prefix(person.prefix)
         if participant is None:
             existing = self.s.scalar(
                 select(TournamentParticipant).where(
@@ -279,14 +281,16 @@ class Persister:
                 player_id=player.id,
                 tag_snapshot=person.gamerTag,
                 external_id=scoped,
+                prefix=prefix,
             )
             self.s.add(participant)
             self.counts["created"] += 1
-        elif participant.tag_snapshot != person.gamerTag:
-            # First imported tournament tag is historical evidence, never silently rewritten.
-            self.conflict("historical_tag_preserved", person.id)
-            self.counts["skipped"] += 1
         else:
+            participant.prefix = prefix
+            if participant.tag_snapshot != person.gamerTag:
+                # First imported tournament tag is historical evidence, never silently
+                # rewritten.
+                self.conflict("historical_tag_preserved", person.id)
             self.counts["skipped"] += 1
         latest_observation = self.s.scalar(
             select(func.max(PlayerAlias.valid_from)).where(PlayerAlias.player_id == player.id)
@@ -503,6 +507,7 @@ class Persister:
                     )
                     old_mapping.source_updated_at = timestamp(result.updatedAt)
         tournament.published, tournament.synced_at = True, now()
+        tournament.prefixes_read = True
         self.s.flush()
         return {
             "tournament_id": str(tournament.id),

@@ -820,6 +820,24 @@ PUBLIC_ROW = {
 }
 
 
+def _public_prefixes(session, rows, seeds):
+    """Approved team prefix of each row (Mission 22), matched by start.gg player id."""
+    from app.players.models import ExternalIdentity
+    from app.teams import service as teams
+
+    keys = {f"player:{r['player_id']}": i for i, r in enumerate(rows)}
+    hub = dict(
+        session.execute(
+            select(ExternalIdentity.external_id, ExternalIdentity.player_id).where(
+                ExternalIdentity.external_id.in_(list(keys))
+            )
+        ).all()
+    )
+    shown = teams.display(session, set(hub.values())) if hub else {}
+    for key, i in keys.items():
+        seeds[i]["prefix"] = (shown.get(hub.get(key)) or {}).get("prefix")
+
+
 def public_view(session, project):
     """What a reader sees: the official order, mains and (rankings) the official reasons."""
     full = view(session, project)
@@ -836,6 +854,7 @@ def public_view(session, project):
             item["score"] = (r.get("scores") or {}).get(method)
             item["reasons"] = (r.get("reasons_by_method") or {}).get(method, r.get("reasons"))
         seeds.append(item)
+    _public_prefixes(session, rows, seeds)
     label = next((m["label"] for m in full["methods"] if m["id"] == method), method)
     return dict(
         slug=full["slug"],

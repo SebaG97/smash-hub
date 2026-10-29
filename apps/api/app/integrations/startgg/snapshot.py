@@ -24,6 +24,7 @@ class Identity(ExternalModel):
 
 class Participant(ExternalModel):
     gamerTag: str = Field(min_length=1, max_length=120)
+    prefix: str | None = None
     player: Identity | None = None
 
 
@@ -132,7 +133,13 @@ class Snapshot(BaseModel):
                 if len(entrant.participants) != size:
                     raise ImportFailure("invalid_entrant_roster")
                 for person in entrant.participants:
-                    if person.id not in people or person != people[person.id] or person.id in used:
+                    # Entrant rosters do not carry the prefix; only the person must match.
+                    if (
+                        person.id not in people
+                        or person.model_dump(exclude={"prefix"})
+                        != people[person.id].model_dump(exclude={"prefix"})
+                        or person.id in used
+                    ):
                         raise ImportFailure("inconsistent_participant")
                     used.add(person.id)
             entrants = {e.id for e in event.entrants}

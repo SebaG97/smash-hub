@@ -6,6 +6,7 @@ import type React from "react";
 import type { Main } from "../lib/api";
 import { Resource } from "./competition-browser";
 import { MainIcons, WinBar, mainColor } from "./mains";
+import { Prefix } from "./prefix";
 import {
   TournamentBanner,
   TournamentLogo,
@@ -25,6 +26,7 @@ type Person = {
   recent_losses?: number;
   streak?: number;
   mains?: Main[];
+  prefix?: string | null;
 };
 type Ref = { id: string | null; tag: string; seed: number | null };
 type HeadToHead = {
@@ -87,8 +89,17 @@ function key(p: {
   return p.startgg_player_id ?? p.id ?? p.tag;
 }
 
-function Tag({ p }: { p: { id: string | null; tag: string } }) {
-  return p.id ? <Link href={`/players/${p.id}`}>{p.tag}</Link> : <>{p.tag}</>;
+function Tag({
+  p,
+}: {
+  p: { id: string | null; tag: string; prefix?: string | null };
+}) {
+  return (
+    <>
+      <Prefix prefix={p.prefix} />
+      {p.id ? <Link href={`/players/${p.id}`}>{p.tag}</Link> : p.tag}
+    </>
+  );
 }
 
 function H2H({ a, b, h2h }: { a: Ref; b: Ref; h2h: HeadToHead }) {

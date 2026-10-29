@@ -650,7 +650,7 @@ def test_readers_only_see_published_projects_without_internals(project):
         public = client.get("/api/v1/seeding/cs").json()
         assert public["public"] is True and public["published"] is True
         assert [s["gamer_tag"] for s in public["seeds"]][:2] == ["Cid", "Ace"]
-        assert set(public["seeds"][0]) == {"seed", "gamer_tag", "mains"}
+        assert set(public["seeds"][0]) == {"seed", "gamer_tag", "mains", "prefix"}
         text = str(public)
         for hidden in ("secreto", "flags", "merges", "confidence", "rating", "override", "methods"):
             assert hidden not in text
