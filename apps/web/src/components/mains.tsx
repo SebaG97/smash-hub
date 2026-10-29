@@ -108,6 +108,75 @@ export function RankingFlag({
  * Organizers mark tournaments whose start.gg seeding did not reflect the players'
  * level; they stop producing upsets and "beat their seed" records (and badges).
  */
+/**
+ * Main or secondary bracket of a tournament (Mission 20). Readers see a tag on secondary
+ * events; organizers get the checkbox, and can hand the call back to the automatic rule.
+ */
+export function MainEventFlag({
+  event,
+}: {
+  event: { id: string; main?: boolean | null; main_set?: boolean };
+}) {
+  const [state, setState] = useState({
+    main: event.main ?? null,
+    set: event.main_set ?? false,
+  });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const admin = useAdmin();
+  if (state.main === null) return null;
+  if (!admin)
+    return state.main ? null : (
+      <p className="ranking-flag">
+        Evento secundario: no cuenta para el ranking ni para títulos.
+      </p>
+    );
+  const save = async (main: boolean | null) => {
+    setBusy(true);
+    setError("");
+    const r = await fetch(`${api}/events/${event.id}/main`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${admin.key}`,
+        "X-Admin-Name": admin.name,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ main }),
+    }).catch(() => null);
+    setBusy(false);
+    if (!r) return setError("No se pudo contactar a la API.");
+    if (!r.ok) return setError(await problem(r));
+    const saved = (await r.json()) as { main: boolean; main_set: boolean };
+    setState({ main: saved.main, set: saved.main_set });
+  };
+  return (
+    <p className="ranking-flag">
+      <label>
+        <input
+          type="checkbox"
+          checked={state.main}
+          disabled={busy}
+          onChange={(e) => save(e.target.checked)}
+        />{" "}
+        Evento principal: cuenta para el ranking y los títulos
+      </label>
+      {state.set ? (
+        <button
+          type="button"
+          className="link-button"
+          disabled={busy}
+          onClick={() => save(null)}
+        >
+          Volver a automático
+        </button>
+      ) : (
+        <small> (automático)</small>
+      )}
+      {error && <small role="alert"> {error}</small>}
+    </p>
+  );
+}
+
 export function SeedingFlag({
   tournamentId,
   initial,

@@ -191,3 +191,14 @@ Vistas previas (web): las fichas de jugador, torneos, rankings y seedings public
 `POST /api/v1/tournaments/images` (admin) lee de start.gg, de a 30 y solo lectura, los torneos publicados con `images: null`, del más nuevo al más viejo, y devuelve `{updated, checked, remaining}`. Un torneo sin imágenes queda como `{}` y no se vuelve a pedir. 503 sin token de start.gg, 502 si start.gg no responde.
 
 `/insights/calendar` y la previa (`tournament.images`) traen el mismo `{profile, banner}`.
+
+## Eventos principales y secundarios (Misión 20)
+
+Un torneo puede tener varios eventos de singles: el principal y uno amateur, una ladder o un «pre». Solo los **principales** cuentan para el ranking, los títulos, los top 8 y el jugador del mes.
+
+- `EventView` agrega `main` (`true` principal, `false` secundario, `null` en eventos por equipos) y `main_set` (si lo decidió un organizador).
+- Mientras nadie decide (`events.main` en NULL, migración 0014), una regla lo adivina: es secundario si su nombre o el del torneo dice amateur, ladder, pre, novato, principiante, beginner o redemption, o si no es el evento de singles más grande de su juego en el torneo.
+- `PUT /api/v1/events/{id}/main` (admin) recibe `{main: true | false | null}`; `null` devuelve la decisión a la regla. Queda registrado quién y cuándo, y los rankings con datos se recalculan al instante.
+- **Ranking:** cuentan solo los sets de eventos importados al hub que sean principales, en torneos con «Cuenta para el ranking» marcado. Los eventos que nunca pasaron por el hub ya no cuentan. `excluded_tournaments` lista lo que quedó afuera; un evento secundario aparece como «Torneo · Evento».
+- `/insights/tournaments/{id}` acepta `?event={id}`; sin él resume el evento principal. Agrega `event`, `main` y `events` (`[{id, name, main, entrants}]`, el principal primero). La imagen del top acepta el mismo `?event=`.
+- Emblema nuevo `amateur` («Campeón amateur») por ganar un evento secundario de 8 o más jugadores. `best_results` agrega `event_name` y `main`, y los secundarios van después de todos los principales.

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import type React from "react";
 import type { Main } from "../lib/api";
 import { Resource } from "./competition-browser";
@@ -68,7 +69,17 @@ type CommunityRecords = {
   most_active: Leader[];
   titles: Leader[];
 };
+type SummaryEvent = {
+  id: string;
+  name: string | null;
+  main: boolean;
+  entrants: number | null;
+};
 type TournamentSummary = {
+  event_id: string;
+  event?: string | null;
+  main?: boolean;
+  events?: SummaryEvent[];
   entrants: number | null;
   top: (Ref & { placement: number; seed: number | null })[];
   upsets: Upset[];
@@ -89,6 +100,7 @@ const BADGE_TONE: Record<string, string> = {
   lider: "gold",
   trofeos: "gold",
   campeon: "gold",
+  amateur: "bone",
   david: "fire",
   remontadas: "fire",
   racha: "fire",
@@ -351,11 +363,42 @@ export function RecordsPage() {
 
 /** Tournament page: top 8 with mains, upsets and who beat their seed. */
 export function TournamentSummaryBlock({ id }: { id: string }) {
+  // A tournament with an amateur (or ladder…) bracket shows one tab per singles event.
+  const [event, setEvent] = useState<string | null>(null);
+  const query = event ? `&event=${event}` : "";
   return (
-    <Resource<TournamentSummary> path={`insights/tournaments/${id}`} optional>
+    <Resource<TournamentSummary>
+      path={`insights/tournaments/${id}${event ? `?event=${event}` : ""}`}
+      optional
+    >
       {(s) => (
         <section className="tournament-summary" aria-label="Resumen">
           <h2>Resultados</h2>
+          {(s.events?.length ?? 0) > 1 && (
+            <div className="event-tabs" role="tablist" aria-label="Eventos">
+              {s.events!.map((e) => (
+                <button
+                  key={e.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={e.id === s.event_id}
+                  onClick={() => setEvent(e.id)}
+                >
+                  {e.name}
+                  <small>
+                    {e.main ? "Principal" : "Secundario"}
+                    {e.entrants ? ` · ${e.entrants}` : ""}
+                  </small>
+                </button>
+              ))}
+            </div>
+          )}
+          {s.main === false && (
+            <p className="seeding-lead">
+              Evento secundario: no cuenta para el ranking ni para títulos y
+              podios.
+            </p>
+          )}
           <ol className="standings">
             {s.top.map((p) => (
               <li key={p.id} style={tint(p.mains)}>
@@ -369,10 +412,11 @@ export function TournamentSummaryBlock({ id }: { id: string }) {
             ))}
           </ol>
           <ShareImage
-            endpoint={`/og/tournament/${id}`}
-            filename={`top-${id}.png`}
+            key={s.event_id}
+            endpoint={`/og/tournament/${id}${event ? `?event=${event}` : ""}`}
+            filename={`top-${id}${event ? `-${event.slice(0, 8)}` : ""}.png`}
             label="Descargar imagen del top"
-            rowsPath={`insights/tournaments/${id}?limit=12`}
+            rowsPath={`insights/tournaments/${id}?limit=12${query}`}
           />
           {s.upsets.length > 0 && (
             <>

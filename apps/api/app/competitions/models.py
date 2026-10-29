@@ -69,6 +69,11 @@ class Event(Record, Base):
     competition_type = Column(Integer)
     num_entrants = Column(Integer)
     team_size = Column(Integer, nullable=False, server_default="1")
+    # Mission 20: organizer's call on whether this is the tournament's main bracket (ranking,
+    # titles). NULL leaves it to the rule in app.competitions.roles.
+    main = Column(Boolean)
+    main_flag_actor = Column(String(60))
+    main_flag_at = Column(DateTime(timezone=True))
     __table_args__ = (
         UniqueConstraint("tournament_id", "slug"),
         UniqueConstraint("id", "tournament_id"),

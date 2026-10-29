@@ -79,9 +79,15 @@ def records(request: Request):
 
 
 @router.get("/tournaments/{id}")
-def tournament(request: Request, id: UUID, limit: int = Query(8, ge=1, le=16)):
+def tournament(
+    request: Request,
+    id: UUID,
+    limit: int = Query(8, ge=1, le=16),
+    event: UUID | None = None,
+):
+    """Summary of one singles event of the tournament (its main one unless `event`)."""
     with Session(request.app.state.engine) as s:
-        summary = engine.tournament_summary(engine.cached(s), id, limit)
+        summary = engine.tournament_summary(engine.cached(s), id, limit, event_id=event)
         if summary is None:
             raise HTTPException(404, "Tournament not found")
         _with_mains(s, summary["top"], None)

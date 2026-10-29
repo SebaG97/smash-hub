@@ -865,6 +865,95 @@
         }
       }
     },
+    "/api/v1/events/{id}/main": {
+      "put": {
+        "tags": [
+          "competitions"
+        ],
+        "summary": "Set Main Flag",
+        "description": "Organizer checkbox: whether this is the tournament's main bracket. Only main events\ncount for rankings, titles, podiums and the player of the month.",
+        "operationId": "set_main_flag_api_v1_events__id__main_put",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "x-admin-name",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Admin-Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MainFlag"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventView"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Record not found or unpublished"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/tournaments/{id}/seeding": {
       "put": {
         "tags": [
@@ -3266,6 +3355,7 @@
           "insights"
         ],
         "summary": "Tournament",
+        "description": "Summary of one singles event of the tournament (its main one unless `event`).",
         "operationId": "tournament_api_v1_insights_tournaments__id__get",
         "parameters": [
           {
@@ -3288,6 +3378,23 @@
               "minimum": 1,
               "default": 8,
               "title": "Limit"
+            }
+          },
+          {
+            "name": "event",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event"
             }
           }
         ],
@@ -3457,6 +3564,22 @@
               }
             ],
             "title": "Starts At"
+          },
+          "event_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Name"
+          },
+          "main": {
+            "type": "boolean",
+            "title": "Main",
+            "default": true
           }
         },
         "type": "object",
@@ -3690,6 +3813,22 @@
           "entrant_count": {
             "type": "integer",
             "title": "Entrant Count"
+          },
+          "main": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Main"
+          },
+          "main_set": {
+            "type": "boolean",
+            "title": "Main Set",
+            "default": false
           }
         },
         "type": "object",
@@ -3945,6 +4084,26 @@
         "additionalProperties": false,
         "type": "object",
         "title": "ImportRequest"
+      },
+      "MainFlag": {
+        "properties": {
+          "main": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Main"
+          }
+        },
+        "type": "object",
+        "required": [
+          "main"
+        ],
+        "title": "MainFlag"
       },
       "MainView": {
         "properties": {

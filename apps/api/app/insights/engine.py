@@ -24,6 +24,7 @@ from app.competitions.models import (
     Tournament,
     TournamentParticipant,
 )
+from app.competitions.roles import event_roles
 from app.players.models import Player
 
 # Placements a double-elimination bracket can produce; seeds map onto the same tiers.
@@ -94,15 +95,18 @@ def load(session):
             Tournament.starts_at,
             Event.num_entrants,
             Tournament.seeding_reliable,
+            Event.name,
         )
         .join(Tournament, Tournament.id == Event.tournament_id)
         .where(Tournament.published.is_(True), Event.team_size == 1)
     )
-    events, unreliable = {}, set()
-    for e, t, name, starts, n, reliable in session.execute(singles):
+    events, unreliable, event_names = {}, set(), {}
+    for e, t, name, starts, n, reliable, event_name in session.execute(singles):
         events[e] = (t, name, starts, n)
+        event_names[e] = event_name
         if not reliable:
             unreliable.add(e)
+    roles = event_roles(session)
     entrants = {
         # Seeds of wrongly seeded tournaments are dropped: no upsets, no "beat the seed".
         e_id: (event_id, None if event_id in unreliable else seed, place)
@@ -199,6 +203,9 @@ def load(session):
                     tournament_id=str(tournament_id),
                     tournament=name,
                     event_id=str(event_id),
+                    event=event_names[event_id],
+                    # Mission 20: only main brackets give titles, podiums and top 8s.
+                    main=roles.get(event_id, True),
                     starts_at=starts,
                 )
             )
@@ -246,8 +253,21 @@ def player_insights(data, player, ranking_place=None):
     upsets = sorted((m for m in wins if m.factor > 0), key=lambda m: (-m.factor, m.at))
     best_streak, current_streak, _ = streaks(mine, player)
     comebacks = sum(1 for m in wins if m.comeback)
-    titles = [f for f in finishes if f["placement"] == 1 and (f["entrants"] or 0) >= 8]
-    top8 = [f for f in finishes if f["placement"] <= 8 and (f["entrants"] or 0) >= 16]
+    titles = [
+        f
+        for f in finishes
+        if f.get("main", True) and f["placement"] == 1 and (f["entrants"] or 0) >= 8
+    ]
+    side_titles = [
+        f
+        for f in finishes
+        if not f.get("main", True) and f["placement"] == 1 and (f["entrants"] or 0) >= 8
+    ]
+    top8 = [
+        f
+        for f in finishes
+        if f.get("main", True) and f["placement"] <= 8 and (f["entrants"] or 0) >= 16
+    ]
     over = sorted(
         (f for f in finishes if f["seed"] and f["placement"] < f["seed"]),
         key=lambda f: -(tier(f["seed"]) - tier(f["placement"])),
@@ -305,6 +325,15 @@ def player_insights(data, player, ranking_place=None):
         badge("trofeos", "Coleccionista de trofeos", f"Ganó {len(titles)} torneos.")
     elif titles:
         badge("campeon", "Campeón", f"Ganó {titles[0]['tournament']}.")
+    if side_titles:
+        f = side_titles[0]
+        badge(
+            "amateur",
+            "Campeón amateur",
+            f"Ganó {f['event']} en {f['tournament']}."
+            if len(side_titles) == 1
+            else f"Ganó {len(side_titles)} eventos secundarios (amateur, ladder…).",
+        )
     if upsets and upsets[0].factor >= 3:
         u = upsets[0]
         badge(
@@ -362,7 +391,8 @@ def player_of_month(data, days=30):
     titles = Counter(
         f["player"]
         for f in data.finishes
-        if f["placement"] == 1
+        if f.get("main", True)
+        and f["placement"] == 1
         and f["starts_at"]
         and f["starts_at"] >= since
         and (f["entrants"] or 0) >= 8
@@ -420,7 +450,9 @@ def community_records(data, limit=5):
             seen.add(key)
             tournaments[f["player"]] += 1
     titles = Counter(
-        f["player"] for f in data.finishes if f["placement"] == 1 and (f["entrants"] or 0) >= 8
+        f["player"]
+        for f in data.finishes
+        if f.get("main", True) and f["placement"] == 1 and (f["entrants"] or 0) >= 8
     )
 
     def who(p):
@@ -459,26 +491,45 @@ def community_records(data, limit=5):
     )
 
 
-def tournament_summary(data, tournament_id, limit=8):
+def tournament_summary(data, tournament_id, limit=8, event_id=None):
+    """Podium, upsets and overperformers of one singles event of the tournament: the one
+    asked for, else the main one (the biggest main event, or the biggest at all)."""
     finishes = [f for f in data.finishes if f["tournament_id"] == str(tournament_id)]
     if not finishes:
         return None
-    biggest = max(
-        {f["event_id"] for f in finishes},
-        key=lambda e: sum(1 for f in finishes if f["event_id"] == e),
+    sizes = Counter(f["event_id"] for f in finishes)
+    info = {f["event_id"]: f for f in finishes}
+    events = sorted(
+        sizes,
+        key=lambda e: (not info[e].get("main", True), -sizes[e], info[e].get("event") or ""),
     )
+    if event_id is not None and str(event_id) not in sizes:
+        return None
+    chosen = str(event_id) if event_id is not None else events[0]
     event = sorted(
-        (f for f in finishes if f["event_id"] == biggest),
+        (f for f in finishes if f["event_id"] == chosen),
         key=lambda f: (f["placement"], f["seed"] or 9999),
     )
-    matches = [m for m in data.matches if m.event_id == biggest]
+    matches = [m for m in data.matches if m.event_id == chosen]
     upsets = unique_upsets(matches)
     over = sorted(
         (f for f in event if f["seed"] and f["placement"] < f["seed"]),
         key=lambda f: -(tier(f["seed"]) - tier(f["placement"])),
     )
     return dict(
-        event_id=biggest,
+        event_id=chosen,
+        event=info[chosen].get("event"),
+        main=info[chosen].get("main", True),
+        # Every singles bracket of the tournament, main first, to switch between them.
+        events=[
+            dict(
+                id=e,
+                name=info[e].get("event"),
+                main=info[e].get("main", True),
+                entrants=info[e]["entrants"] or sizes[e],
+            )
+            for e in events
+        ],
         entrants=event[0]["entrants"],
         top=[
             dict(

@@ -279,7 +279,8 @@ def test_ranking_checkbox_excludes_tournament_and_recalculates(db, snapshot):
         s.commit()
     with client_for(db) as client:
         before = client.get("/api/v1/seeding/rk", headers=AUTH).json()
-        assert before["run"]["set_count"] == 2 and before["excluded_tournaments"] == []
+        # Only imported hub events count: "Other" never went through the hub (Mission 20).
+        assert before["run"]["set_count"] == 1 and before["excluded_tournaments"] == ["Other"]
         # Player 100 (entrant 11) has mains from the imported tournament.
         ace = next(r for r in before["seeds"] if r["player_id"] == "100")
         assert ace["mains"][0]["character"] == "C1"
@@ -294,10 +295,28 @@ def test_ranking_checkbox_excludes_tournament_and_recalculates(db, snapshot):
         )
         assert r.status_code == 200 and r.json()["counts_for_ranking"] is False
         after = client.get("/api/v1/seeding/rk", headers=AUTH).json()
-        assert after["run"]["set_count"] == 1
-        assert after["excluded_tournaments"] == ["Imported"]
+        assert after["run"]["set_count"] == 0
+        assert after["excluded_tournaments"] == ["Imported", "Other"]
         listed = client.get("/api/v1/tournaments").json()["items"][0]
         assert listed["counts_for_ranking"] is False
+        client.put(
+            f"/api/v1/tournaments/{tournament_id}/ranking", json={"counts": True}, headers=AUTH
+        )
+        # A secondary bracket (amateur, ladder…) does not count either.
+        event = client.get(f"/api/v1/tournaments/{tournament_id}/events").json()["items"]
+        singles = next(e for e in event if e["team_size"] == 1)
+        assert (singles["main"], singles["main_set"]) == (True, False)
+        url = f"/api/v1/events/{singles['id']}/main"
+        assert client.put(url, json={"main": False}).status_code == 401
+        r = client.put(url, json={"main": False}, headers=AUTH).json()
+        assert (r["main"], r["main_set"]) == (False, True)
+        after = client.get("/api/v1/seeding/rk", headers=AUTH).json()
+        assert after["run"]["set_count"] == 0
+        assert after["excluded_tournaments"] == ["Imported · " + singles["name"], "Other"]
+        # Back to the automatic rule: the only singles bracket is the main one.
+        r = client.put(url, json={"main": None}, headers=AUTH).json()
+        assert (r["main"], r["main_set"]) == (True, False)
+        assert client.get("/api/v1/seeding/rk", headers=AUTH).json()["run"]["set_count"] == 1
 
 
 def test_upcoming_preview_endpoint_reads_startgg_entrants(db, snapshot, monkeypatch):

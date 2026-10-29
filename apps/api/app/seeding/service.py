@@ -316,8 +316,8 @@ def recalculate(
         for s in session.scalars(select(SeedingSet).where(SeedingSet.project_id == project.id))
     ]
     if project.kind == "ranking":
-        excluded = excluded_events(session)
-        sets = [s for s in sets if s["startgg_event_id"] not in excluded]
+        allowed = ranked_events(session)
+        sets = [s for s in sets if s["startgg_event_id"] in allowed]
     rows, summary = compute(
         entrants,
         sets,
@@ -370,25 +370,54 @@ def recalculate(
     return run
 
 
-def excluded_events(session):
-    """start.gg event ids of hub tournaments an organizer unchecked for rankings."""
+def ranked_events(session):
+    """start.gg event ids that feed rankings (Mission 20): only hub events that are their
+    tournament's main bracket, in tournaments an organizer left checked for rankings."""
     from app.competitions.models import Event, Tournament
+    from app.competitions.roles import event_roles
     from app.integrations.models import ExternalMapping
 
-    return set(
-        session.scalars(
-            select(ExternalMapping.external_id)
+    main = {e for e, is_main in event_roles(session).items() if is_main}
+    return {
+        external
+        for external, event in session.execute(
+            select(ExternalMapping.external_id, Event.id)
             .join(Event, Event.id == ExternalMapping.event_id)
             .join(Tournament, Tournament.id == Event.tournament_id)
-            .where(ExternalMapping.entity_type == "event", Tournament.counts_for_ranking.is_(False))
+            .where(ExternalMapping.entity_type == "event", Tournament.counts_for_ranking.is_(True))
         )
-    )
+        if event in main
+    }
 
 
 def excluded_tournaments(session, sets):
-    """Names of unchecked tournaments that appear in this dataset."""
-    excluded = excluded_events(session)
-    return sorted({s.tournament_name for s in sets if s.startgg_event_id in excluded})
+    """Brackets in this dataset that do not count: unchecked tournaments, secondary events
+    (amateur, ladder…) and tournaments never imported into the hub."""
+    from app.competitions.models import Event, Tournament
+    from app.integrations.models import ExternalMapping
+
+    allowed = ranked_events(session)
+    # Secondary brackets of checked tournaments are named with their event.
+    secondary = {
+        external: name
+        for external, name, counts in session.execute(
+            select(ExternalMapping.external_id, Event.name, Tournament.counts_for_ranking)
+            .join(Event, Event.id == ExternalMapping.event_id)
+            .join(Tournament, Tournament.id == Event.tournament_id)
+            .where(ExternalMapping.entity_type == "event")
+        )
+        if counts
+    }
+    found = set()
+    for s in sets:
+        if s.counted and s.startgg_event_id not in allowed:
+            event = secondary.get(s.startgg_event_id)
+            found.add(
+                s.tournament_name
+                if event is None or event == s.tournament_name
+                else f"{s.tournament_name} · {event}"
+            )
+    return sorted(found)
 
 
 def _overrides(session, project):

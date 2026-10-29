@@ -9,6 +9,7 @@ from app.competitions.models import (
     Tournament,
     TournamentParticipant,
 )
+from app.competitions.roles import event_roles
 from app.players.models import ExternalIdentity
 
 
@@ -60,6 +61,8 @@ def best_results(session, player_id, limit=3):
             Tournament.id,
             Tournament.name,
             Tournament.starts_at,
+            Event.id.label("event_id"),
+            Event.name.label("event_name"),
         )
         .select_from(EntrantMember)
         .join(TournamentParticipant, TournamentParticipant.id == EntrantMember.participant_id)
@@ -73,8 +76,15 @@ def best_results(session, player_id, limit=3):
             EventEntrant.placement.is_not(None),
         )
     ).all()
+    # Secondary brackets (amateur, ladder…) go after every main one (Mission 20).
+    roles = event_roles(session, {r.id for r in rows})
     ranked = sorted(
-        rows, key=lambda r: (r.placement / max(r.num_entrants or r.placement, 1), r.placement)
+        rows,
+        key=lambda r: (
+            not roles.get(r.event_id, True),
+            r.placement / max(r.num_entrants or r.placement, 1),
+            r.placement,
+        ),
     )
     return [
         {
@@ -83,6 +93,8 @@ def best_results(session, player_id, limit=3):
             "tournament_id": r.id,
             "tournament_name": r.name,
             "starts_at": r.starts_at,
+            "event_name": r.event_name,
+            "main": roles.get(r.event_id, True),
         }
         for r in ranked[:limit]
     ]

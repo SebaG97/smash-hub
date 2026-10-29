@@ -9,6 +9,7 @@ import { characterColor, characterIcon } from "../lib/characters";
 import {
   CostumePicker,
   MainIcons,
+  MainEventFlag,
   RankingFlag,
   SeedingFlag,
   WinBar,
@@ -252,6 +253,7 @@ function EventCard(e: Event) {
       <p>
         {e.entrant_count} entrants · {status(e.status)}
       </p>
+      <MainEventFlag event={e} />
     </>
   );
 }
@@ -494,6 +496,9 @@ function PlayerSummary({ p }: { p: PlayerDetail }) {
                 <span>
                   <Link href={`/tournaments/${b.tournament_id}`}>
                     {b.tournament_name}
+                    {b.main === false && b.event_name
+                      ? ` · ${b.event_name}`
+                      : ""}
                   </Link>
                   <small>
                     {b.entrants ? `de ${b.entrants} jugadores` : ""}

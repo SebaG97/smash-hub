@@ -140,3 +140,5 @@ Misión 17: casilla de organizadores «Seeding mal hecho» por torneo: sus seeds
 Misión 18: en la previa, los inscritos sin resultados en el hub (extranjeros o debutantes) muestran a pedido su último año en start.gg: récord, torneos, mains y mejores resultados.
 
 Misión 19: logos y banners de start.gg en torneos, previas y calendarios (migración 0013). Para los torneos ya importados, el botón de organizadores «Traer logos y banners de start.gg» en `/tournaments`.
+
+Misión 20: eventos principales y secundarios (amateur, ladder, pre) por torneo: solo los principales suman para el ranking y los títulos; pestañas por evento y casilla de organizadores (migración 0014).

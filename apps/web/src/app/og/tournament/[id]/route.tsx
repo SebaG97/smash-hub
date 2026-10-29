@@ -28,13 +28,16 @@ async function tournamentImage(
   uploads?: Map<number, Art>,
 ) {
   const api = apiBase(request);
+  // One event of the tournament (Mission 20); its main one when not given.
+  const event = new URL(request.url).searchParams.get("event");
+  const only = event && /^[0-9a-f-]{36}$/i.test(event) ? `&event=${event}` : "";
   const get = (path: string) =>
     fetch(`${api}/${path}`)
       .then((r) => (r.ok ? r.json() : null))
       .catch(() => null);
   const [tournament, summary] = await Promise.all([
     get(`tournaments/${encodeURIComponent(id)}`),
-    get(`insights/tournaments/${encodeURIComponent(id)}?limit=12`),
+    get(`insights/tournaments/${encodeURIComponent(id)}?limit=12${only}`),
   ]);
   if (!tournament || !summary)
     return new Response("Torneo sin resultados", { status: 404 });
@@ -47,7 +50,10 @@ async function tournamentImage(
       })
     : "";
   return shareImage(request, {
-    title: tournament.name,
+    title:
+      summary.main === false && summary.event
+        ? `${tournament.name} · ${summary.event}`
+        : tournament.name,
     subtitle: `${summary.entrants ?? "?"} jugadores${date ? `, ${date}` : ""}`,
     rows: (summary.top as Top[]).map((t) => ({
       place: t.placement,

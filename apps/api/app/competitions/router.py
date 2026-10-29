@@ -18,6 +18,7 @@ from app.competitions.models import (
     Tournament,
     TournamentParticipant,
 )
+from app.competitions.roles import event_roles
 from app.core.admin import Admin
 from app.games.models import Character, Game
 from app.players.mains import player_mains
@@ -69,6 +70,10 @@ class EventView(PublicModel):
     competition_type: int | None
     status: str | None
     entrant_count: int
+    # Mission 20: the tournament's main bracket (ranking, titles) or a secondary one; null
+    # for team events. `main_set` tells whether an organizer decided it.
+    main: bool | None = None
+    main_set: bool = False
 
 
 class MemberView(BaseModel):
@@ -139,6 +144,8 @@ class BestResult(BaseModel):
     tournament_id: UUID
     tournament_name: str
     starts_at: datetime | None
+    event_name: str | None = None
+    main: bool = True
 
 
 class PlayerDetail(PlayerView):
@@ -252,6 +259,7 @@ def event_views(s, rows):
             .group_by(EventEntrant.event_id)
         ).all()
     )
+    roles = event_roles(s, {r.tournament_id for r in rows})
     return [
         {
             **{
@@ -267,6 +275,8 @@ def event_views(s, rows):
             },
             "game": games[r.game_id],
             "entrant_count": counts.get(r.id, 0),
+            "main": roles.get(r.id),
+            "main_set": r.main is not None,
         }
         for r in rows
     ]
@@ -629,6 +639,43 @@ def fetch_tournament_images(request: Request, actor: Admin):
         }
 
 
+class MainFlag(BaseModel):
+    # null hands the decision back to the automatic rule.
+    main: bool | None
+
+
+@router.put("/events/{id}/main", response_model=EventView)
+def set_main_flag(request: Request, id: UUID, body: MainFlag, actor: Admin):
+    """Organizer checkbox: whether this is the tournament's main bracket. Only main events
+    count for rankings, titles, podiums and the player of the month."""
+    from app.insights import engine
+
+    with Session(request.app.state.engine) as s:
+        event = require_event(s, id)
+        event.main = body.main
+        event.main_flag_actor, event.main_flag_at = actor, func.now()
+        s.flush()
+        recalculate_rankings(s, actor)
+        s.commit()
+        engine.invalidate()
+        return event_views(s, [event])[0]
+
+
+def recalculate_rankings(s, actor):
+    """Rankings with data are recalculated at once after an organizer's ranking decision."""
+    from app.seeding import service as seeding_service
+    from app.seeding.models import SeedingProject
+
+    for project in s.scalars(
+        select(SeedingProject).where(
+            SeedingProject.kind == "ranking",
+            SeedingProject.current_run_id.is_not(None),
+            SeedingProject.refresh_status != "RUNNING",
+        )
+    ):
+        seeding_service.recalculate(s, project, actor)
+
+
 class SeedingFlag(BaseModel):
     reliable: bool
 
@@ -654,21 +701,11 @@ class RankingFlag(BaseModel):
 @router.put("/tournaments/{id}/ranking", response_model=TournamentView)
 def set_ranking_flag(request: Request, id: UUID, body: RankingFlag, actor: Admin):
     """Organizer checkbox; rankings that already have data are recalculated at once."""
-    from app.seeding import service as seeding_service
-    from app.seeding.models import SeedingProject
-
     with Session(request.app.state.engine) as s:
         tournament = require_tournament(s, id)
         tournament.counts_for_ranking = body.counts
         tournament.ranking_flag_actor, tournament.ranking_flag_at = actor, func.now()
         s.flush()
-        for project in s.scalars(
-            select(SeedingProject).where(
-                SeedingProject.kind == "ranking",
-                SeedingProject.current_run_id.is_not(None),
-                SeedingProject.refresh_status != "RUNNING",
-            )
-        ):
-            seeding_service.recalculate(s, project, actor)
+        recalculate_rankings(s, actor)
         s.commit()
         return tournament_views(s, [tournament])[0]

@@ -27,6 +27,9 @@ export type Event = {
   team_size: number;
   entrant_count: number;
   status: string | null;
+  /** Mission 20: main bracket (ranking, titles) or secondary; null for team events. */
+  main?: boolean | null;
+  main_set?: boolean;
 };
 export type Entrant = {
   id: string;
@@ -84,6 +87,8 @@ export type PlayerDetail = Player & {
     tournament_id: string;
     tournament_name: string;
     starts_at: string | null;
+    event_name?: string | null;
+    main?: boolean;
   }[];
 };
 

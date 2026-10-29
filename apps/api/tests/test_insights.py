@@ -396,3 +396,71 @@ def test_visitor_summary_from_startgg_sets():
     ]
     assert result["recent"][0]["url"] == "https://www.start.gg/tournament/open-26"
     assert result["mains"][0]["character"] == "Min Min"
+
+
+def test_event_roles_guess_the_main_bracket():
+    from app.competitions.roles import guess
+
+    def row(id, name, entrants, *, tournament="Burgame", game="u", manual=None, t="t"):
+        return dict(
+            id=id,
+            tournament_id=t,
+            tournament=tournament,
+            name=name,
+            game_id=game,
+            entrants=entrants,
+            manual=manual,
+        )
+
+    roles = guess(
+        [
+            row("pro", "SUPER SMASH BURGAME", 42),
+            row("ama", "Burgame Amateur", 15),
+            # Expo Anime: "Pre-Ultimate" is a side bracket even if it were the biggest.
+            row("pre", "Pre-Ultimate", 30, tournament="Expo Anime", t="x"),
+            row("singles", "Ultimate Singles", 21, tournament="Expo Anime", t="x"),
+            # A whole amateur tournament has no main bracket.
+            row("solo", "SUPER SMASH BURGAME", 11, tournament="BURGAME AMATEUR", t="a"),
+            # Two plain brackets: the biggest is the main one.
+            row("big", "Singles", 40, tournament="Open", t="o"),
+            row("small", "Singles B", 9, tournament="Open", t="o"),
+            # Another game in the same tournament has its own main bracket.
+            row("mk", "Mortal Kombat 1", 5, tournament="Open", t="o", game="mk"),
+            # Organizers have the last word.
+            row("forced", "Ladder", 8, tournament="Ladder night", t="l", manual=True),
+        ]
+    )
+    assert roles == {
+        "pro": True,
+        "ama": False,
+        "pre": False,
+        "singles": True,
+        "solo": False,
+        "big": True,
+        "small": False,
+        "mk": True,
+        "forced": True,
+    }
+
+
+def test_secondary_events_give_no_titles_but_their_own_badge_and_tab():
+    data = Data(tags={"m": "Mauserrr", "w": "Wesker"})
+    data.finishes = [
+        dict(finish("w", 1, 1, entrants=42), event="Pro", main=True),
+        dict(finish("m", 5, 9, entrants=42), event="Pro", main=True),
+        dict(finish("m", 1, 2, entrants=15), event_id="ama", event="Burgame Amateur", main=False),
+    ]
+    mauser = engine.player_insights(data, "m")
+    assert mauser["records"]["titles"] == 0
+    assert [b["id"] for b in mauser["badges"]] == ["amateur"]
+    assert mauser["badges"][0]["why"] == "Ganó Burgame Amateur en Open t1."
+    assert engine.player_insights(data, "w")["records"]["titles"] == 1
+    summary = engine.tournament_summary(data, "t1")
+    assert (summary["event_id"], summary["main"]) == ("e-t1", True)
+    assert [(e["name"], e["main"]) for e in summary["events"]] == [
+        ("Pro", True),
+        ("Burgame Amateur", False),
+    ]
+    amateur = engine.tournament_summary(data, "t1", event_id="ama")
+    assert [p["tag"] for p in amateur["top"]] == ["Mauserrr"]
+    assert engine.tournament_summary(data, "t1", event_id="nope") is None

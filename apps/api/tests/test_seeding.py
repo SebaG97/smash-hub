@@ -14,7 +14,7 @@ from app.core.config import Settings
 from app.main import create_app
 from app.seeding import service, startgg
 from app.seeding.engine import apply_overrides, compute
-from app.seeding.models import SeedingAuditEntry, SeedingProject
+from app.seeding.models import SeedingAuditEntry, SeedingProject, SeedingSet
 
 KEY = "k" * 32
 START = datetime(2026, 1, 1, tzinfo=UTC)
@@ -415,7 +415,14 @@ def test_method_choice_is_official_and_survives_recalculation(project):
 
 
 @pytest.fixture
-def ranking(db):
+def ranking(db, monkeypatch):
+    # These datasets use start.gg events that are not imported into the hub; the hub's
+    # allowlist of ranked events (Mission 20) is covered in test_imports.
+    monkeypatch.setattr(
+        service,
+        "ranked_events",
+        lambda session: set(session.scalars(select(SeedingSet.startgg_event_id))),
+    )
     with Session(db) as session:
         p = SeedingProject(
             slug="rk",

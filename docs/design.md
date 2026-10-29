@@ -72,3 +72,7 @@ En la previa, «Sin resultados en el hub» lista a cada inscrito sin sets import
 ## Logos y banners (Misión 19)
 
 Los torneos muestran su arte de start.gg: el banner arriba de la ficha del torneo y de la previa (ancho completo, bordes redondeados, recortado a 2:1), y el logo cuadrado al lado del nombre en el listado de torneos, en «Próximos torneos» de la portada y en la lista de próximos torneos de Seeding. Si un torneo no tiene banner, el logo va junto al título. Al compartir el link de una previa, la vista previa usa el banner. Las fotos de los jugadores de start.gg no se usan.
+
+## Eventos amateur (Misión 20)
+
+En un torneo con más de un evento de singles, «Resultados» muestra una pestaña por evento (nombre, «Principal» o «Secundario» e inscritos). El secundario tiene su propio podio, sorpresas e imagen del top, y una línea aclara que no cuenta para el ranking ni para títulos. En la lista de eventos, los organizadores tienen la casilla «Evento principal: cuenta para el ranking y los títulos» con la marca «(automático)» mientras decide la regla, y «Volver a automático» después de cambiarla. En la ficha del jugador, un mejor resultado en un evento secundario se lee «Torneo · Evento».
