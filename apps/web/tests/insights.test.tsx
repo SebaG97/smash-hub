@@ -87,13 +87,34 @@ it("hides achievements when the player has no data", async () => {
 it("lists community records with the player of the month", async () => {
   mock(() => ({
     player_of_month: {
-      ...wesker,
-      wins: 22,
-      losses: 3,
-      upsets: 5,
-      titles: 3,
-      since: "2026-09-27T00:00:00Z",
-      until: "2026-10-27T00:00:00Z",
+      month: "2026-10",
+      label: "octubre de 2026",
+      in_progress: true,
+      months: ["2026-09", "2026-10"],
+      regions: [
+        {
+          region: "central",
+          name: "Gran Asunción",
+          winner: {
+            ...wesker,
+            points: 85.7,
+            results: [
+              {
+                tournament: "PGP 2026",
+                tournament_id: "t1",
+                placement: 1,
+                entrants: 51,
+                seed: 4,
+                upsets: 3,
+                top10_wins: 2,
+                points: 63.2,
+              },
+            ],
+          },
+          runners: [{ ...zio, points: 30.1 }],
+        },
+        { region: "cde", name: "Ciudad del Este", winner: null, runners: [] },
+      ],
     },
     streaks: [{ ...wesker, value: 26 }],
     rivalries: [{ a: wesker, b: zio, sets: 18, a_wins: 12, b_wins: 6 }],
@@ -113,8 +134,22 @@ it("lists community records with the player of the month", async () => {
     titles: [{ ...wesker, value: 11 }],
   }));
   render(<RecordsPage />);
-  expect(await screen.findByText("Jugador del mes")).toBeInTheDocument();
-  expect(screen.getByText(/22 sets ganados, 5 sorpresas y 3 títulos/));
+  expect(
+    await screen.findByRole("heading", { name: "Jugador del mes" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByText(
+      "Jugador del mes · Gran Asunción · octubre de 2026 (en curso)",
+    ),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByText(/1\.º de 51 en PGP 2026 \(siendo seed 4, 3 sorpresas\)/),
+  ).toBeInTheDocument();
+  expect(screen.getByText("Le siguen Zio (30,1).")).toBeInTheDocument();
+  expect(screen.getByText("Sin torneos este mes.")).toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "Mes siguiente →" }),
+  ).toBeDisabled();
   expect(screen.getByText("+2")).toBeInTheDocument();
   expect(screen.getByText("18 sets")).toBeInTheDocument();
   expect(screen.getByText("26 sets seguidos")).toBeInTheDocument();

@@ -142,3 +142,5 @@ Misión 18: en la previa, los inscritos sin resultados en el hub (extranjeros o 
 Misión 19: logos y banners de start.gg en torneos, previas y calendarios (migración 0013). Para los torneos ya importados, el botón de organizadores «Traer logos y banners de start.gg» en `/tournaments`.
 
 Misión 20: eventos principales y secundarios (amateur, ladder, pre) por torneo: solo los principales suman para el ranking y los títulos; pestañas por evento y casilla de organizadores (migración 0014).
+
+Misión 21: jugador del mes por rendimiento (posición según tamaño, superar el seed y sorpresas) y por región, Gran Asunción y Ciudad del Este, con historial mes por mes (ADR-016).

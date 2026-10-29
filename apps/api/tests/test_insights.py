@@ -66,7 +66,17 @@ def test_player_badges_and_records():
 
     result = engine.player_insights(data, "a", ranking_place=1)
     ids = [b["id"] for b in result["badges"]]
-    assert ids == ["lider", "trofeos", "david", "remontadas", "racha", "especialista", "nuevo"]
+    # September 2026 is over, so winning it also gives "Jugador del mes" (Mission 21).
+    assert ids == [
+        "lider",
+        "trofeos",
+        "david",
+        "remontadas",
+        "racha",
+        "especialista",
+        "mes",
+        "nuevo",
+    ]
     records = result["records"]
     assert records["best_streak"] == 11
     assert records["current_streak"] == 0
@@ -100,9 +110,18 @@ def test_community_records_and_player_of_month():
     ]
     data.finishes = [finish("a", 1, 5), finish("b", 2, 1)]
     records = engine.community_records(data)
-    assert records["player_of_month"]["tag"] == "Ana"
-    assert records["player_of_month"]["wins"] == 2
-    assert records["player_of_month"]["titles"] == 1
+    month = records["player_of_month"]
+    assert (month["month"], month["label"]) == ("2026-09", "septiembre de 2026")
+    central, east = month["regions"]
+    # Ana: 1st of 16 (15) + three tiers over her seed 5 (8) and two upsets of 3 (9), with
+    # those 17 weighted x0.6 (nobody of a ranking played) = 25.2; Beto lost both: 10 - 3.6.
+    assert (central["name"], central["winner"]["tag"], central["winner"]["points"]) == (
+        "Gran Asunción",
+        "Ana",
+        25.2,
+    )
+    assert central["runners"] == [{"id": "b", "tag": "Beto", "points": 6.4}]
+    assert (east["name"], east["winner"]) == ("Ciudad del Este", None)
     assert len(records["upsets"]) == 1
     assert records["upsets"][0]["factor"] == 4
     rivalry = records["rivalries"][0]
@@ -464,3 +483,47 @@ def test_secondary_events_give_no_titles_but_their_own_badge_and_tab():
     amateur = engine.tournament_summary(data, "t1", event_id="ama")
     assert [p["tag"] for p in amateur["top"]] == ["Mauserrr"]
     assert engine.tournament_summary(data, "t1", event_id="nope") is None
+
+
+def test_player_of_month_rewards_beating_expectations_per_region():
+    data = Data(tags={"w": "Wesker", "c": "Cry", "z": "Zio", "n": "Nhorko"})
+    data.ranked = ["w", "z"]  # the published ranking's top players
+
+    def at(day, city, event, *rest, **kw):
+        return dict(
+            finish(*rest, **kw), city=city, event_id=event, starts_at=START + timedelta(days=day)
+        )
+
+    data.finishes = [
+        # Asunción, September: Wesker wins as seed 1, as expected; Zio beats his seed.
+        at(5, "Asunción", "go", "w", 1, 1, entrants=32, tournament="go"),
+        at(5, "Asunción", "go", "z", 2, 5, entrants=32, tournament="go"),
+        # Ciudad del Este, same month: its own player of the month.
+        at(10, "Ciudad del Este", "san", "n", 1, 1, entrants=16, tournament="san"),
+        at(10, "Ciudad del Este", "san", "c", 2, 9, entrants=16, tournament="san"),
+        # October in Asunción only.
+        at(35, "Asunción", "pgp", "w", 1, 4, entrants=48, tournament="pgp"),
+    ]
+    upset = match(1, "z", "w", ws=5, ls=1, tournament="go", days=5)
+    upset.event_id = "go"
+    data.matches = [upset]
+    september = engine.player_of_month(data, "2026-09", now=START + timedelta(days=60))
+    central, east = september["regions"]
+    # Zio: 10 x2 (32 players) + (2 x3 tiers over seed 5 + an upset of 3 tiers on a top 10,
+    # 4.5 + 2) x0.76 (two of the top 20 played) = 29.5. Wesker: 30 - 3 x0.76 = 27.7.
+    assert (central["winner"]["tag"], central["winner"]["points"]) == ("Zio", 29.5)
+    assert central["winner"]["results"][0]["top10_wins"] == 1
+    assert central["runners"] == [{"id": "w", "tag": "Wesker", "points": 27.7}]
+    assert east["winner"]["tag"] == "Cry"
+    assert september["in_progress"] is False
+    assert september["months"] == ["2026-09", "2026-10"]
+    october = engine.player_of_month(data, now=START + timedelta(days=35))
+    assert (october["month"], october["in_progress"]) == ("2026-10", True)
+    assert october["regions"][1]["winner"] is None
+    # Finished months leave a badge; the month in progress does not yet.
+    engine.month_winners(data, now=START + timedelta(days=35))
+    assert "w" not in data.month_winners
+    badges = engine.player_insights(data, "c")["badges"]
+    assert [b["why"] for b in badges if b["id"] == "mes"] == [
+        "Fue jugador del mes de Ciudad del Este en septiembre de 2026."
+    ]

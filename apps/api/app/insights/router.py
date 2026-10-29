@@ -73,8 +73,28 @@ def records(request: Request):
             _with_mains(s, result[key], None)
         _with_mains(s, result["rivalries"], "a", "b")
         _with_mains(s, result["upsets"], "winner", "loser")
-        if result["player_of_month"]:
-            _with_mains(s, [result["player_of_month"]], None)
+        _month_mains(s, result["player_of_month"])
+        return result
+
+
+def _month_mains(session, month):
+    if month:
+        _with_mains(session, [r["winner"] for r in month["regions"] if r["winner"]], None)
+
+
+@router.get("/player-of-month")
+def player_of_month(
+    request: Request, month: str | None = Query(None, pattern=r"^\d{4}-(0[1-9]|1[0-2])$")
+):
+    """Player of the month per region (the latest month with results unless `month`)."""
+    with Session(request.app.state.engine) as s:
+        data = engine.cached(s)
+        if month is not None and month not in engine.months_played(data):
+            raise HTTPException(404, "No tournaments that month")
+        result = engine.player_of_month(data, month)
+        if result is None:
+            raise HTTPException(404, "No results yet")
+        _month_mains(s, result)
         return result
 
 

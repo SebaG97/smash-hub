@@ -44,7 +44,7 @@ El color sale del propio juego: cada jugador toma el color característico de su
 
 - **Emblemas:** fila de chapas con el nombre en la tipografía de títulos y el motivo debajo. Oro para los de títulos y el liderato, fuego para las hazañas (sorpresas, remontadas, rachas) y hueso para el resto.
 - **Sorpresas:** el factor va como `+N` en fuego, a la izquierda, como un marcador.
-- **Jugador del mes:** la única pieza destacada de la portada, con el ícono grande del main y su color de fondo.
+- **Jugador del mes:** la única pieza destacada de la portada, con el ícono grande del main y su color de fondo. Desde la Misión 21 son dos tarjetas lado a lado (Gran Asunción y Ciudad del Este) con los resultados que le dieron los puntos y quiénes lo siguen; en `/estadisticas` se puede recorrer mes por mes.
 - **Imágenes para redes:** cuadradas (1080×1080) para Instagram y WhatsApp, con la misma receta: concreto, logo, números de puesto inclinados (oro el 1.º, fuego 2.º y 3.º) y la franja de color del main de cada jugador.
 
 ## Imagen de podio (Misión 14)

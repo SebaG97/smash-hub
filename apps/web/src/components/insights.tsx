@@ -5,7 +5,7 @@ import { useState } from "react";
 import type React from "react";
 import type { Main } from "../lib/api";
 import { Resource } from "./competition-browser";
-import { MainIcons, WinBar, mainColor } from "./mains";
+import { MainIcons, mainColor } from "./mains";
 import { ShareImage } from "./share-image";
 import { TournamentLogo, type TournamentImages } from "./tournament-art";
 
@@ -52,13 +52,29 @@ type Upset = {
   date?: string;
 };
 type Leader = Ref & { value: number };
-export type PlayerOfMonth = Ref & {
-  wins: number;
-  losses: number;
+type MonthResult = {
+  tournament: string;
+  tournament_id: string;
+  placement: number;
+  entrants: number | null;
+  seed: number | null;
   upsets: number;
-  titles: number;
-  since: string;
-  until: string;
+  top10_wins: number;
+  points: number;
+};
+type MonthRegion = {
+  region: string;
+  name: string;
+  winner: (Ref & { points: number; results: MonthResult[] }) | null;
+  runners: { id: string; tag: string | null; points: number }[];
+};
+/** Mission 21: the month's best player per region (Gran Asunción, Ciudad del Este). */
+export type PlayerOfMonth = {
+  month: string;
+  label: string;
+  in_progress: boolean;
+  months: string[];
+  regions: MonthRegion[];
 };
 type CommunityRecords = {
   player_of_month: PlayerOfMonth | null;
@@ -100,6 +116,7 @@ const BADGE_TONE: Record<string, string> = {
   lider: "gold",
   trofeos: "gold",
   campeon: "gold",
+  mes: "gold",
   amateur: "bone",
   david: "fire",
   remontadas: "fire",
@@ -110,20 +127,6 @@ const BADGE_TONE: Record<string, string> = {
   camaleon: "bone",
   nuevo: "bone",
 };
-
-function day(value: string | null) {
-  // A bare date (2026-10-19) is read as UTC midnight, the previous day in Asunción.
-  const at =
-    value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00Z` : value;
-  return at
-    ? new Date(at).toLocaleDateString("es-PY", {
-        timeZone: "America/Asuncion",
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      })
-    : "";
-}
 
 function tint(mains?: Main[]) {
   const color = mainColor(mains);
@@ -278,24 +281,116 @@ function LeaderList({
   );
 }
 
+function why(r: MonthResult) {
+  const extra = [
+    r.seed ? `siendo seed ${r.seed}` : "",
+    r.upsets ? `${r.upsets} ${r.upsets === 1 ? "sorpresa" : "sorpresas"}` : "",
+  ].filter(Boolean);
+  return `${r.placement}.º de ${r.entrants ?? "?"} en ${r.tournament}${extra.length ? ` (${extra.join(", ")})` : ""}`;
+}
+
+function points(n: number) {
+  return n.toLocaleString("es-PY", { maximumFractionDigits: 1 });
+}
+
+/** One region's player of the month: who, the results that got them there, who followed. */
+function MonthRegionCard({ m, r }: { m: PlayerOfMonth; r: MonthRegion }) {
+  const w = r.winner;
+  return (
+    <div className="spotlight" style={w ? tint(w.mains) : undefined}>
+      {w && <MainIcons mains={w.mains?.slice(0, 1)} size={72} />}
+      <div>
+        <p className="eyebrow">
+          Jugador del mes · {r.name} · {m.label}
+          {m.in_progress ? " (en curso)" : ""}
+        </p>
+        {w ? (
+          <>
+            <h3>
+              <Link href={`/players/${w.id}`}>{w.tag}</Link>
+            </h3>
+            <p>
+              {points(w.points)} puntos:{" "}
+              {w.results.map((res, i) => (
+                <span key={res.tournament_id}>
+                  {i > 0 && "; "}
+                  {why(res)}
+                </span>
+              ))}
+              .
+            </p>
+            {r.runners.length > 0 && (
+              <p className="seeding-lead">
+                Le siguen{" "}
+                {r.runners
+                  .map((x) => `${x.tag} (${points(x.points)})`)
+                  .join(" y ")}
+                .
+              </p>
+            )}
+          </>
+        ) : (
+          <p>Sin torneos este mes.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function PlayerOfMonthCard({ p }: { p: PlayerOfMonth }) {
   return (
-    <div className="spotlight" style={tint(p.mains)}>
-      <MainIcons mains={p.mains?.slice(0, 1)} size={72} />
-      <div>
-        <p className="eyebrow">Jugador del mes</p>
-        <h3>
-          <Link href={`/players/${p.id}`}>{p.tag}</Link>
-        </h3>
-        <p>
-          {p.wins} sets ganados, {p.upsets}{" "}
-          {p.upsets === 1 ? "sorpresa" : "sorpresas"} y {p.titles}{" "}
-          {p.titles === 1 ? "título" : "títulos"} entre el {day(p.since)} y el{" "}
-          {day(p.until)}.
-        </p>
-      </div>
-      <WinBar wins={p.wins} losses={p.losses} />
+    <div className="spotlights">
+      {p.regions.map((r) => (
+        <MonthRegionCard key={r.region} m={p} r={r} />
+      ))}
     </div>
+  );
+}
+
+/** /estadisticas: the player of the month with its history, month by month. */
+function PlayerOfMonthHistory({ latest }: { latest: PlayerOfMonth }) {
+  const [month, setMonth] = useState(latest.month);
+  const at = latest.months.indexOf(month);
+  const go = (step: number) => setMonth(latest.months[at + step]);
+  return (
+    <section aria-labelledby="month-title">
+      <h2 id="month-title">Jugador del mes</h2>
+      <p className="seeding-lead">
+        Cuenta lo que hizo cada uno en los torneos del mes contra lo que se
+        esperaba: puntos por posición según el tamaño del bracket, por terminar
+        por encima de su seed y por sorpresas (más si le ganó a un top 10), y
+        resta perder contra alguien mucho peor seedeado. Valen sus tres mejores
+        torneos del mes. Hay uno por región: Gran Asunción y Ciudad del Este.
+      </p>
+      <p className="month-nav">
+        <button
+          type="button"
+          className="link-button"
+          disabled={at <= 0}
+          onClick={() => go(-1)}
+        >
+          ← Mes anterior
+        </button>
+        <button
+          type="button"
+          className="link-button"
+          disabled={at >= latest.months.length - 1}
+          onClick={() => go(1)}
+        >
+          Mes siguiente →
+        </button>
+      </p>
+      {month === latest.month ? (
+        <PlayerOfMonthCard p={latest} />
+      ) : (
+        <Resource<PlayerOfMonth>
+          key={month}
+          path={`insights/player-of-month?month=${month}`}
+        >
+          {(m) => <PlayerOfMonthCard p={m} />}
+        </Resource>
+      )}
+    </section>
   );
 }
 
@@ -312,7 +407,9 @@ export function RecordsPage() {
       <Resource<CommunityRecords> path="insights/records">
         {(d) => (
           <>
-            {d.player_of_month && <PlayerOfMonthCard p={d.player_of_month} />}
+            {d.player_of_month && (
+              <PlayerOfMonthHistory latest={d.player_of_month} />
+            )}
             <section>
               <h2>Mayores sorpresas</h2>
               <ol className="upsets">

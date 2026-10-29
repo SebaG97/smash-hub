@@ -202,3 +202,7 @@ Un torneo puede tener varios eventos de singles: el principal y uno amateur, una
 - **Ranking:** cuentan solo los sets de eventos importados al hub que sean principales, en torneos con «Cuenta para el ranking» marcado. Los eventos que nunca pasaron por el hub ya no cuentan. `excluded_tournaments` lista lo que quedó afuera; un evento secundario aparece como «Torneo · Evento».
 - `/insights/tournaments/{id}` acepta `?event={id}`; sin él resume el evento principal. Agrega `event`, `main` y `events` (`[{id, name, main, entrants}]`, el principal primero). La imagen del top acepta el mismo `?event=`.
 - Emblema nuevo `amateur` («Campeón amateur») por ganar un evento secundario de 8 o más jugadores. `best_results` agrega `event_name` y `main`, y los secundarios van después de todos los principales.
+
+## Jugador del mes por región (Misión 21, ADR-016)
+
+`player_of_month` de `/insights/records` pasa a ser `{month: "YYYY-MM", label, in_progress, months, regions}` con `regions: [{region: "central" | "cde", name, winner, runners}]`. `winner` es `{id, tag, mains, points, results: [{tournament, tournament_id, placement, entrants, seed, upsets, top10_wins, points}]}` (sus 3 mejores torneos) o `null` si la región no tuvo torneos; `runners` son los dos siguientes con sus puntos. `GET /api/v1/insights/player-of-month?month=YYYY-MM` devuelve lo mismo para otro mes (404 si ese mes no hubo torneos, 422 con un mes inválido). Emblema nuevo `mes` («Jugador del mes») por ganar un mes terminado.

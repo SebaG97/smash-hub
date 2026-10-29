@@ -10,7 +10,8 @@ import threading
 import time
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
 
@@ -69,6 +70,8 @@ class Data:
     finishes: list = field(default_factory=list)  # (player, placement, entrants, tournament...)
     picks: dict = field(default_factory=dict)  # player -> Counter(character -> games)
     games: list = field(default_factory=list)  # Game of eligible singles sets
+    ranked: list = field(default_factory=list)  # players of the published ranking, in order
+    month_winners: dict | None = None  # filled on demand by month_winners()
 
 
 @dataclass
@@ -96,14 +99,16 @@ def load(session):
             Event.num_entrants,
             Tournament.seeding_reliable,
             Event.name,
+            Tournament.location,
         )
         .join(Tournament, Tournament.id == Event.tournament_id)
         .where(Tournament.published.is_(True), Event.team_size == 1)
     )
-    events, unreliable, event_names = {}, set(), {}
-    for e, t, name, starts, n, reliable, event_name in session.execute(singles):
+    events, unreliable, event_names, cities = {}, set(), {}, {}
+    for e, t, name, starts, n, reliable, event_name, location in session.execute(singles):
         events[e] = (t, name, starts, n)
         event_names[e] = event_name
+        cities[e] = (location or {}).get("city")
         if not reliable:
             unreliable.add(e)
     roles = event_roles(session)
@@ -146,7 +151,7 @@ def load(session):
         if player and character != "Random Character":
             picks[player][character] += 1
 
-    data = Data(picks=dict(picks))
+    data = Data(picks=dict(picks), ranked=ranked_players(session))
     data.tags = dict(session.execute(select(Player.id, Player.tag)).all())
     for set_id, event_id, at, round_label in session.execute(
         select(Set.id, Set.event_id, Set.completed_at, Set.round_label).where(
@@ -204,12 +209,42 @@ def load(session):
                     tournament=name,
                     event_id=str(event_id),
                     event=event_names[event_id],
+                    city=cities[event_id],
                     # Mission 20: only main brackets give titles, podiums and top 8s.
                     main=roles.get(event_id, True),
                     starts_at=starts,
                 )
             )
     return data
+
+
+def ranked_players(session):
+    """Hub players of the latest published ranking, best first (eligible rows only)."""
+    from app.players.models import ExternalIdentity
+    from app.seeding import service
+    from app.seeding.models import SeedingProject
+
+    project = session.scalar(
+        select(SeedingProject)
+        .where(
+            SeedingProject.kind == "ranking",
+            SeedingProject.published.is_(True),
+            SeedingProject.current_run_id.is_not(None),
+        )
+        .order_by(SeedingProject.event_date.desc())
+    )
+    if project is None:
+        return []
+    rows = [r for r in service.view(session, project)["seeds"] if r.get("eligible", True)]
+    keys = [f"player:{r['player_id']}" for r in rows]
+    hub = dict(
+        session.execute(
+            select(ExternalIdentity.external_id, ExternalIdentity.player_id).where(
+                ExternalIdentity.external_id.in_(keys)
+            )
+        ).all()
+    )
+    return [hub[k] for k in keys if k in hub]
 
 
 _cache = {"at": 0.0, "data": None}
@@ -369,6 +404,17 @@ def player_insights(data, player, ranking_place=None):
             )
         elif len(regular) >= 4:
             badge("camaleon", "Camaleón", f"Usa {len(regular)} personajes con frecuencia.")
+    won_months = month_winners(data).get(str(player), [])
+    if won_months:
+        month, region = won_months[-1]
+        badge(
+            "mes",
+            "Jugador del mes",
+            f"Fue jugador del mes de {region} en {month_name(month)}."
+            if len(won_months) == 1
+            else f"Fue jugador del mes {len(won_months)} veces; la última, de {region} en "
+            f"{month_name(month)}.",
+        )
     if first_seen and latest and latest - first_seen <= timedelta(days=60):
         badge("nuevo", "Nuevo en la escena", "Su primer torneo fue en los últimos dos meses.")
     return dict(records=records, badges=badges)
@@ -377,42 +423,151 @@ def player_insights(data, player, ranking_place=None):
 # ---------------------------------------------------------------- community
 
 
-def player_of_month(data, days=30):
-    if not data.matches:
-        return None
-    since = data.matches[-1].at - timedelta(days=days)
-    recent = [m for m in data.matches if m.at >= since]
-    score, wins, upsets = Counter(), Counter(), Counter()
-    for m in recent:
-        wins[m.winner] += 1
-        score[m.winner] += 1 + 2 * min(m.factor, 3)
-        if m.factor > 0:
-            upsets[m.winner] += 1
-    titles = Counter(
-        f["player"]
+# Player of the month (Mission 21): what a player did in the month's tournaments against
+# what was expected of them, per region, so a scene that rarely travels gets its own.
+REGIONS = {"central": "Gran Asunción", "cde": "Ciudad del Este"}
+EAST = {
+    "Ciudad del Este",
+    "Hernandarias",
+    "Minga Guazú",
+    "Presidente Franco",
+    "Santa Rita",
+    "Encarnación",
+    "Salto del Guairá",
+}
+PLACE_POINTS = {1: 15, 2: 10, 3: 7, 4: 5, 5: 3, 6: 3, 7: 2, 8: 2, 9: 1, 10: 1, 11: 1, 12: 1}
+BEST_OF = 3  # tournaments that count per player and month
+ASUNCION = ZoneInfo("America/Asuncion")
+MONTHS = (
+    "enero febrero marzo abril mayo junio julio agosto septiembre octubre noviembre diciembre"
+).split()
+
+
+def month_name(month):
+    year, number = month.split("-")
+    return f"{MONTHS[int(number) - 1]} de {year}"
+
+
+def region_of(city):
+    """Tournaments in Alto Paraná and nearby count for Ciudad del Este, the rest for Asunción."""
+    return "cde" if city in EAST else "central"
+
+
+def month_of(at):
+    return at.astimezone(ASUNCION).strftime("%Y-%m")
+
+
+def month_scores(data, month, region):
+    """Players of a region's main events in a month, best first, with how they scored.
+
+    Per tournament: placement points (15, 10, 7, 5, 3, 3, 2, 2, then 1 down to 12th) times
+    the bracket size (x0.5 for 8 players, x1 for 16, x2 for 32 or more); +2 per bracket
+    tier above their seed (at most +10); +1.5 per tier of each upset won (+2 more against
+    a top 10 of the ranking); -1 per tier of each upset lost. Seed and upset points are
+    weighted by how many of the ranking's top 20 played (x0.6 to x1.4). The best three
+    tournaments of the month count.
+    """
+    finishes = [
+        f
         for f in data.finishes
         if f.get("main", True)
-        and f["placement"] == 1
         and f["starts_at"]
-        and f["starts_at"] >= since
-        and (f["entrants"] or 0) >= 8
+        and month_of(f["starts_at"]) == month
+        and region_of(f.get("city")) == region
+    ]
+    if not finishes:
+        return []
+    top20, top10 = set(data.ranked[:20]), set(data.ranked[:10])
+    events = {f["event_id"] for f in finishes}
+    strength = Counter(f["event_id"] for f in finishes if f["player"] in top20)
+    won, lost = defaultdict(list), defaultdict(list)
+    for m in data.matches:
+        if m.event_id in events and m.factor > 0:
+            won[(m.winner, m.event_id)].append(m)
+            lost[(m.loser, m.event_id)].append(m)
+    results = defaultdict(list)
+    for f in finishes:
+        e, p = f["event_id"], f["player"]
+        size = min(max((f["entrants"] or 0) / 16, 0.5), 2)
+        level = min(max(0.6 + 0.08 * strength[e], 0.6), 1.4)
+        place = PLACE_POINTS.get(f["placement"], 0) * size
+        seed = min(2 * max(tier(f["seed"]) - tier(f["placement"]), 0), 10) if f["seed"] else 0
+        upsets = won[(p, e)]
+        bonus = sum(1.5 * min(m.factor, 3) + (2 if m.loser in top10 else 0) for m in upsets)
+        slips = sum(min(m.factor, 3) for m in lost[(p, e)])
+        results[p].append(
+            dict(
+                tournament=f["tournament"],
+                tournament_id=f["tournament_id"],
+                placement=f["placement"],
+                entrants=f["entrants"],
+                seed=f["seed"],
+                upsets=len(upsets),
+                top10_wins=sum(1 for m in upsets if m.loser in top10),
+                points=round(place + (seed + bonus - slips) * level, 1),
+            )
+        )
+    rows = []
+    for p, mine in results.items():
+        best = sorted(mine, key=lambda r: -r["points"])[:BEST_OF]
+        rows.append(
+            dict(
+                id=str(p),
+                tag=data.tags.get(p),
+                points=round(sum(r["points"] for r in best), 1),
+                results=best,
+            )
+        )
+    return sorted(rows, key=lambda r: (-r["points"], r["tag"] or ""))
+
+
+def months_played(data):
+    return sorted(
+        {month_of(f["starts_at"]) for f in data.finishes if f.get("main", True) and f["starts_at"]}
     )
-    for player, n in titles.items():
-        score[player] += 5 * n
-    if not score:
+
+
+def player_of_month(data, month=None, now=None):
+    """The month's best player per region; the latest month with results by default."""
+    months = months_played(data)
+    if not months:
         return None
-    player, points = score.most_common(1)[0]
-    losses = sum(1 for m in recent if m.loser == player)
+    month = month or months[-1]
+    current = month_of(now or datetime.now(UTC))
+    regions = []
+    for key, name in REGIONS.items():
+        rows = month_scores(data, month, key)
+        regions.append(
+            dict(
+                region=key,
+                name=name,
+                winner=rows[0] if rows and rows[0]["points"] > 0 else None,
+                runners=[dict(id=r["id"], tag=r["tag"], points=r["points"]) for r in rows[1:3]],
+            )
+        )
     return dict(
-        id=str(player),
-        tag=data.tags.get(player),
-        wins=wins[player],
-        losses=losses,
-        upsets=upsets[player],
-        titles=titles[player],
-        since=since.date().isoformat(),
-        until=data.matches[-1].at.date().isoformat(),
+        month=month,
+        label=month_name(month),
+        in_progress=month == current,
+        months=months,
+        regions=regions,
     )
+
+
+def month_winners(data, now=None):
+    """{player id: [(month, region name)]} over finished months, for the badge."""
+    if data.month_winners is None:
+        current = month_of(now or datetime.now(UTC))
+        winners = defaultdict(list)
+        for month in months_played(data):
+            if month == current:
+                continue
+            for key, name in REGIONS.items():
+                rows = month_scores(data, month, key)
+                if rows and rows[0]["points"] > 0:
+                    winners[rows[0]["id"]].append((month, name))
+        data.month_winners = dict(winners)
+    return data.month_winners
 
 
 def unique_upsets(matches):
