@@ -741,3 +741,35 @@ def test_recalculate_can_drop_manual_moves(project):
         assert "reset_all" in actions
         methods = {m["id"] for m in body["methods"]}
         assert "glicko1" in methods and body["seeds"][0]["ranks"]["glicko1"] >= 1
+
+
+def test_monthly_ranking_compares_with_the_month_before(ranking):
+    with Session(ranking) as session:
+        p = session.scalar(select(SeedingProject))
+        p.published = True
+        entrants = [
+            dict(startgg_entrant_id=f"p{i}", startgg_player_id=str(i), gamer_tag=t)
+            for i, t in ((1, "Ace"), (2, "Bee"), (3, "Cid"))
+        ]
+        # January: Ace beats Bee twelve times. February: Cid shows up and beats both.
+        rows = [a_set(n, "1", "2", day=5 + n, event="jan") for n in range(1, 13)]
+        rows += [
+            a_set(20 + n, "3", "1" if n % 2 else "2", day=40 + n, event="feb") for n in range(12)
+        ]
+        service.replace_dataset(session, p, entrants, rows, cutoff=EVENT)
+        session.flush()
+        service.recalculate(session, p, "test")
+        session.commit()
+    with client_for(ranking) as client:
+        url = "/api/v1/seeding/rk/monthly"
+        january = client.get(url, params={"month": "2026-01"}).json()
+        assert [r["gamer_tag"] for r in january["rows"]] == ["Ace", "Bee"]
+        assert january["min_sets"] == 10 and january["label"] == "enero de 2026"
+        february = client.get(url, params={"month": "2026-02"}).json()
+        assert february["compared"] is True
+        moves = {r["gamer_tag"]: (r["place"], r["change"], r["new"]) for r in february["rows"]}
+        assert moves["Cid"] == (1, None, True)
+        assert moves["Ace"][1] == -1  # 1st in January, 2nd now
+        assert february["months"][-1] == "2026-05"  # up to the event date, June 1
+        assert client.get(url, params={"month": "2027-01"}).status_code == 422
+        assert client.get(url, params={"month": "2026-13"}).status_code == 422

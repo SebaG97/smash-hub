@@ -80,3 +80,7 @@ En un torneo con más de un evento de singles, «Resultados» muestra una pesta�
 ## Equipos (Misión 22)
 
 El prefijo aprobado va antes del tag, más chico y en gris, separado por una barra («BG | Wesker»). En la ficha del jugador lleva a la página del equipo. `/equipos` muestra una tarjeta por equipo con títulos, top 8 y cuántos tiene en el top 20, y sus primeros seis jugadores ordenados por ranking. `/equipos/{clave}` muestra el plantel completo y sus top 8 recientes. Los organizadores ven abajo la lista de prefijos para revisar, con los nuevos primero, un selector de decisión y el botón para traer los prefijos de los torneos viejos.
+
+## Ranking del mes (Misión 23)
+
+En la página del ranking, los organizadores tienen «Ranking del mes»: un selector de mes y el botón «Descargar ranking del mes». La imagen es vertical (1080×1350, formato 4:5 de Instagram): encabezado con logo, nombre y «Al cierre de octubre de 2026» en dorado; una línea gris con los requisitos para entrar; dos columnas de filas alternadas con el borde del color del main, puesto (1.º dorado, 2.º y 3.º fuego), cambio respecto al mes anterior, ícono, prefijo gris y récord; al pie, los destacados y la leyenda de los signos.

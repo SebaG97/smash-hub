@@ -8,6 +8,7 @@ import re
 import threading
 import unicodedata
 from datetime import UTC, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from pydantic import ValidationError
 from sqlalchemy import delete, select, update
@@ -890,3 +891,132 @@ def clear_all_overrides(session, project, actor):
     if removed:
         audit(session, project, "reset_all", actor, removed=removed)
     return removed
+
+
+# ---------------------------------------------------------------- monthly ranking
+
+ASUNCION = ZoneInfo("America/Asuncion")
+MONTH_NAMES = (
+    "enero febrero marzo abril mayo junio julio agosto septiembre octubre noviembre diciembre"
+).split()
+
+
+def _month_start(year, month):
+    if month > 12:
+        year, month = year + 1, 1
+    return datetime(year, month, 1, tzinfo=ASUNCION).astimezone(UTC)
+
+
+def _standings(session, project, params, start, end):
+    """Eligible players of the ranking with only the sets played before `end`, in order."""
+    entrants = [
+        dict(player_id=e.startgg_player_id, gamer_tag=e.gamer_tag)
+        for e in session.scalars(
+            select(SeedingEntrant).where(SeedingEntrant.project_id == project.id)
+        )
+    ]
+    allowed = ranked_events(session)
+    sets = [
+        {c.name: getattr(s, c.name) for c in SeedingSet.__table__.columns}
+        for s in session.scalars(select(SeedingSet).where(SeedingSet.project_id == project.id))
+        if s.startgg_event_id in allowed
+    ]
+    rows, summary = compute(
+        entrants,
+        sets,
+        merges=project.merges or {},
+        duplicates=project.duplicates or {},
+        window_start=start,
+        window_end=end,
+        parameters=params,
+    )
+    return [r for r in rows if r["eligible"]], summary
+
+
+def monthly(session, project, month=None):
+    """The ranking as it stood at the end of a month, with each player's change of place
+    against the end of the previous month (Mission 23). Nothing is stored: both are
+    recalculated from the downloaded sets with the official parameters.
+    """
+    if project.kind != "ranking":
+        raise InvalidRequest("Solo los rankings tienen resumen mensual.")
+    run = session.get(SeedingRun, project.current_run_id) if project.current_run_id else None
+    if run is None:
+        raise InvalidRequest("El ranking todavía no tiene un cálculo.")
+    start = utc(run.window_start)
+    # Months go up to the last downloaded results, not to a window end in the future.
+    last = min(
+        utc(run.window_end),
+        utc(project.data_cutoff) if project.data_cutoff else utc(run.window_end),
+        datetime.now(UTC),
+    )
+    first_local = start.astimezone(ASUNCION)
+    last_local = (last - timedelta(seconds=1)).astimezone(ASUNCION)
+    months = []
+    y, m = first_local.year, first_local.month
+    while (y, m) <= (last_local.year, last_local.month):
+        months.append(f"{y:04d}-{m:02d}")
+        y, m = (y + 1, 1) if m == 12 else (y, m + 1)
+    month = month or months[-1]
+    if month not in months:
+        raise InvalidRequest("Ese mes no está dentro del período del ranking.")
+    year, number = (int(x) for x in month.split("-"))
+    end = min(_month_start(year, number + 1), last)
+    month_from = max(_month_start(year, number), start)
+    params = Parameters(**(run.parameters or {}))
+    now, summary = _standings(session, project, params, start, end)
+    before = (
+        {
+            r["player_id"]: i
+            for i, r in enumerate(_standings(session, project, params, start, month_from)[0], 1)
+        }
+        if month_from > start
+        else None
+    )
+    ids = [r["player_id"] for r in now]
+    mains = mains_by_startgg_player(session, ids)
+    costumes = costumes_by_startgg_player(session, ids)
+    rows = []
+    for place, r in enumerate(now, 1):
+        previous = before.get(r["player_id"]) if before is not None else None
+        rows.append(
+            dict(
+                place=place,
+                previous=previous,
+                change=None if previous is None else previous - place,
+                new=before is not None and previous is None,
+                player_id=r["player_id"],
+                gamer_tag=r["gamer_tag"],
+                wins=r["wins"],
+                losses=r["losses"],
+                sets=r["sets"],
+                mains=with_costume(
+                    [dict(x) for x in mains.get(r["player_id"], [])[:1]],
+                    costumes.get(r["player_id"]),
+                ),
+            )
+        )
+    _public_prefixes(session, now, rows)
+    gone = (
+        [p for p, _ in sorted(before.items(), key=lambda x: x[1]) if p not in set(ids)]
+        if before is not None
+        else []
+    )
+    method = params.method
+    return dict(
+        slug=project.slug,
+        name=project.name,
+        month=month,
+        label=f"{MONTH_NAMES[number - 1]} de {year}",
+        months=months,
+        window_start=start,
+        window_end=end,
+        method=method,
+        method_label=METHODS.get(method, {}).get("label", method),
+        min_sets=params.min_sets,
+        events=summary["offline_event_count"],
+        sets=summary["set_count"],
+        compared=before is not None,
+        rows=rows,
+        left=len(gone),
+    )

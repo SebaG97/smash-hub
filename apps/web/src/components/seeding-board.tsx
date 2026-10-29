@@ -686,6 +686,73 @@ function IdentityPanel({
   );
 }
 
+const MONTHS = [
+  "enero",
+  "febrero",
+  "marzo",
+  "abril",
+  "mayo",
+  "junio",
+  "julio",
+  "agosto",
+  "septiembre",
+  "octubre",
+  "noviembre",
+  "diciembre",
+];
+
+/** Months of a ranking (Asunción calendar) up to its last downloaded results. */
+export function rankingMonths(from: string, until: string) {
+  const local = (value: string) =>
+    new Date(value)
+      .toLocaleDateString("en-CA", { timeZone: "America/Asuncion" })
+      .slice(0, 7);
+  const months: string[] = [];
+  let [y, m] = local(from).split("-").map(Number);
+  const last = local(until);
+  while (`${y}-${String(m).padStart(2, "0")}` <= last) {
+    months.push(`${y}-${String(m).padStart(2, "0")}`);
+    [y, m] = m === 12 ? [y + 1, 1] : [y, m + 1];
+  }
+  return months;
+}
+
+/** Organizers: the whole ranking at the end of a month, with changes of place. */
+function MonthlyImage({ view }: { view: PublicSeedingView }) {
+  const admin = useAdmin();
+  const until = [
+    view.data_cutoff,
+    view.run?.window_end,
+    new Date().toISOString(),
+  ]
+    .filter((v): v is string => Boolean(v))
+    .sort()[0];
+  const months = rankingMonths(view.window_start, until);
+  const [month, setMonth] = useState(months[months.length - 1]);
+  if (!admin || !month) return null;
+  return (
+    <p className="home-more monthly-image">
+      <label>
+        Ranking del mes{" "}
+        <select value={month} onChange={(e) => setMonth(e.target.value)}>
+          {months.map((m) => (
+            <option key={m} value={m}>
+              {MONTHS[Number(m.slice(5)) - 1]} {m.slice(0, 4)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <a
+        className="primary-button"
+        href={`/og/ranking/${view.slug}/mes?month=${month}`}
+        download={`${view.slug}-${month}.png`}
+      >
+        Descargar ranking del mes
+      </a>
+    </p>
+  );
+}
+
 function PublicBoard({ view }: { view: PublicSeedingView }) {
   const [open, setOpen] = useState<number | null>(null);
   const ranking = view.kind === "ranking";
@@ -724,6 +791,7 @@ function PublicBoard({ view }: { view: PublicSeedingView }) {
           mains: s.mains,
         }))}
       />
+      {ranking && <MonthlyImage view={view} />}
       {ranking && (view.run?.parameters.min_sets ?? 0) > 0 && (
         <p className="seeding-lead">
           Entran los jugadores con al menos {view.run?.parameters.min_sets} sets

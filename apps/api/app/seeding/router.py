@@ -4,7 +4,7 @@ import asyncio
 from datetime import datetime
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -172,6 +172,24 @@ def project_view(request: Request, slug: str, actor: MaybeAdmin):
         if not project.published:
             raise service.ProjectNotFound  # Drafts do not exist for readers.
         return service.public_view(session, project)
+
+    return run(request, operation)
+
+
+@router.get("/{slug}/monthly")
+def monthly(
+    request: Request,
+    slug: str,
+    actor: MaybeAdmin,
+    month: str | None = Query(None, pattern=r"^\d{4}-(0[1-9]|1[0-2])$"),
+):
+    """A ranking at the end of a month and how each player moved since the month before."""
+
+    def operation(session):
+        project = service.project_by_slug(session, slug)
+        if actor is None and not project.published:
+            raise service.ProjectNotFound
+        return service.monthly(session, project, month)
 
     return run(request, operation)
 

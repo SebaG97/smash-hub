@@ -658,3 +658,20 @@ export async function playerCard(data: PlayerCardData) {
     },
   );
 }
+
+/** Shared look for other share images (og-monthly.tsx). */
+export const brand = {
+  concrete: CONCRETE,
+  slab: SLAB,
+  bone: BONE,
+  ash: ASH,
+  gold: "#f3a81f",
+  fire: "#e5541b",
+  font: displayFont,
+  logo: () => inline("smashclublogo.jpg"),
+};
+
+/** Stock icon of a character as a data URI, or null. */
+export async function stockIcon(main?: string | null) {
+  return (await stock({ place: 0, tag: "", main }))?.src ?? null;
+}
