@@ -1494,7 +1494,8 @@ body {
 .tournament-banner {
   display: block;
   width: 100%;
-  max-height: 340px;
+  /* Whole banner at start.gg's 2:1, never taller than about 400px. */
+  max-width: 800px;
   aspect-ratio: 2 / 1;
   object-fit: cover;
   border-radius: 10px;
