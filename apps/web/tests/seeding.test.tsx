@@ -266,6 +266,16 @@ describe("seeding board", () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Cid" })).toBeNull();
     expect(screen.queryByRole("button", { name: /Bajar a/ })).toBeNull();
+    // Organizers download the share image and the month's ranking from here.
+    expect(
+      screen.getByRole("link", { name: "Descargar imagen para redes" }),
+    ).toHaveAttribute("href", `/og/ranking/${ranking.slug}`);
+    expect(
+      screen.getByRole("link", { name: "Descargar ranking del mes" }),
+    ).toHaveAttribute(
+      "href",
+      expect.stringMatching(/^\/og\/ranking\/cs\/mes\?month=\d{4}-\d{2}$/),
+    );
     fireEvent.click(
       screen.getByRole("button", {
         name: /Mostrar 1 jugadores con menos de 10/,

@@ -718,7 +718,16 @@ export function rankingMonths(from: string, until: string) {
 }
 
 /** Organizers: the whole ranking at the end of a month, with changes of place. */
-function MonthlyImage({ view }: { view: PublicSeedingView }) {
+function MonthlyImage({
+  view,
+}: {
+  view: {
+    slug: string;
+    window_start: string;
+    data_cutoff: string | null;
+    run?: { window_end: string } | null;
+  };
+}) {
   const admin = useAdmin();
   const until = [
     view.data_cutoff,
@@ -781,17 +790,6 @@ function PublicBoard({ view }: { view: PublicSeedingView }) {
           </>
         )}
       </p>
-      <ShareImage
-        endpoint={`/og/${ranking ? "ranking" : "seeding"}/${view.slug}`}
-        filename={`${view.slug}.png`}
-        label="Descargar imagen para redes"
-        rows={view.seeds.map((s) => ({
-          place: s.seed,
-          tag: s.gamer_tag,
-          mains: s.mains,
-        }))}
-      />
-      {ranking && <MonthlyImage view={view} />}
       {ranking && (view.run?.parameters.min_sets ?? 0) > 0 && (
         <p className="seeding-lead">
           Entran los jugadores con al menos {view.run?.parameters.min_sets} sets
@@ -1036,6 +1034,20 @@ export function SeedingBoard({
           </>
         )}
       </p>
+      {/* Share images are for organizers, so they live here too (readers never see them). */}
+      <ShareImage
+        endpoint={`/og/${ranking ? "ranking" : "seeding"}/${view.slug}`}
+        filename={`${view.slug}.png`}
+        label="Descargar imagen para redes"
+        rows={view.seeds
+          .filter((s) => !ranking || s.eligible)
+          .map((s, i) => ({
+            place: ranking ? i + 1 : s.seed,
+            tag: s.gamer_tag,
+            mains: s.mains,
+          }))}
+      />
+      {ranking && <MonthlyImage view={view} />}
 
       <div className="seeding-actions">
         <button className="primary-button" onClick={exportCsv}>
