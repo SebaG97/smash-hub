@@ -148,3 +148,5 @@ Misión 21: jugador del mes por rendimiento (posición según tamaño, superar e
 Misión 22: prefijos de start.gg («BG | Wesker») y página de equipos (`/equipos`); los organizadores aprueban, unen u ocultan cada prefijo antes de que se muestre (migración 0015).
 
 Misión 23: imagen mensual del ranking completo para redes, con requisitos y el cambio de puesto de cada jugador respecto al mes anterior.
+
+Misión 24: el ranking pide 2 torneos presenciales (uno en los últimos 6 meses) en vez de 10 sets, y muestra las listas «Por entrar» e «Inactivos» (ADR-017).

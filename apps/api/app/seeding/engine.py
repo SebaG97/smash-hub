@@ -75,6 +75,10 @@ class Parameters(BaseModel):
     points_top_events: int = Field(default=5, ge=1, le=30)
     # Rankings only list players with enough sets; seeding keeps every entrant.
     min_sets: int = Field(default=0, ge=0, le=200)
+    # Mission 24: rankings ask for offline tournaments played (not sets, which punish
+    # whoever loses early) and for one of them in the last `active_days` (0: no limit).
+    min_events: int = Field(default=0, ge=0, le=50)
+    active_days: int = Field(default=0, ge=0, le=730)
 
 
 def _confidence(sets, offline_events, recent_events, merged):
@@ -187,6 +191,16 @@ def compute(entrants, sets, *, merges, duplicates, window_start, window_end, par
         offline_ev = sum(not e["online"] for e in played)
         recent_ev = sum(e["date"] >= recent_from for e in played)
         last = max((e["date"] for e in played), default=None)
+        last_offline = max((e["date"] for e in played if not e["online"]), default=None)
+        missing = []
+        if sets_total < max(p.min_sets, 1):
+            missing.append("sets")
+        if offline_ev < p.min_events:
+            missing.append("events")
+        if p.active_days and (
+            last_offline is None or last_offline < end - timedelta(days=p.active_days)
+        ):
+            missing.append("inactive")
         main = circuits[pid].most_common(1)[0][0] if circuits[pid] else None
         rows.append(
             dict(
@@ -240,7 +254,9 @@ def compute(entrants, sets, *, merges, duplicates, window_start, window_end, par
                 ],
                 win_rate=round(100 * wins[pid] / sets_total, 1) if sets_total else None,
                 wilson=round(wilson_lower_bound(wins[pid], losses[pid]), 1) if sets_total else None,
-                eligible=sets_total > 0 and sets_total >= p.min_sets,
+                eligible=not missing,
+                # What keeps an ineligible player out: "sets", "events" or "inactive".
+                missing=missing,
             )
         )
 
@@ -323,7 +339,14 @@ def _flags(r, p, home, duplicates):
     if not r["sets"]:
         flags.append("sin datos: ubicar manualmente")
     elif not r["eligible"]:
-        flags.append(f"menos de {p.min_sets} sets")
+        flags.extend(
+            {
+                "sets": f"menos de {p.min_sets} sets",
+                "events": f"menos de {p.min_events} torneos",
+                "inactive": f"sin torneos en {p.active_days} días",
+            }[m]
+            for m in r["missing"]
+        )
     if r["main_circuit"] and home and r["main_circuit"] != home:
         flags.append(
             "circuito distinto al local" if r["main_circuit"] != "ONLINE" else "mayoría online"
@@ -348,10 +371,15 @@ def _reasons(r, p, rated, method):
             "Va al final en orden alfabético hasta que la organización lo ubique a mano."
         ]
     if not r["eligible"]:
-        return [
-            f"Tiene {r['sets']} sets contados; hacen falta al menos {p.min_sets} para entrar en "
-            "este cálculo."
-        ]
+        why = {
+            "sets": f"tiene {r['sets']} sets contados y hacen falta al menos {p.min_sets}",
+            "events": f"jugó {r['offline_events']} "
+            f"{'torneo presencial' if r['offline_events'] == 1 else 'torneos presenciales'} "
+            f"y hacen falta al menos {p.min_events}",
+            "inactive": f"no juega un torneo presencial desde el {r['last_event']}; hace falta "
+            f"al menos uno en los últimos {p.active_days} días",
+        }
+        return [f"No entra en este cálculo: {'; '.join(why[m] for m in r['missing'])}."]
     rank = r["ranks"].get(method)
     reasons = [
         f"Resultados: {r['wins']}-{r['losses']} en {r['sets']} sets contados "

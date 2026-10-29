@@ -8,6 +8,16 @@ import {
 
 type Params = { params: Promise<{ slug: string }> };
 
+/** Short entry rule for the image: "mínimo 2 torneos, 1 en los últimos 6 meses". */
+function entry(d: Monthly) {
+  const parts = [];
+  if (d.min_events) parts.push(`mínimo ${d.min_events} torneos`);
+  if (d.active_days)
+    parts.push(`1 en los últimos ${Math.round(d.active_days / 30.4)} meses`);
+  if (d.min_sets) parts.push(`mínimo ${d.min_sets} sets`);
+  return parts.join(", ") || "sin mínimo";
+}
+
 function day(value: string) {
   return new Date(value).toLocaleDateString("es-PY", {
     timeZone: "America/Asuncion",
@@ -43,7 +53,7 @@ export async function GET(request: Request, { params }: Params) {
     label: `Al cierre de ${d.label}`,
     requirements: `Torneos presenciales del ${day(d.window_start)} al ${day(
       d.window_end,
-    )} (${d.events}) · mínimo ${d.min_sets} sets · método ${d.method_label}`,
+    )} (${d.events}) · ${entry(d)} · método ${d.method_label}`,
     highlights: highlights(d, rows),
     rows,
   });

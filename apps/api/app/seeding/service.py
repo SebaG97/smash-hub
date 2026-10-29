@@ -272,15 +272,25 @@ def replace_dataset(session, project, entrants, sets, *, cutoff):
     project.data_cutoff = cutoff
 
 
+# Mission 24: two offline tournaments in the period, one of them in the last six months.
+RANKING_RULES = dict(min_sets=0, min_events=2, active_days=183)
+
+
 def default_parameters(session, project):
     """The last run's parameters (so a refresh keeps the chosen method), else kind defaults."""
     if project.current_run_id is not None:
         run = session.get(SeedingRun, project.current_run_id)
         try:
-            return Parameters.model_validate(run.parameters)
+            params = Parameters.model_validate(run.parameters)
         except ValidationError:
-            pass  # Runs from an older algorithm version.
-    return Parameters(min_sets=10) if project.kind == "ranking" else Parameters()
+            params = None  # Runs from an older algorithm version.
+        if params is not None:
+            # Rankings calculated before Mission 24 asked for 10 sets: move them to the
+            # tournaments and activity rule, keeping everything else.
+            if project.kind == "ranking" and "min_events" not in (run.parameters or {}):
+                params = params.model_copy(update=RANKING_RULES)
+            return params
+    return Parameters(**RANKING_RULES) if project.kind == "ranking" else Parameters()
 
 
 def recalculate(
@@ -845,7 +855,9 @@ def public_view(session, project):
     run = full["run"]
     method = full["method"]
     rows = full["seeds"]
+    outside = []
     if project.kind == "ranking":
+        outside = [r for r in rows if not r.get("eligible", True)]
         rows = [r for r in rows if r.get("eligible", True)]
     seeds = []
     for place, r in enumerate(rows, 1):
@@ -877,10 +889,43 @@ def public_view(session, project):
             window_end=run["window_end"],
             set_count=run["set_count"],
             event_count=run["event_count"],
-            parameters={"min_sets": (run["parameters"] or {}).get("min_sets", 0)},
+            parameters={
+                key: (run["parameters"] or {}).get(key, 0)
+                for key in ("min_sets", "min_events", "active_days")
+            },
         ),
         seeds=seeds,
+        **(_outside_lists(session, outside) if project.kind == "ranking" else {}),
     )
+
+
+def _outside_lists(session, rows):
+    """Mission 24: who is close to entering the ranking and who left it for inactivity.
+
+    `pending`: players short only of tournaments who won more sets than they lost (one great
+    tournament is not enough to be placed, but they should know what they lack).
+    `inactive`: players who meet everything but recent activity.
+    """
+
+    def item(r):
+        return dict(
+            gamer_tag=r["gamer_tag"],
+            wins=r["wins"],
+            losses=r["losses"],
+            events=r["offline_events"],
+            last_event=r["last_event"],
+            mains=r.get("mains") or [],
+        )
+
+    pending = [r for r in rows if r.get("missing") == ["events"] and r["wins"] > r["losses"]]
+    pending.sort(key=lambda r: (-(r["wins"] - r["losses"]), -r["wins"], r["gamer_tag"].lower()))
+    inactive = [r for r in rows if r.get("missing") == ["inactive"]]
+    inactive.sort(key=lambda r: (r["last_event"] or "", r["gamer_tag"].lower()), reverse=True)
+    result = {}
+    for key, chosen in (("pending", pending[:12]), ("inactive", inactive)):
+        result[key] = [item(r) for r in chosen]
+        _public_prefixes(session, chosen, result[key])
+    return result
 
 
 def clear_all_overrides(session, project, actor):
@@ -963,7 +1008,7 @@ def monthly(session, project, month=None):
     year, number = (int(x) for x in month.split("-"))
     end = min(_month_start(year, number + 1), last)
     month_from = max(_month_start(year, number), start)
-    params = Parameters(**(run.parameters or {}))
+    params = default_parameters(session, project)
     now, summary = _standings(session, project, params, start, end)
     before = (
         {
@@ -1014,6 +1059,8 @@ def monthly(session, project, month=None):
         method=method,
         method_label=METHODS.get(method, {}).get("label", method),
         min_sets=params.min_sets,
+        min_events=params.min_events,
+        active_days=params.active_days,
         events=summary["offline_event_count"],
         sets=summary["set_count"],
         compared=before is not None,

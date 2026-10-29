@@ -70,7 +70,7 @@ Un ranking usa el mismo motor con todos los sets de los torneos presenciales de 
 docker compose run --rm api python -m app.cli.seeding create-ranking --slug ranking-py-2026 --name "Ranking Paraguay 2026" --country PY --start 2025-11-14T00:00:00-03:00 --end 2026-11-14T00:00:00-03:00
 ```
 
-Después, en `/rankings/ranking-py-2026`, entrar con la clave y **Recalcular** con «Bajar datos nuevos de start.gg». Para aparecer hacen falta al menos 10 sets en el período (los demás se pueden mostrar con un botón al final). Los rankings no admiten ajustes manuales.
+Después, en `/rankings/ranking-py-2026`, entrar con la clave y **Recalcular** con «Bajar datos nuevos de start.gg». Para aparecer hacen falta 2 torneos presenciales en el período, uno de ellos en los últimos 6 meses (ADR-017; los demás se pueden mostrar con un botón al final). Debajo del ranking, «Por entrar» lista a quienes les fue bien en un solo torneo e «Inactivos» a quienes cumplen todo menos la actividad. Los rankings no admiten ajustes manuales.
 
 En producción, desde la consola de `api`: `python -m app.runtime seeding --allow-production create-ranking ...` con los mismos argumentos.
 

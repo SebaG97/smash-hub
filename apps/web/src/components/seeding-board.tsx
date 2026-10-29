@@ -415,11 +415,8 @@ function DataPanel({ view }: { view: SeedingView }) {
               {view.excluded_tournaments!.join(" · ")}.
             </li>
           )}
-          {ranking && (run?.parameters.min_sets ?? 0) > 0 && (
-            <li>
-              Para entrar al ranking hacen falta al menos{" "}
-              {run?.parameters.min_sets} sets en el período.
-            </li>
+          {ranking && requirements(run?.parameters) && (
+            <li>{requirements(run?.parameters)}</li>
           )}
           {view.methods.map((m) => (
             <li key={m.id}>
@@ -762,6 +759,84 @@ function MonthlyImage({
   );
 }
 
+/** The ranking's entry rule in words (Mission 24). */
+export function requirements(p?: {
+  min_sets?: number;
+  min_events?: number;
+  active_days?: number;
+}) {
+  const parts: string[] = [];
+  if (p?.min_events)
+    parts.push(
+      `al menos ${p.min_events} ${p.min_events === 1 ? "torneo presencial" : "torneos presenciales"} en el período`,
+    );
+  if (p?.active_days)
+    parts.push(
+      `uno de ellos en los últimos ${Math.round(p.active_days / 30.4)} meses`,
+    );
+  if (p?.min_sets) parts.push(`al menos ${p.min_sets} sets`);
+  return parts.length ? `Para entrar hace falta ${parts.join(", ")}.` : "";
+}
+
+function OutsideLists({ view }: { view: PublicSeedingView }) {
+  const missing = view.run?.parameters.min_events ?? 0;
+  return (
+    <>
+      {(view.pending?.length ?? 0) > 0 && (
+        <section aria-labelledby="pending-title" className="data-section">
+          <h2 id="pending-title">Por entrar</h2>
+          <p className="seeding-lead">
+            Les fue bien, pero un solo torneo no alcanza para ubicarlos: con{" "}
+            {missing > 1 ? `${missing} torneos` : "otro torneo"} entran al
+            ranking.
+          </p>
+          <ul className="leaders">
+            {view.pending!.map((p) => (
+              <li key={p.gamer_tag}>
+                <span className="who">
+                  <MainIcons mains={p.mains?.slice(0, 1)} size={26} />
+                  <Prefix prefix={p.prefix} />
+                  {p.gamer_tag}
+                </span>
+                <span>
+                  {p.wins}–{p.losses} en {p.events}{" "}
+                  {p.events === 1 ? "torneo" : "torneos"}; le{" "}
+                  {missing - p.events === 1
+                    ? "falta 1 torneo"
+                    : `faltan ${missing - p.events} torneos`}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {(view.inactive?.length ?? 0) > 0 && (
+        <section aria-labelledby="inactive-title" className="data-section">
+          <h2 id="inactive-title">Inactivos</h2>
+          <p className="seeding-lead">
+            Cumplen todo menos la actividad: vuelven al ranking cuando jueguen
+            un torneo presencial.
+          </p>
+          <ul className="leaders">
+            {view.inactive!.map((p) => (
+              <li key={p.gamer_tag}>
+                <span className="who">
+                  <MainIcons mains={p.mains?.slice(0, 1)} size={26} />
+                  <Prefix prefix={p.prefix} />
+                  {p.gamer_tag}
+                </span>
+                <span>
+                  {p.wins}–{p.losses}; último torneo el {day(p.last_event)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </>
+  );
+}
+
 function PublicBoard({ view }: { view: PublicSeedingView }) {
   const [open, setOpen] = useState<number | null>(null);
   const ranking = view.kind === "ranking";
@@ -790,10 +865,10 @@ function PublicBoard({ view }: { view: PublicSeedingView }) {
           </>
         )}
       </p>
-      {ranking && (view.run?.parameters.min_sets ?? 0) > 0 && (
+      {ranking && view.run && (
         <p className="seeding-lead">
-          Entran los jugadores con al menos {view.run?.parameters.min_sets} sets
-          en el período, en {view.run?.event_count} torneos presenciales.
+          {requirements(view.run.parameters)} Cuentan {view.run.event_count}{" "}
+          torneos presenciales.
         </p>
       )}
       <section
@@ -876,6 +951,7 @@ function PublicBoard({ view }: { view: PublicSeedingView }) {
           </table>
         </div>
       </section>
+      {ranking && <OutsideLists view={view} />}
     </div>
   );
 }
@@ -1285,8 +1361,8 @@ export function SeedingBoard({
               onClick={() => setShowAll(!showAll)}
             >
               {showAll
-                ? "Ocultar jugadores con pocos sets"
-                : `Mostrar ${hidden.length} jugadores con menos de ${view.run?.parameters.min_sets ?? 0} sets`}
+                ? "Ocultar a quienes no entran"
+                : `Mostrar ${hidden.length} jugadores que no entran (pocos torneos o inactivos)`}
             </button>
           </p>
         )}

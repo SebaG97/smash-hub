@@ -246,6 +246,8 @@ export type Monthly = {
   window_end: string;
   method_label: string;
   min_sets: number;
+  min_events?: number;
+  active_days?: number;
   events: number;
   compared: boolean;
   left: number;

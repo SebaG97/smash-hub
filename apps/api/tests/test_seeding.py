@@ -14,7 +14,7 @@ from app.core.config import Settings
 from app.main import create_app
 from app.seeding import service, startgg
 from app.seeding.engine import apply_overrides, compute
-from app.seeding.models import SeedingAuditEntry, SeedingProject, SeedingSet
+from app.seeding.models import SeedingAuditEntry, SeedingProject, SeedingRun, SeedingSet
 
 KEY = "k" * 32
 START = datetime(2026, 1, 1, tzinfo=UTC)
@@ -441,8 +441,9 @@ def ranking(db, monkeypatch):
 
 
 def test_ranking_download_lists_every_player_and_rejects_overrides(ranking, monkeypatch):
+    # Two tournaments: rankings ask for two (Mission 24).
     nodes = [
-        dict(node(i, players=(w, lo)), event=node(i)["event"])
+        node(i, players=(w, lo), event=7 + i % 2)
         for i, (w, lo) in enumerate([("1", "2"), ("1", "3"), ("2", "3")] * 6, 1)
     ]
 
@@ -466,13 +467,14 @@ def test_ranking_download_lists_every_player_and_rejects_overrides(ranking, monk
         service.replace_dataset(session, p, entrants, rows, cutoff=EVENT)
         session.flush()
         run = service.recalculate(session, p, "test")
-        assert run.parameters["min_sets"] == 10
+        rule = {k: run.parameters[k] for k in ("min_sets", "min_events", "active_days")}
+        assert rule == {"min_sets": 0, "min_events": 2, "active_days": 183}
         session.commit()
     with client_for(ranking) as client:
         body = client.get("/api/v1/seeding/rk", headers=AUTH).json()
         assert body["kind"] == "ranking" and body["country_code"] == "PY"
         assert [s["gamer_tag"] for s in body["seeds"]] == ["Ace", "Bee", "Cid"]
-        assert all(s["eligible"] for s in body["seeds"])  # 12 sets each, minimum is 10
+        assert all(s["eligible"] for s in body["seeds"])  # all played both tournaments
         assert client.get("/api/v1/seeding?kind=ranking", headers=AUTH).json()[0]["slug"] == "rk"
         assert client.get("/api/v1/seeding?kind=seeding", headers=AUTH).json() == []
         r = client.put(
@@ -669,15 +671,20 @@ def test_public_ranking_shows_eligible_players_with_reasons(ranking, monkeypatch
             dict(startgg_entrant_id=f"p{i}", startgg_player_id=str(i), gamer_tag=t)
             for i, t in ((1, "Ace"), (2, "Bee"), (3, "Cid"))
         ]
-        rows = [a_set(n, "1", "2", day=n % 50 + 1) for n in range(1, 13)]
-        rows.append(a_set(99, "3", "1", day=3))
+        rows = [a_set(n, "1", "2", day=n % 50 + 1, event=f"e{n % 3}") for n in range(1, 13)]
+        rows.append(a_set(99, "3", "1", day=3))  # Cid: one tournament, won his only set
         service.replace_dataset(session, p, entrants, rows, cutoff=EVENT)
         session.flush()
         service.recalculate(session, p, "test")
         session.commit()
     with client_for(ranking) as client:
         public = client.get("/api/v1/seeding/rk").json()
-        assert [s["gamer_tag"] for s in public["seeds"]] == ["Ace", "Bee"]  # Cid: 1 set
+        assert [s["gamer_tag"] for s in public["seeds"]] == ["Ace", "Bee"]  # Cid: 1 tournament
+        assert public["run"]["parameters"] == {"min_sets": 0, "min_events": 2, "active_days": 183}
+        assert [(x["gamer_tag"], x["wins"], x["events"]) for x in public["pending"]] == [
+            ("Cid", 1, 1)
+        ]
+        assert public["inactive"] == []
         first = public["seeds"][0]
         assert first["seed"] == 1 and first["wins"] == 12 and first["reasons"]
         assert public["method_label"].startswith("Combinado") and "flags" not in str(public)
@@ -752,9 +759,10 @@ def test_monthly_ranking_compares_with_the_month_before(ranking):
             for i, t in ((1, "Ace"), (2, "Bee"), (3, "Cid"))
         ]
         # January: Ace beats Bee twelve times. February: Cid shows up and beats both.
-        rows = [a_set(n, "1", "2", day=5 + n, event="jan") for n in range(1, 13)]
+        rows = [a_set(n, "1", "2", day=5 + n, event=f"jan{n % 2}") for n in range(1, 13)]
         rows += [
-            a_set(20 + n, "3", "1" if n % 2 else "2", day=40 + n, event="feb") for n in range(12)
+            a_set(20 + n, "3", "1" if n % 2 else "2", day=40 + n, event=f"feb{n % 2}")
+            for n in range(12)
         ]
         service.replace_dataset(session, p, entrants, rows, cutoff=EVENT)
         session.flush()
@@ -764,7 +772,7 @@ def test_monthly_ranking_compares_with_the_month_before(ranking):
         url = "/api/v1/seeding/rk/monthly"
         january = client.get(url, params={"month": "2026-01"}).json()
         assert [r["gamer_tag"] for r in january["rows"]] == ["Ace", "Bee"]
-        assert january["min_sets"] == 10 and january["label"] == "enero de 2026"
+        assert january["min_events"] == 2 and january["label"] == "enero de 2026"
         february = client.get(url, params={"month": "2026-02"}).json()
         assert february["compared"] is True
         moves = {r["gamer_tag"]: (r["place"], r["change"], r["new"]) for r in february["rows"]}
@@ -773,3 +781,64 @@ def test_monthly_ranking_compares_with_the_month_before(ranking):
         assert february["months"][-1] == "2026-05"  # up to the event date, June 1
         assert client.get(url, params={"month": "2027-01"}).status_code == 422
         assert client.get(url, params={"month": "2026-13"}).status_code == 422
+
+
+def test_rankings_ask_for_tournaments_and_recent_activity():
+    """Mission 24: sets punish whoever loses early; rankings count tournaments instead."""
+    from app.seeding.engine import Parameters
+
+    entrants = [
+        dict(player_id=p, gamer_tag=t)
+        for p, t in (("1", "Ace"), ("2", "Bee"), ("3", "Cid"), ("4", "Dot"))
+    ]
+    sets = [
+        # Ace and Bee: two tournaments in May. Bee lost early both times (2 sets only).
+        a_set(1, "1", "2", day=125, event="may1"),
+        a_set(2, "1", "2", day=135, event="may2"),
+        # Cid: 5-0 in a single tournament.
+        *(a_set(10 + n, "3", "1", day=130, event="may3") for n in range(5)),
+        # Dot: two tournaments, but the last one in January.
+        a_set(20, "4", "2", day=5, event="jan1"),
+        a_set(21, "4", "2", day=20, event="jan2"),
+    ]
+    params = Parameters(min_events=2, active_days=90)
+    rows, _ = compute(
+        entrants,
+        sets,
+        merges={},
+        duplicates={},
+        window_start=START,
+        window_end=EVENT,
+        parameters=params,
+    )
+    by = {r["gamer_tag"]: r for r in rows}
+    assert by["Ace"]["eligible"] and by["Bee"]["eligible"]  # 2 sets, but 2 tournaments
+    assert by["Cid"]["missing"] == ["events"]
+    assert by["Cid"]["reasons"] == [
+        "No entra en este cálculo: jugó 1 torneo presencial y hacen falta al menos 2."
+    ]
+    assert by["Dot"]["missing"] == ["inactive"]
+    assert "sin torneos en 90 días" in by["Dot"]["flags"]
+
+
+def test_rankings_from_before_the_tournament_rule_move_to_it(ranking):
+    with Session(ranking) as session:
+        p = session.scalar(select(SeedingProject))
+        run = SeedingRun(
+            project_id=p.id,
+            algorithm_version="old",
+            parameters={"min_sets": 10, "method": "glicko2"},
+            window_start=START,
+            window_end=EVENT,
+            actor="test",
+            set_count=0,
+            event_count=0,
+            offline_event_count=0,
+            player_count=0,
+        )
+        session.add(run)
+        session.flush()
+        p.current_run_id = run.id
+        params = service.default_parameters(session, p)
+        assert (params.min_sets, params.min_events, params.active_days) == (0, 2, 183)
+        assert params.method == "glicko2"  # everything else is kept

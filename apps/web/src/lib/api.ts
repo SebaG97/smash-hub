@@ -217,6 +217,15 @@ export type SeedingRow = {
   reasons: string[];
   override: SeedingOverride | null;
 };
+export type OutsidePlayer = {
+  gamer_tag: string;
+  prefix?: string | null;
+  wins: number;
+  losses: number;
+  events: number;
+  last_event: string | null;
+  mains?: Main[];
+};
 export type PublicSeedingView = {
   slug: string;
   name: string;
@@ -235,8 +244,15 @@ export type PublicSeedingView = {
     window_end: string;
     set_count: number;
     event_count: number;
-    parameters: { min_sets: number };
+    parameters: {
+      min_sets: number;
+      min_events?: number;
+      active_days?: number;
+    };
   } | null;
+  /** Ranking only (Mission 24): close to entering, and out for inactivity. */
+  pending?: OutsidePlayer[];
+  inactive?: OutsidePlayer[];
   seeds: {
     seed: number;
     gamer_tag: string;

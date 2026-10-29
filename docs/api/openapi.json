@@ -5188,6 +5188,20 @@
             "minimum": 0.0,
             "title": "Min Sets",
             "default": 0
+          },
+          "min_events": {
+            "type": "integer",
+            "maximum": 50.0,
+            "minimum": 0.0,
+            "title": "Min Events",
+            "default": 0
+          },
+          "active_days": {
+            "type": "integer",
+            "maximum": 730.0,
+            "minimum": 0.0,
+            "title": "Active Days",
+            "default": 0
           }
         },
         "additionalProperties": false,

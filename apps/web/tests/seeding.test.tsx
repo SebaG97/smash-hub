@@ -278,7 +278,7 @@ describe("seeding board", () => {
     );
     fireEvent.click(
       screen.getByRole("button", {
-        name: /Mostrar 1 jugadores con menos de 10/,
+        name: /Mostrar 1 jugadores que no entran/,
       }),
     );
     expect(screen.getByRole("button", { name: "Cid" })).toBeInTheDocument();
