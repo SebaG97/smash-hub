@@ -8,6 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Path, Query, Request
 from sqlalchemy.orm import Session
 
+from app.brackets import service as brackets
 from app.insights import engine, preview, visitors
 from app.integrations.startgg.client import ImportFailure, StartGGClient
 from app.integrations.startgg.images import tournament_images
@@ -206,6 +207,15 @@ def upcoming(request: Request, slug: str = Path(pattern=r"^[a-z0-9-]{1,120}$")):
             source=source,
         )
         _with_mains(s, result["entrants"], None)
+    # Mission 25: the winners bracket if the seeds hold, only with the hub's own seeding.
+    # Pools would put players elsewhere, so then there is no projection.
+    pools = preview.starts_with_pools(event)
+    result["bracket"] = (
+        brackets.projected(result["entrants"])
+        if source["source"] == "seeding" and not pools
+        else None
+    )
+    result["pools"] = pools
     return result
 
 

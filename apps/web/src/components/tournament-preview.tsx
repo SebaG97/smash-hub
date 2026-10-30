@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import type React from "react";
 import type { Main } from "../lib/api";
+import { BracketView, type Bracket } from "./bracket";
 import { Resource } from "./competition-browser";
 import { MainIcons, WinBar, mainColor } from "./mains";
 import { Prefix } from "./prefix";
@@ -58,6 +59,8 @@ export type TournamentPreview = {
   crossings: { stage: string; a: Ref; b: Ref; h2h: HeadToHead }[];
   rivalries: { a: Ref; b: Ref; sets: number; h2h: HeadToHead }[];
   newcomers: { count: number; tags: string[] };
+  bracket?: Bracket | null;
+  pools?: boolean;
 };
 
 function day(value: string | null, long = false) {
@@ -198,6 +201,23 @@ export function TournamentPreviewPage({ slug }: { slug: string }) {
                         ))}
                       </ol>
                     </section>
+                  )}
+                  {d.bracket && (
+                    <section aria-labelledby="bracket-title">
+                      <h2 id="bracket-title">Bracket proyectado</h2>
+                      <p className="seeding-lead">
+                        El lado de winners si gana siempre el de mejor seed,
+                        según el seeding publicado. El de losers se arma con los
+                        resultados.
+                      </p>
+                      <BracketView bracket={d.bracket} />
+                    </section>
+                  )}
+                  {d.pools && d.seeding.source === "seeding" && (
+                    <p className="seeding-lead">
+                      Este torneo empieza con pools, así que no mostramos un
+                      bracket proyectado.
+                    </p>
                   )}
                   {d.crossings.length > 0 && (
                     <section aria-labelledby="crossings-title">

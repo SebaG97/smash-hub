@@ -3933,6 +3933,48 @@
           }
         }
       }
+    },
+    "/api/v1/events/{id}/bracket": {
+      "get": {
+        "tags": [
+          "brackets"
+        ],
+        "summary": "Bracket",
+        "description": "Phase groups of a published event with every set placed in its column and row.",
+        "operationId": "bracket_api_v1_events__id__bracket_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {

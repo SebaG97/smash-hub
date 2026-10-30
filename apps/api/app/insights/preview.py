@@ -12,6 +12,7 @@ from uuid import UUID
 
 from sqlalchemy import select
 
+from app.brackets.service import phase_names
 from app.insights import engine
 from app.integrations.startgg.client import ImportFailure
 from app.integrations.startgg.images import tournament_images
@@ -51,7 +52,19 @@ async def fetch(client, slug):
         raise ImportFailure("startgg_tournament_not_found")
     event = singles_event(tournament)
     entrants = await seeding_startgg.fetch_entrants(client, event["id"]) if event else []
+    if event:
+        # Phase groups tell whether the event starts with pools (Mission 25).
+        phases = await client.query("event_phases", {"id": event["id"]})
+        event = {**event, "phase_groups": phase_names(phases)}
     return tournament, event, entrants
+
+
+def starts_with_pools(event):
+    groups = list(((event or {}).get("phase_groups") or {}).values())
+    if not groups:
+        return False
+    first = min(g["order"] for g in groups)
+    return sum(g["order"] == first for g in groups) > 1
 
 
 def projected_order(session, event_slug):

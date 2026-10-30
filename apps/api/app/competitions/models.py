@@ -78,6 +78,8 @@ class Event(Record, Base):
     main = Column(Boolean)
     main_flag_actor = Column(String(60))
     main_flag_at = Column(DateTime(timezone=True))
+    # start.gg phases ("Pools", "Top 8") for the bracket, read once (Mission 25).
+    phases = Column(JSON(none_as_null=True))
     __table_args__ = (
         UniqueConstraint("tournament_id", "slug"),
         UniqueConstraint("id", "tournament_id"),

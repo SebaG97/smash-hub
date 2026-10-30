@@ -227,3 +227,15 @@ Los prefijos se comparan sin mayúsculas, espacios repetidos, barras ni corchete
 `GET /api/v1/seeding/{slug}/monthly?month=YYYY-MM` (solo rankings; público si está publicado) recalcula el ranking dos veces, sin guardar nada y con los parámetros oficiales: con los sets jugados hasta el fin de ese mes (hora de Asunción) y hasta el fin del mes anterior. Devuelve `{name, month, label, months, window_start, window_end, method, method_label, min_sets, min_events, active_days, events, sets, compared, left, rows}`. Cada fila es `{place, previous, change (positivo = subió), new (entró este mes), player_id, gamer_tag, prefix, wins, losses, sets, mains}`. `left` es cuántos estaban el mes anterior y ya no. Sin `month` usa el último mes con resultados descargados. Los meses van del inicio del ranking hasta la última descarga, sin pasar la fecha del ranking. 422 con un mes fuera del período.
 
 La web genera la imagen en `/og/ranking/{slug}/mes?month=YYYY-MM` (PNG 1080×1350): todo el ranking en dos columnas (hasta 64 jugadores) con puesto, cambio (+ verde, − rojo, «NUEVO» dorado), ícono del main, prefijo, tag y récord; arriba los requisitos (período, torneos, mínimo de sets, método) y abajo los destacados del mes (mayor subida, quiénes entran y cuántos salen).
+
+## Brackets (Misión 25)
+
+`GET /api/v1/events/{id}/bracket` (público, solo torneos publicados; 404 si no hay sets) arma el bracket con los sets ya importados: cada set guarda en `source_result` su grupo de fase, su ronda (negativa en losers) y de qué sets vienen sus jugadores. La primera visita lee de start.gg, solo lectura, los nombres de las fases («Bracket», «Top 8», «Pools A1») y los guarda en `events.phases` (migración 0016; `{}` si el evento no tiene mapeo). Si start.gg no responde, se reintenta a los 10 minutos y mientras tanto las fases se llaman «Fase 1», «Fase 2».
+
+Devuelve `{event, tournament, projected: false, groups}`. Cada grupo es `{id, name, order, type, winners, losers, height}`; `winners` y `losers` son columnas `{round, label (en castellano), sets}` y cada set es `{id, round, label, row, to, status (played | dq | unresolved), completed_at, sides, games}`:
+
+- `row`: la fila del set, a mitad de camino entre los dos sets de los que vienen sus jugadores. `to` es el set al que pasa el ganador (salteando byes), para dibujar las líneas. Los byes, los lugares vacíos y la gran final reset no jugada no se devuelven.
+- `sides`: `[{tag, prefix (aprobado, el de ese torneo), id (jugador del hub), seed, score, winner, characters}]`, siempre dos y en el orden de start.gg.
+- `games`: `[{number, winner (1 | 2 | null), characters: [lado 1, lado 2]}]` con lo que cargó el árbitro.
+
+La previa (`/insights/upcoming/{slug}`) agrega `bracket` y `pools`. `bracket` es el lado de winners si gana siempre el de mejor seed, con el mismo formato y `status: "projected"`. Solo existe con un seeding del hub publicado para ese evento (nunca con los seeds de start.gg) y si el evento no empieza con pools (`pools: true` cuando la primera fase tiene más de un grupo).

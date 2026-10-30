@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import type React from "react";
 import type { Main } from "../lib/api";
+import { EventBracket } from "./bracket";
 import { Resource } from "./competition-browser";
 import { MainIcons, mainColor } from "./mains";
 import { Prefix } from "./prefix";
@@ -549,6 +550,7 @@ export function TournamentSummaryBlock({ id }: { id: string }) {
               </ul>
             </>
           )}
+          <EventBracket eventId={s.event_id} />
         </section>
       )}
     </Resource>

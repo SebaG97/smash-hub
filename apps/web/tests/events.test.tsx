@@ -52,7 +52,12 @@ it("switches between the main and the amateur bracket", async () => {
   expect(
     screen.getByText(/Evento secundario: no cuenta para el ranking/),
   ).toBeInTheDocument();
-  expect(String(fetchMock.mock.calls.at(-1)?.[0])).toContain("?event=ama");
+  const urls = fetchMock.mock.calls.map((c) => String(c[0]));
+  expect(
+    urls.some((u) => u.includes("insights/tournaments/t1?event=ama")),
+  ).toBe(true);
+  // Each event tab also loads that event's bracket (Mission 25).
+  expect(urls.some((u) => u.endsWith("/events/ama/bracket"))).toBe(true);
 });
 
 it("tells readers an event is secondary", () => {

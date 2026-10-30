@@ -1,0 +1,9 @@
+query EventPhases($id: ID!) {
+  event(id: $id) {
+    id
+    phases {
+      id name phaseOrder bracketType
+      phaseGroups(query: {page: 1, perPage: 64}) { nodes { id displayIdentifier } }
+    }
+  }
+}

@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import ValidationError
 
+from app.brackets.router import router as brackets_router
 from app.competitions.router import router as competitions_router
 from app.core.config import Settings, get_settings
 from app.core.errors import install_error_handling
@@ -58,5 +59,6 @@ def create_app(settings: Settings | None = None, engine=None) -> FastAPI:
     app.include_router(imports_router)
     app.include_router(insights_router)
     app.include_router(teams_router)
+    app.include_router(brackets_router)
 
     return app

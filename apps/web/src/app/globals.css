@@ -1591,3 +1591,125 @@ a.tag-prefix:hover {
 .prefix-review input {
   max-width: 100%;
 }
+
+/* Brackets (Mission 25) */
+.bracket-section {
+  margin: 28px 0;
+}
+.bracket-side h3 {
+  margin: 18px 0 6px;
+}
+.bracket-scroll {
+  overflow-x: auto;
+  padding-bottom: 8px;
+  -webkit-overflow-scrolling: touch;
+}
+.bracket-tree {
+  position: relative;
+}
+.bracket-tree svg {
+  position: absolute;
+  inset: 0;
+  fill: none;
+  stroke: var(--ash);
+  stroke-opacity: 0.45;
+  stroke-width: 1.5;
+}
+.bracket-round {
+  position: absolute;
+  top: 0;
+  margin: 0;
+  color: var(--ash);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.bracket-set {
+  position: absolute;
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+}
+.bracket-set:hover,
+.bracket-set.open {
+  border-color: var(--fire);
+}
+.bracket-set.guess {
+  opacity: 0.6;
+  border-style: dashed;
+}
+.bracket-set > span {
+  display: grid;
+  grid-template-columns: 22px 1fr auto 22px;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px 0 0;
+  min-width: 0;
+}
+.bracket-set > span + span {
+  border-top: 1px solid var(--line);
+}
+.bracket-set .won {
+  font-weight: 700;
+}
+.bracket-set .won b {
+  color: var(--gold);
+}
+.bracket-set b {
+  text-align: right;
+}
+.bracket-seed {
+  align-self: stretch;
+  display: grid;
+  place-items: center;
+  background: var(--paper);
+  color: var(--ash);
+  font-size: 0.7rem;
+}
+.bracket-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.bracket-chars {
+  display: inline-flex;
+  gap: 2px;
+}
+.bracket-chars img {
+  display: block;
+}
+.bracket-detail {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.bracket-detail h3 {
+  margin: 0 0 4px;
+}
+.bracket-games {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.bracket-games li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.bracket-games small {
+  color: var(--ash);
+}
