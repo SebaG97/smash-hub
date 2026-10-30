@@ -2,7 +2,8 @@ query EventPhases($id: ID!) {
   event(id: $id) {
     id
     phases {
-      id name phaseOrder bracketType
+      id name phaseOrder bracketType numSeeds
+      seeds(query: {page: 1, perPage: 1}) { pageInfo { total } }
       phaseGroups(query: {page: 1, perPage: 64}) { nodes { id displayIdentifier } }
     }
   }

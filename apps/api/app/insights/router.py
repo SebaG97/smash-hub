@@ -207,16 +207,18 @@ def upcoming(request: Request, slug: str = Path(pattern=r"^[a-z0-9-]{1,120}$")):
             source=source,
         )
         _with_mains(s, result["entrants"], None)
-    # Mission 25: the winners bracket if the seeds hold, only with the hub's own seeding.
-    # Pools would put players elsewhere, so then there is no projection.
-    pools = preview.starts_with_pools(event)
+    # Mission 25: start.gg's first phase (pools or the bracket) with the hub's published
+    # seeds in it; never with start.gg's own seeds.
     result["bracket"] = (
-        brackets.projected(result["entrants"])
-        if source["source"] == "seeding" and not pools
+        brackets.projection(token_of(request), event["id"], result["entrants"])
+        if source["source"] == "seeding" and event
         else None
     )
-    result["pools"] = pools
     return result
+
+
+def token_of(request):
+    return request.app.state.settings.startgg_api_token
 
 
 @router.get("/startgg-players/{player_id}")

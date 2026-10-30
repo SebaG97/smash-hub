@@ -2,6 +2,7 @@ import React from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import {
+  BracketPreview,
   BracketView,
   EventBracket,
   type Bracket,
@@ -157,4 +158,36 @@ it("shows projected sets as a guess", () => {
   const cards = screen.getAllByRole("button", { name: "Wesker contra Zio" });
   expect(cards[0]).not.toHaveClass("guess");
   expect(cards[1]).toHaveClass("guess");
+});
+
+it("lets organizers see start.gg's pools with an unpublished seeding", async () => {
+  sessionStorage.setItem(
+    "seeding-admin",
+    JSON.stringify({ key: "secret-key", name: "Org" }),
+  );
+  const pools: Bracket = {
+    projected: true,
+    source: "startgg",
+    later: ["TOP 32 (BO5)", "TOP 8 (BO5)"],
+    groups: [
+      { ...bracket.groups[1], id: "p1", name: "Pools (BO3) · 1" },
+      { ...bracket.groups[1], id: "p2", name: "Pools (BO3) · 2" },
+    ],
+  };
+  const fetch = vi.fn((url: string, init?: RequestInit) =>
+    Promise.resolve(new Response(JSON.stringify(url && init && pools))),
+  );
+  vi.stubGlobal("fetch", fetch);
+  render(<BracketPreview slug="cs" />);
+  fireEvent.click(screen.getByRole("button", { name: "Ver bracket" }));
+  expect(
+    await screen.findByRole("tab", { name: "Pools (BO3) · 1" }),
+  ).toHaveAttribute("aria-selected", "true");
+  expect(screen.getByText(/Después siguen: TOP 32/)).toBeInTheDocument();
+  const [url, init] = fetch.mock.calls[0];
+  expect(url).toMatch(/\/seeding\/cs\/bracket$/);
+  expect((init?.headers as Record<string, string>).Authorization).toBe(
+    "Bearer secret-key",
+  );
+  sessionStorage.clear();
 });

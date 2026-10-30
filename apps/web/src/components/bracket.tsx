@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { adminHeaders, useAdmin } from "../lib/admin";
 import { characterIcon } from "../lib/characters";
 import { Resource } from "./competition-browser";
 import { Prefix } from "./prefix";
@@ -46,7 +47,16 @@ export type BracketGroup = {
   losers: BracketColumn[];
   height: number;
 };
-export type Bracket = { projected: boolean; groups: BracketGroup[] };
+export type Bracket = {
+  projected: boolean;
+  groups: BracketGroup[];
+  /** Projections: "startgg" uses start.gg's real pools or bracket; "hub" is our guess. */
+  source?: "startgg" | "hub";
+  /** Phases after the projected one ("TOP 32", "TOP 8"). */
+  later?: string[];
+};
+
+const api = (process.env.NEXT_PUBLIC_API_URL || "/api/v1").replace(/\/$/, "");
 
 // Card size and spacing, in pixels.
 const WIDTH = 196;
@@ -69,10 +79,84 @@ export function EventBracket({ eventId }: { eventId: string }) {
   );
 }
 
-export function BracketView({ bracket }: { bracket: Bracket }) {
+/** Organizers: start.gg's bracket with this seeding, before publishing it. */
+export function BracketPreview({ slug }: { slug: string }) {
+  const admin = useAdmin();
+  const [state, setState] = useState<{
+    bracket?: Bracket;
+    error?: string;
+    loading?: boolean;
+  }>({});
+  const load = () => {
+    setState((s) => ({ ...s, loading: true, error: undefined }));
+    fetch(`${api}/seeding/${slug}/bracket`, { headers: adminHeaders(admin) })
+      .then(async (r) => {
+        const body = await r.json().catch(() => ({}));
+        if (!r.ok)
+          throw new Error(body.detail || "No se pudo armar el bracket.");
+        setState({ bracket: body as Bracket });
+      })
+      .catch((e: unknown) =>
+        setState({
+          error:
+            e instanceof Error ? e.message : "No se pudo armar el bracket.",
+        }),
+      );
+  };
+  return (
+    <section className="bracket-section" aria-labelledby="bracket-preview">
+      <h2 id="bracket-preview">Bracket con este seeding</h2>
+      <p className="seeding-lead">
+        Solo lo ven los organizadores. Usa los pools o el bracket que ya armó
+        start.gg y pone a cada jugador en el lugar de su seed; no cambia nada en
+        start.gg.
+      </p>
+      <button
+        type="button"
+        className="primary-button"
+        onClick={load}
+        disabled={state.loading}
+      >
+        {state.loading
+          ? "Armando…"
+          : state.bracket
+            ? "Actualizar bracket"
+            : "Ver bracket"}
+      </button>
+      {state.error && <p role="alert">{state.error}</p>}
+      {state.bracket && <ProjectionNotes bracket={state.bracket} />}
+      {state.bracket && <BracketView bracket={state.bracket} first />}
+    </section>
+  );
+}
+
+/** What a projected bracket is based on. */
+export function ProjectionNotes({ bracket }: { bracket: Bracket }) {
+  return (
+    <p className="seeding-lead">
+      {bracket.source === "hub"
+        ? "start.gg todavía no armó el bracket: es el lado de winners de un bracket único según los seeds."
+        : "Lado de winners de cada grupo de start.gg con nuestros seeds; las rondas siguientes suponen que gana el de mejor seed."}
+      {bracket.later?.length
+        ? ` Después siguen: ${bracket.later.join(", ")}.`
+        : ""}
+    </p>
+  );
+}
+
+export function BracketView({
+  bracket,
+  first = false,
+}: {
+  bracket: Bracket;
+  /** Open on the first group (pools) instead of the last phase. */
+  first?: boolean;
+}) {
   const groups = bracket.groups ?? [];
   // The last phase (the final bracket, "Top 8") is the one people want to see first.
-  const [group, setGroup] = useState(groups[groups.length - 1]?.id);
+  const [group, setGroup] = useState(
+    (first ? groups[0] : groups[groups.length - 1])?.id,
+  );
   const [open, setOpen] = useState<string | null>(null);
   const current = groups.find((g) => g.id === group) ?? groups[0];
   if (!current) return null;

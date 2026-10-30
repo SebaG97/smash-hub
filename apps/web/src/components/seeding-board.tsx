@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type React from "react";
 import { useRouter } from "next/navigation";
+import { BracketPreview } from "./bracket";
 import { MainIcons, WinBar, mainColor } from "./mains";
 import { Prefix } from "./prefix";
 import { ShareImage } from "./share-image";
@@ -1124,6 +1125,9 @@ export function SeedingBoard({
           }))}
       />
       {ranking && <MonthlyImage view={view} />}
+      {!ranking && view.startgg_event_slug && (
+        <BracketPreview key={view.slug} slug={view.slug} />
+      )}
 
       <div className="seeding-actions">
         <button className="primary-button" onClick={exportCsv}>

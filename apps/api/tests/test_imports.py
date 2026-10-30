@@ -366,6 +366,11 @@ def test_upcoming_preview_endpoint_reads_startgg_entrants(db, snapshot, monkeypa
 
     monkeypatch.setattr(router, "StartGGClient", FakeClient)
     monkeypatch.setattr(router, "_previews", {})
+    from app.brackets import service as brackets
+
+    # The projected bracket reads start.gg's empty bracket (Mission 25): none here.
+    monkeypatch.setattr(brackets, "StartGGClient", FakeClient)
+    monkeypatch.setattr(brackets, "_structures", {})
     with client_for(db) as client:
         body = client.get("/api/v1/insights/upcoming/center-stage").json()
         assert body["tournament"]["name"] == "Center Stage"
@@ -385,6 +390,7 @@ def test_upcoming_preview_endpoint_reads_startgg_entrants(db, snapshot, monkeypa
         assert calls.count("upcoming_tournament") == 1
         assert body["seeding"]["source"] == "seeding"
         assert [(p["seed"], p["tag"]) for p in body["entrants"]] == [(1, "Visita"), (2, "A")]
+        assert body["bracket"] is None  # start.gg has no bracket and 2 players are too few
         body = client.get("/api/v1/insights/upcoming/center-stage").json()
         assert body["seeding"]["source"] == "none"
         assert client.get("/api/v1/insights/upcoming/nada").status_code == 404

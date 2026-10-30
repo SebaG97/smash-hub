@@ -177,3 +177,80 @@ def test_event_bracket_reads_phase_names_once(db, snapshot, monkeypatch):
         assert c.get("/api/v1/events/not-a-uuid/bracket").status_code == 422
     with Session(db) as s:
         assert service.phase_names(s.get(Event, event_id).phases)["72"]["name"] == "Top 8"
+
+
+def pool_set(id, round, *slots, label="Winners Round 1"):
+    return dict(id=id, round=round, fullRoundText=label, slots=list(slots))
+
+
+def by_seed(n):
+    return dict(seed={"seedNum": n}, prereqType="seed", prereqId=f"seed{n}")
+
+
+def from_set(id, n=None):
+    # start.gg names the seed coming from a bye on the next round's slot.
+    return dict(
+        prereqType="set", prereqId=id, prereqPlacement=1, seed={"seedNum": n} if n else None
+    )
+
+
+def test_pools_from_startgg_take_the_hubs_seeds():
+    found = dict(
+        later=["TOP 8"],
+        groups=[
+            dict(
+                id="g1",
+                name="Pools · 1",
+                sets=[
+                    pool_set("p1-1", 1, by_seed(4), by_seed(5)),
+                    pool_set("p1-2", 2, from_set("bye", 1), from_set("p1-1")),
+                    pool_set("p1-l", -1, from_set("p1-1")),
+                ],
+            ),
+            dict(
+                id="g2",
+                name="Pools · 2",
+                sets=[pool_set("p2-1", 1, by_seed(2), by_seed(3))],
+            ),
+        ],
+    )
+    people = [dict(seed=n, tag=f"P{n}", id=None, mains=[]) for n in range(1, 6)]
+    result = service.seeded(found, people)
+    assert result["source"] == "startgg" and result["later"] == ["TOP 8"]
+    assert [g["name"] for g in result["groups"]] == ["Pools · 1", "Pools · 2"]
+    pool = result["groups"][0]
+    assert pool["losers"] == []
+    cells = [[[x["tag"] for x in s["sides"]] for s in c["sets"]] for c in pool["winners"]]
+    assert cells == [[["P4", "P5"]], [["P1", "P4"]]]
+
+
+def test_first_phase_is_where_everyone_is_seeded():
+    data = {
+        "event": {
+            "phases": [
+                {"id": 3, "name": "TOP 8", "phaseOrder": 3, "numSeeds": 0},
+                {"id": 4, "name": "Pools", "phaseOrder": 4, "numSeeds": 77},
+            ]
+        }
+    }
+    assert service.first_phase(data)["name"] == "Pools"
+    assert service.first_phase({"event": {"phases": []}}) is None
+
+
+def test_bracket_preview_is_for_organizers_only(db):
+    with TestClient(
+        create_app(
+            Settings(
+                _env_file=None,
+                database_url="postgresql://unused:unused@localhost/x",
+                admin_token="secret-key-for-tests-only-0123",
+            ),
+            engine=db,
+        )
+    ) as c:
+        assert c.get("/api/v1/seeding/cs/bracket").status_code == 401
+        missing = c.get(
+            "/api/v1/seeding/cs/bracket",
+            headers={"Authorization": "Bearer secret-key-for-tests-only-0123"},
+        )
+        assert missing.status_code == 404
