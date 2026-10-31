@@ -241,3 +241,17 @@ Devuelve `{event, tournament, projected: false, groups}`. Cada grupo es `{id, na
 La previa (`/insights/upcoming/{slug}`) agrega `bracket`, solo con un seeding del hub publicado para ese evento (nunca con los seeds de start.gg). Se arma con el bracket vacío que start.gg ya tiene de la primera fase (la que tiene a todos los inscriptos: pools o el bracket único), leído solo lectura y guardado 15 minutos: cada lugar de start.gg dice qué número de seed va ahí, y ahí se pone a nuestro jugador con ese seed. Devuelve el lado de winners de cada grupo (`losers: []`), con las rondas siguientes suponiendo que gana el de mejor seed y `status: "projected"`. Agrega `source: "startgg"` y `later` (las fases que siguen, de la más grande a la más chica, por ejemplo `["TOP 32 (BO5)", "TOP 8 (BO5)"]`). Si start.gg todavía no armó el bracket, `source: "hub"`: el lado de winners de un bracket único según los seeds (hace falta un mínimo de 4).
 
 `GET /api/v1/seeding/{slug}/bracket` (admin) devuelve lo mismo con el seeding actual del proyecto, publicado o no, más `published`, para que los organizadores vean los pools antes de publicar. No escribe nada en start.gg. 422 si el proyecto es un ranking, no tiene evento de start.gg o no tiene cálculo; 502 si start.gg no responde.
+
+## En vivo (Misión 27)
+
+Solo lectura de start.gg y sin guardar nada: lo oficial sigue siendo la importación.
+
+`GET /api/v1/live` lista los torneos presenciales de Paraguay con singles de Ultimate que ya empezaron y siguen en curso, o que empezaron hace menos de 36 horas: `{items: [{name, slug, url, starts_at, city, images, active}]}`. Se guarda 2 minutos.
+
+`GET /api/v1/live/{slug}?event={id de start.gg}` responde solo para torneos de esa lista (404 en otro caso, para que nadie gaste el token con torneos cualquiera). Sin `event` usa el evento principal. Todos los visitantes comparten una lectura de 60 segundos; si start.gg falla se devuelve la última con `stale: true`, y 502 si no hay ninguna.
+
+Devuelve `{tournament, events, event, final, top, projected: false, groups, current, updated_at}`. `groups` tiene el formato de `/events/{id}/bracket`, con todos los sets de las fases ya alcanzadas y `status` que puede ser `played`, `dq`, `live` (en juego o llamado a un setup) o `pending`. `current` es el grupo a abrir: donde se está jugando o, si no, el último con resultados. `top` son hasta 16 filas `{placement, tag, prefix, id, seed, mains}` con los personajes usados en el torneo o, si no se cargaron, los mains del hub.
+
+`final` es verdadero cuando start.gg cerró el evento o cuando ya se decidió la gran final (la ganó quien venía de winners, o se jugó el reset), aunque start.gg todavía no lo haya cerrado.
+
+La web muestra un aviso en la portada y la página `/en-vivo/{slug}`, que se actualiza cada minuto. Los admins descargan el top desde `/og/en-vivo/{slug}?event=`, marcado «parcial» mientras `final` sea falso.

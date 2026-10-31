@@ -4048,6 +4048,85 @@
           }
         }
       }
+    },
+    "/api/v1/live": {
+      "get": {
+        "tags": [
+          "live"
+        ],
+        "summary": "Live",
+        "description": "Tournaments in Paraguay under way or that started in the last hours.",
+        "operationId": "live_api_v1_live_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/live/{slug}": {
+      "get": {
+        "tags": [
+          "live"
+        ],
+        "summary": "Tournament",
+        "description": "Bracket and standings right now. Only listed tournaments, so nobody can spend the\nstart.gg token on arbitrary ones.",
+        "operationId": "tournament_api_v1_live__slug__get",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9-]{1,120}$",
+              "title": "Slug"
+            }
+          },
+          {
+            "name": "event",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^\\d{1,12}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {

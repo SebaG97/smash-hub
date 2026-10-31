@@ -122,7 +122,9 @@ it("switches phases and marks disqualifications", () => {
   fireEvent.click(screen.getByRole("tab", { name: "Bracket" }));
   expect(screen.getByText("DQ")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Lucas contra Arthur" }));
-  expect(screen.getByText(/No se cargaron los personajes/)).toBeInTheDocument();
+  expect(screen.getByText("Ganó por DQ")).toBeInTheDocument();
+  // Nothing was played, so no characters are missing.
+  expect(screen.queryByText(/No se cargaron los personajes/)).toBeNull();
 });
 
 it("loads the bracket of an event", async () => {

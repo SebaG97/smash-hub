@@ -154,3 +154,5 @@ Misión 24: el ranking pide 2 torneos presenciales (uno en los últimos 6 meses)
 Misión 25: bracket de cada evento en la página del torneo (fases, personajes partida por partida) y bracket proyectado en la previa cuando el seeding del hub está publicado.
 
 Misión 26: el jugador del mes premia superar lo esperado: la posición pesa poco y pesan los escalones sobre el seed y las sorpresas (ADR-018).
+
+Misión 27: página en vivo (`/en-vivo/{slug}`) con bracket y posiciones leídos de start.gg mientras se juega, e imagen del top apenas termina la gran final.

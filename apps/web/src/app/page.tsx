@@ -1,5 +1,6 @@
 import { HomeBoard } from "../components/home-board";
 import { HomeSpotlight } from "../components/home-spotlight";
+import { LiveNotice } from "../components/live";
 import { Logo } from "../components/logo";
 
 export default function Home() {
@@ -15,6 +16,7 @@ export default function Home() {
           </p>
         </div>
       </section>
+      <LiveNotice />
       <HomeSpotlight />
       <HomeBoard />
     </div>

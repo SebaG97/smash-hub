@@ -1,0 +1,18 @@
+query LiveSets($id: ID!, $page: Int!, $perPage: Int!) {
+  phaseGroup(id: $id) {
+    id
+    sets(page: $page, perPage: $perPage, sortType: STANDARD) {
+      pageInfo { total totalPages }
+      nodes {
+        id state round fullRoundText completedAt winnerId displayScore
+        games { orderNum winnerId selections { entrant { id } character { name } } }
+        slots {
+          prereqId prereqType prereqPlacement
+          seed { seedNum }
+          standing { stats { score { value } } }
+          entrant { id name participants { gamerTag prefix player { id } } }
+        }
+      }
+    }
+  }
+}

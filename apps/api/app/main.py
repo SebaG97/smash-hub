@@ -13,6 +13,7 @@ from app.database.session import build_engine
 from app.health.router import router
 from app.insights.router import router as insights_router
 from app.integrations.router import router as imports_router
+from app.live.router import router as live_router
 from app.seeding.router import router as seeding_router
 from app.statistics.router import router as statistics_router
 from app.teams.router import router as teams_router
@@ -60,5 +61,6 @@ def create_app(settings: Settings | None = None, engine=None) -> FastAPI:
     app.include_router(insights_router)
     app.include_router(teams_router)
     app.include_router(brackets_router)
+    app.include_router(live_router)
 
     return app

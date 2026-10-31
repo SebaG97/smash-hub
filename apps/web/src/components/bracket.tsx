@@ -147,15 +147,18 @@ export function ProjectionNotes({ bracket }: { bracket: Bracket }) {
 export function BracketView({
   bracket,
   first = false,
+  initial,
 }: {
   bracket: Bracket;
   /** Open on the first group (pools) instead of the last phase. */
   first?: boolean;
+  /** Group to open on, when the caller knows better (the one being played). */
+  initial?: string | null;
 }) {
   const groups = bracket.groups ?? [];
   // The last phase (the final bracket, "Top 8") is the one people want to see first.
   const [group, setGroup] = useState(
-    (first ? groups[0] : groups[groups.length - 1])?.id,
+    initial ?? (first ? groups[0] : groups[groups.length - 1])?.id,
   );
   const [open, setOpen] = useState<string | null>(null);
   const current = groups.find((g) => g.id === group) ?? groups[0];
@@ -295,7 +298,7 @@ function SetCard({
   return (
     <button
       type="button"
-      className={`bracket-set${guess ? " guess" : ""}${open ? " open" : ""}`}
+      className={`bracket-set${guess ? " guess" : ""}${set.status === "live" ? " live" : ""}${open ? " open" : ""}`}
       style={style}
       aria-expanded={open}
       aria-label={label}
@@ -367,9 +370,13 @@ function SetDetail({ set }: { set: BracketSet }) {
       <p className="seeding-lead">
         {set.status === "projected"
           ? "Cruce proyectado según el seeding publicado."
-          : [set.status === "dq" ? "Ganó por DQ" : null, when]
-              .filter(Boolean)
-              .join(" · ")}
+          : set.status === "live"
+            ? "Se está jugando."
+            : set.status === "pending"
+              ? "Todavía no se jugó."
+              : [set.status === "dq" ? "Ganó por DQ" : null, when]
+                  .filter(Boolean)
+                  .join(" · ")}
       </p>
       {set.games.length > 0 ? (
         <ol className="bracket-games">
@@ -386,7 +393,7 @@ function SetDetail({ set }: { set: BracketSet }) {
           ))}
         </ol>
       ) : (
-        set.status !== "projected" && (
+        set.status === "played" && (
           <p className="seeding-lead">
             No se cargaron los personajes de este set en start.gg.
           </p>

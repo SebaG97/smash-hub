@@ -1,0 +1,11 @@
+query LiveStandings($id: ID!) {
+  event(id: $id) {
+    id state
+    standings(query: {page: 1, perPage: 16}) {
+      nodes {
+        placement isFinal
+        entrant { id name initialSeedNum participants { gamerTag prefix player { id } } }
+      }
+    }
+  }
+}

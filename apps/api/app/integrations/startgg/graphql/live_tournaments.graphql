@@ -1,0 +1,14 @@
+query LiveTournaments($country: String!, $videogame: ID!, $after: Timestamp!, $before: Timestamp!) {
+  tournaments(query: {page: 1, perPage: 10, sortBy: "startAt desc",
+                      filter: {countryCode: $country, videogameIds: [$videogame], afterDate: $after, beforeDate: $before}}) {
+    nodes {
+      id name slug startAt endAt state city isOnline
+      images { type url }
+      events(limit: 20) {
+        id name slug state numEntrants isOnline
+        teamRosterSize { maxPlayers }
+        videogame { id }
+      }
+    }
+  }
+}
