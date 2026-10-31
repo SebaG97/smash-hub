@@ -436,6 +436,12 @@ EAST = {
     "Salto del Guairá",
 }
 PLACE_POINTS = {1: 15, 2: 10, 3: 7, 4: 5, 5: 3, 6: 3, 7: 2, 8: 2, 9: 1, 10: 1, 11: 1, 12: 1}
+# Player of the month rewards beating expectations (ADR-018): placements weigh little, so a
+# top seed doing what its seed says cannot win it every month.
+PLACE_WEIGHT = 0.25
+RISE_POINTS = 3  # per bracket tier finished above the seed
+UPSET_POINTS = 2  # per tier of each upset won
+UPSET_CAP = 4  # tiers that count per upset
 BEST_OF = 3  # tournaments that count per player and month
 ASUNCION = ZoneInfo("America/Asuncion")
 MONTHS = (
@@ -460,11 +466,11 @@ def month_of(at):
 def month_scores(data, month, region):
     """Players of a region's main events in a month, best first, with how they scored.
 
-    Per tournament: placement points (15, 10, 7, 5, 3, 3, 2, 2, then 1 down to 12th) times
-    the bracket size (x0.5 for 8 players, x1 for 16, x2 for 32 or more); +2 per bracket
-    tier above their seed (at most +10); +1.5 per tier of each upset won (+2 more against
-    a top 10 of the ranking); -1 per tier of each upset lost. Seed and upset points are
-    weighted by how many of the ranking's top 20 played (x0.6 to x1.4). The best three
+    Per tournament: a quarter of the placement points (15, 10, 7, 5, 3, 3, 2, 2, then 1 down
+    to 12th) times the bracket size (x0.5 for 8 players, x1 for 16, x2 for 32 or more); +3
+    per bracket tier above their seed; +2 per tier of each upset won, up to 4 tiers (+2 more
+    against a top 10 of the ranking); -1 per tier of each upset lost. Seed and upset points
+    are weighted by how many of the ranking's top 20 played (x0.6 to x1.4). The best three
     tournaments of the month count.
     """
     finishes = [
@@ -490,10 +496,12 @@ def month_scores(data, month, region):
         e, p = f["event_id"], f["player"]
         size = min(max((f["entrants"] or 0) / 16, 0.5), 2)
         level = min(max(0.6 + 0.08 * strength[e], 0.6), 1.4)
-        place = PLACE_POINTS.get(f["placement"], 0) * size
-        seed = min(2 * max(tier(f["seed"]) - tier(f["placement"]), 0), 10) if f["seed"] else 0
+        place = PLACE_POINTS.get(f["placement"], 0) * size * PLACE_WEIGHT
+        rise = max(tier(f["seed"]) - tier(f["placement"]), 0) if f["seed"] else 0
         upsets = won[(p, e)]
-        bonus = sum(1.5 * min(m.factor, 3) + (2 if m.loser in top10 else 0) for m in upsets)
+        bonus = sum(
+            UPSET_POINTS * min(m.factor, UPSET_CAP) + (2 if m.loser in top10 else 0) for m in upsets
+        )
         slips = sum(min(m.factor, 3) for m in lost[(p, e)])
         results[p].append(
             dict(
@@ -504,7 +512,7 @@ def month_scores(data, month, region):
                 seed=f["seed"],
                 upsets=len(upsets),
                 top10_wins=sum(1 for m in upsets if m.loser in top10),
-                points=round(place + (seed + bonus - slips) * level, 1),
+                points=round(place + (RISE_POINTS * rise + bonus - slips) * level, 1),
             )
         )
     rows = []
@@ -515,7 +523,7 @@ def month_scores(data, month, region):
                 id=str(p),
                 tag=data.tags.get(p),
                 points=round(sum(r["points"] for r in best), 1),
-                results=best,
+                results=[r for r in best if r["points"] > 0],
             )
         )
     return sorted(rows, key=lambda r: (-r["points"], r["tag"] or ""))
@@ -542,7 +550,11 @@ def player_of_month(data, month=None, now=None):
                 region=key,
                 name=name,
                 winner=rows[0] if rows and rows[0]["points"] > 0 else None,
-                runners=[dict(id=r["id"], tag=r["tag"], points=r["points"]) for r in rows[1:3]],
+                runners=[
+                    dict(id=r["id"], tag=r["tag"], points=r["points"])
+                    for r in rows[1:3]
+                    if r["points"] > 0
+                ],
             )
         )
     return dict(

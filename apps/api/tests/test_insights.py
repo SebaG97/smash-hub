@@ -113,14 +113,15 @@ def test_community_records_and_player_of_month():
     month = records["player_of_month"]
     assert (month["month"], month["label"]) == ("2026-09", "septiembre de 2026")
     central, east = month["regions"]
-    # Ana: 1st of 16 (15) + three tiers over her seed 5 (8) and two upsets of 3 (9), with
-    # those 17 weighted x0.6 (nobody of a ranking played) = 25.2; Beto lost both: 10 - 3.6.
+    # Ana: 1st of 16 (3.75) + four tiers over her seed 5 (12) and two upsets of 4 (16), those
+    # 28 weighted x0.6 (nobody of a ranking played) = 20.6. Beto lost both: 2.5 - 3.6 < 0,
+    # and negative scores are not listed.
     assert (central["name"], central["winner"]["tag"], central["winner"]["points"]) == (
         "Gran Asunción",
         "Ana",
-        25.2,
+        20.6,
     )
-    assert central["runners"] == [{"id": "b", "tag": "Beto", "points": 6.4}]
+    assert central["runners"] == []
     assert (east["name"], east["winner"]) == ("Ciudad del Este", None)
     assert len(records["upsets"]) == 1
     assert records["upsets"][0]["factor"] == 4
@@ -509,11 +510,11 @@ def test_player_of_month_rewards_beating_expectations_per_region():
     data.matches = [upset]
     september = engine.player_of_month(data, "2026-09", now=START + timedelta(days=60))
     central, east = september["regions"]
-    # Zio: 10 x2 (32 players) + (2 x3 tiers over seed 5 + an upset of 3 tiers on a top 10,
-    # 4.5 + 2) x0.76 (two of the top 20 played) = 29.5. Wesker: 30 - 3 x0.76 = 27.7.
-    assert (central["winner"]["tag"], central["winner"]["points"]) == ("Zio", 29.5)
+    # Zio: 5 (10 x2 for 32 players x0.25) + (3 x3 tiers over seed 5 + an upset of 4 tiers on
+    # a top 10, 8 + 2) x0.76 (two of the top 20 played) = 19.4. Wesker: 7.5 - 3 x0.76 = 5.2.
+    assert (central["winner"]["tag"], central["winner"]["points"]) == ("Zio", 19.4)
     assert central["winner"]["results"][0]["top10_wins"] == 1
-    assert central["runners"] == [{"id": "w", "tag": "Wesker", "points": 27.7}]
+    assert central["runners"] == [{"id": "w", "tag": "Wesker", "points": 5.2}]
     assert east["winner"]["tag"] == "Cry"
     assert september["in_progress"] is False
     assert september["months"] == ["2026-09", "2026-10"]
@@ -527,3 +528,22 @@ def test_player_of_month_rewards_beating_expectations_per_region():
     assert [b["why"] for b in badges if b["id"] == "mes"] == [
         "Fue jugador del mes de Ciudad del Este en septiembre de 2026."
     ]
+
+
+def test_player_of_month_goes_to_the_surprise_not_the_top_seed():
+    """Mission 26: seed 10 finishing 3rd beats seed 1 doing what was expected."""
+    data = Data(tags={"f": "filho dele", "m": "MasterHand"})
+
+    def at(player, placement, seed):
+        return dict(
+            finish(player, placement, seed, entrants=16, tournament="san"),
+            city="Ciudad del Este",
+            event_id="san",
+            starts_at=START,
+        )
+
+    data.finishes = [at("f", 1, 1), at("m", 3, 10)]
+    east = engine.player_of_month(data, "2026-09", now=START + timedelta(days=60))["regions"][1]
+    # MasterHand: 7 x0.25 + 4 tiers x3 x0.6 = 8.9; filho: 15 x0.25 = 3.8.
+    assert (east["winner"]["tag"], east["winner"]["points"]) == ("MasterHand", 8.9)
+    assert east["runners"] == [{"id": "f", "tag": "filho dele", "points": 3.8}]
