@@ -255,3 +255,7 @@ Devuelve `{tournament, events, event, final, top, projected: false, groups, curr
 `final` es verdadero cuando start.gg cerró el evento o cuando ya se decidió la gran final (la ganó quien venía de winners, o se jugó el reset), aunque start.gg todavía no lo haya cerrado.
 
 La web muestra un aviso en la portada y la página `/en-vivo/{slug}`, que se actualiza cada minuto. Los admins descargan el top desde `/og/en-vivo/{slug}?event=`, marcado «parcial» mientras `final` sea falso.
+
+## Imagen del jugador del mes (Misión 28)
+
+Cada resultado de `player_of_month` agrega `wins`: hasta 3 jugadores vencidos con mejor seed, `[{tag, seed}]`, de la mayor sorpresa a la menor y sin repetir. La web genera en `/og/jugador-del-mes?month=YYYY-MM` (sin mes, el último) un PNG de 1080×1350 con un panel por región: render del main, prefijo, tag, puntos, qué hizo en cada torneo y quiénes le siguen. Los admins lo descargan y pueden reemplazar el render por una imagen propia, igual que en las otras imágenes.

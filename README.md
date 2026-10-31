@@ -156,3 +156,5 @@ Misión 25: bracket de cada evento en la página del torneo (fases, personajes p
 Misión 26: el jugador del mes premia superar lo esperado: la posición pesa poco y pesan los escalones sobre el seed y las sorpresas (ADR-018).
 
 Misión 27: página en vivo (`/en-vivo/{slug}`) con bracket y posiciones leídos de start.gg mientras se juega, e imagen del top apenas termina la gran final.
+
+Misión 28: imagen para redes de los jugadores del mes, con los datos que explican por qué ganaron.

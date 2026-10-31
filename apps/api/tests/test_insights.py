@@ -514,6 +514,7 @@ def test_player_of_month_rewards_beating_expectations_per_region():
     # a top 10, 8 + 2) x0.76 (two of the top 20 played) = 19.4. Wesker: 7.5 - 3 x0.76 = 5.2.
     assert (central["winner"]["tag"], central["winner"]["points"]) == ("Zio", 19.4)
     assert central["winner"]["results"][0]["top10_wins"] == 1
+    assert central["winner"]["results"][0]["wins"] == [{"tag": "Wesker", "seed": 1}]
     assert central["runners"] == [{"id": "w", "tag": "Wesker", "points": 5.2}]
     assert east["winner"]["tag"] == "Cry"
     assert september["in_progress"] is False

@@ -503,6 +503,10 @@ def month_scores(data, month, region):
             UPSET_POINTS * min(m.factor, UPSET_CAP) + (2 if m.loser in top10 else 0) for m in upsets
         )
         slips = sum(min(m.factor, 3) for m in lost[(p, e)])
+        # The best seeds beaten, once each (a reset repeats them), to explain the award.
+        beaten = {}
+        for m in sorted(upsets, key=lambda m: -m.factor):
+            beaten.setdefault(m.loser, m.loser_seed)
         results[p].append(
             dict(
                 tournament=f["tournament"],
@@ -512,6 +516,7 @@ def month_scores(data, month, region):
                 seed=f["seed"],
                 upsets=len(upsets),
                 top10_wins=sum(1 for m in upsets if m.loser in top10),
+                wins=[dict(tag=data.tags.get(x), seed=s) for x, s in list(beaten.items())[:3]],
                 points=round(place + (RISE_POINTS * rise + bonus - slips) * level, 1),
             )
         )

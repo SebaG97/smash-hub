@@ -27,13 +27,15 @@ async function isOrganizer(request: Request) {
   return Boolean(r?.ok);
 }
 
-async function prepare(file: File, index: number): Promise<Art> {
+async function prepare(
+  file: File,
+  slot: { width: number; height: number },
+): Promise<Art> {
   const input = sharp(Buffer.from(await file.arrayBuffer()), {
     limitInputPixels: 50_000_000,
   });
   const meta = await input.metadata();
   if (!meta.format || !FORMATS.has(meta.format)) throw new Error("format");
-  const slot = slotSize(index);
   if (meta.hasAlpha) {
     // A cutout (transparent PNG) goes where the render would.
     const { data, info } = await input
@@ -63,6 +65,7 @@ async function prepare(file: File, index: number): Promise<Art> {
 /** Uploaded images by row index, or an error response. */
 export async function readUploads(
   request: Request,
+  slot: (index: number) => { width: number; height: number } = slotSize,
 ): Promise<Map<number, Art> | Response> {
   if (!(await isOrganizer(request)))
     return problem(401, "Necesitás la clave de organizador.");
@@ -83,7 +86,7 @@ export async function readUploads(
         `La imagen de la fila ${index + 1} pesa más de 5 MB.`,
       );
     try {
-      uploads.set(index, await prepare(value, index));
+      uploads.set(index, await prepare(value, slot(index)));
     } catch {
       return problem(
         422,

@@ -347,12 +347,28 @@ function MonthRegionCard({ m, r }: { m: PlayerOfMonth; r: MonthRegion }) {
 }
 
 export function PlayerOfMonthCard({ p }: { p: PlayerOfMonth }) {
+  const winners = p.regions.filter((r) => r.winner);
   return (
-    <div className="spotlights">
-      {p.regions.map((r) => (
-        <MonthRegionCard key={r.region} m={p} r={r} />
-      ))}
-    </div>
+    <>
+      <div className="spotlights">
+        {p.regions.map((r) => (
+          <MonthRegionCard key={r.region} m={p} r={r} />
+        ))}
+      </div>
+      {winners.length > 0 && (
+        <ShareImage
+          key={p.month}
+          endpoint={`/og/jugador-del-mes?month=${p.month}`}
+          filename={`jugador-del-mes-${p.month}.png`}
+          label="Descargar imagen del jugador del mes"
+          rows={winners.map((r) => ({
+            place: 1,
+            tag: r.winner!.tag,
+            mains: r.winner!.mains,
+          }))}
+        />
+      )}
+    </>
   );
 }
 
@@ -365,11 +381,11 @@ function PlayerOfMonthHistory({ latest }: { latest: PlayerOfMonth }) {
     <section aria-labelledby="month-title">
       <h2 id="month-title">Jugador del mes</h2>
       <p className="seeding-lead">
-        Cuenta lo que hizo cada uno en los torneos del mes contra lo que se
-        esperaba: puntos por posición según el tamaño del bracket, por terminar
-        por encima de su seed y por sorpresas (más si le ganó a un top 10), y
-        resta perder contra alguien mucho peor seedeado. Valen sus tres mejores
-        torneos del mes. Hay uno por región: Gran Asunción y Ciudad del Este.
+        Premia superar lo esperado: lo que más suma es terminar por encima de su
+        seed y dar sorpresas (más si le ganó a un top 10). La posición suma poco
+        y resta perder contra alguien mucho peor seedeado. Valen sus tres
+        mejores torneos del mes. Hay uno por región: Gran Asunción y Ciudad del
+        Este.
       </p>
       <p className="month-nav">
         <button

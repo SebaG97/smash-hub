@@ -671,6 +671,17 @@ export const brand = {
   logo: () => inline("smashclublogo.jpg"),
 };
 
+/** Official render of a character (the stock icon if it fails), for other images. */
+export function renderArt(
+  main: string | undefined,
+  costume: number | undefined,
+  width: RenderWidth,
+) {
+  return art({ place: 0, tag: "", main, costume }, width);
+}
+
+export const fitArt = fit;
+
 /** Stock icon of a character as a data URI, or null. */
 export async function stockIcon(main?: string | null) {
   return (await stock({ place: 0, tag: "", main }))?.src ?? null;
