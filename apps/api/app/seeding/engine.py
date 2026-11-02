@@ -17,7 +17,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.rankings.methods import bradley_terry, elo, glicko1, wilson_lower_bound
-from app.rankings.policy import Policy, utc
+from app.rankings.policy import Policy, period_start, utc
 from app.rankings.service import calculate
 
 ALGORITHM = "seeding-multi-method-v2"
@@ -153,7 +153,12 @@ def compute(entrants, sets, *, merges, duplicates, window_start, window_end, par
             if raw != side:
                 merged_sets[side] += 1
 
-    computed = calculate(games, Policy(), end)
+    # Glicko-2 rates weekly periods and skips the one still open, so a window ending
+    # mid-week (a month's end) used to leave out that week's tournaments. Closing the
+    # period at the end of that week counts them; sets after `end` were dropped above.
+    policy = Policy()
+    closed = period_start(end - timedelta(microseconds=1), policy)
+    computed = calculate(games, policy, closed + timedelta(days=policy.period_days))
     ratings = {r["player_id"]: r for r in computed[-1][2]} if computed else {}
     elo_ratings = elo(games, k=p.elo_k)
     g1_ratings = glicko1(games)

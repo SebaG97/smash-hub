@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from app.core.config import Settings
 from app.main import create_app
 from app.seeding import service, startgg
-from app.seeding.engine import apply_overrides, compute
+from app.seeding.engine import Parameters, apply_overrides, compute
 from app.seeding.models import SeedingAuditEntry, SeedingProject, SeedingRun, SeedingSet
 
 KEY = "k" * 32
@@ -861,3 +861,28 @@ def test_rankings_move_their_end_forward_when_downloading(ranking):
             select(SeedingAuditEntry).where(SeedingAuditEntry.action == "period_end")
         ).one()
         assert entry.details["after"] == later.isoformat()
+
+
+def test_the_week_still_open_counts_for_glicko():
+    """A month can end mid-week: that week's tournaments (SaN's 10 on Friday 30/10) count."""
+    entrants = [dict(player_id="1", gamer_tag="Ace"), dict(player_id="2", gamer_tag="Bee")]
+    early = [a_set(n, "1", "2", day=4 + n % 3, event="e1") for n in range(6)]
+    # Monday 2026-01-12 opens a week; Bee wins all on Friday, the window ends on Sunday.
+    late = [a_set(10 + n, "2", "1", day=15, event="e2") for n in range(6)]
+    end = START + timedelta(days=17)
+
+    def ratings(sets):
+        rows, _ = compute(
+            entrants,
+            sets,
+            merges={},
+            duplicates={},
+            window_start=START,
+            window_end=end,
+            parameters=Parameters(min_events=0, active_days=0),
+        )
+        return {r["gamer_tag"]: r["rating"] for r in rows}
+
+    before, after = ratings(early), ratings(early + late)
+    assert before["Ace"] > before["Bee"]
+    assert after["Bee"] > before["Bee"] and after["Ace"] < before["Ace"]
