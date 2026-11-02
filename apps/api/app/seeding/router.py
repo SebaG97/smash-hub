@@ -227,6 +227,7 @@ def recalculate(
                 actor,
                 request.app.state.settings.startgg_api_token,
                 body.window_start,
+                window_end=body.window_end,
                 method=body.method,
             )
         except service.ProjectNotFound:

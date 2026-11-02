@@ -842,3 +842,22 @@ def test_rankings_from_before_the_tournament_rule_move_to_it(ranking):
         params = service.default_parameters(session, p)
         assert (params.min_sets, params.min_events, params.active_days) == (0, 2, 183)
         assert params.method == "glicko2"  # everything else is kept
+
+
+def test_rankings_move_their_end_forward_when_downloading(ranking):
+    """A ranking has no event: its period can grow with new data (an admin hit 26/10)."""
+    later = EVENT + timedelta(days=150)
+    with Session(ranking) as session:
+        p = session.scalar(select(SeedingProject))
+        with pytest.raises(service.InvalidRequest, match="marcá 'Bajar datos nuevos"):
+            service.recalculate(session, p, "Org", window_end=later)
+    with pytest.raises(service.InvalidRequest, match="mañana"):
+        service.claim_refresh(ranking, "rk", "Org", None, datetime.now(UTC) + timedelta(days=3))
+    service.claim_refresh(ranking, "rk", "Org", None, later)
+    with Session(ranking) as session:
+        p = session.scalar(select(SeedingProject))
+        assert service.utc(p.event_date) == later and p.refresh_status == "RUNNING"
+        entry = session.scalars(
+            select(SeedingAuditEntry).where(SeedingAuditEntry.action == "period_end")
+        ).one()
+        assert entry.details["after"] == later.isoformat()

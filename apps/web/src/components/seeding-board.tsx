@@ -192,7 +192,9 @@ function Recalculate({
         setBusy(true);
         const r = await send(admin, "POST", `${view.slug}/recalculate`, {
           window_start: fromInput(from),
-          window_end: refresh ? undefined : fromInput(to),
+          // Rankings can move their end forward when downloading new data.
+          window_end:
+            refresh && view.kind !== "ranking" ? undefined : fromInput(to),
           refresh,
           reset_overrides: resetMoves || undefined,
         }).catch(() => null);

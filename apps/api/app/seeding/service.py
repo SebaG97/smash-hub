@@ -309,8 +309,15 @@ def recalculate(
         raise InvalidRequest(
             "La fecha desde es anterior a los datos descargados: activa 'bajar datos nuevos'."
         )
-    if end <= start or end > utc(project.event_date):
-        raise InvalidRequest("La ventana debe terminar después de empezar y no después del evento.")
+    if end <= start:
+        raise InvalidRequest("La ventana debe terminar después de empezar.")
+    if end > utc(project.event_date):
+        if project.kind == "ranking":
+            raise InvalidRequest(
+                f"Los datos descargados llegan hasta el {local_day(project.event_date)}: "
+                "para incluir fechas posteriores marcá 'Bajar datos nuevos de start.gg'."
+            )
+        raise InvalidRequest("La ventana no puede terminar después del evento.")
     params = parameters or default_parameters(session, project)
     if method is not None:
         params = params.model_copy(update={"method": method})
@@ -684,7 +691,11 @@ def export_csv(session, project):
 # ---------------------------------------------------------------- start.gg refresh
 
 
-def claim_refresh(engine, slug, actor, window_start):
+def local_day(value):
+    return utc(value).astimezone(ASUNCION).strftime("%d/%m/%Y")
+
+
+def claim_refresh(engine, slug, actor, window_start, window_end=None):
     with Session(engine) as session:
         project = project_by_slug(session, slug, lock=True)
         now = datetime.now(UTC)
@@ -695,6 +706,24 @@ def claim_refresh(engine, slug, actor, window_start):
         ):
             raise RefreshBusy
         start = utc(window_start) if window_start else utc(project.window_start)
+        if window_end and project.kind == "ranking":
+            # A ranking has no event: downloading new data can move its end forward
+            # (or back), up to tomorrow.
+            end = utc(window_end)
+            if end > now + timedelta(days=1):
+                raise InvalidRequest("La fecha hasta no puede pasar de mañana.")
+            if end <= start:
+                raise InvalidRequest("La fecha hasta debe ser posterior a la fecha desde.")
+            if end != utc(project.event_date):
+                audit(
+                    session,
+                    project,
+                    "period_end",
+                    actor,
+                    before=utc(project.event_date).isoformat(),
+                    after=end.isoformat(),
+                )
+                project.event_date = end
         if start >= utc(project.event_date):
             raise InvalidRequest("La fecha desde debe ser anterior al evento.")
         project.refresh_status, project.refresh_started_at = "RUNNING", now
@@ -809,10 +838,12 @@ def run_refresh(engine, project_id, token, actor, start, method=None):
             session.commit()
 
 
-def start_refresh(engine, slug, actor, token, window_start=None, *, method=None, runner=None):
+def start_refresh(
+    engine, slug, actor, token, window_start=None, *, window_end=None, method=None, runner=None
+):
     if token is None or not token.get_secret_value().strip():
         raise InvalidRequest("La API no tiene STARTGG_API_TOKEN configurado.")
-    project_id, start = claim_refresh(engine, slug, actor, window_start)
+    project_id, start = claim_refresh(engine, slug, actor, window_start, window_end)
     args = (engine, project_id, token, actor, start, method)
     if runner is not None:
         runner(*args)
