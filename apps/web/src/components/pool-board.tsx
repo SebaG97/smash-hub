@@ -47,16 +47,19 @@ async function message(r: Response) {
 export function PoolBoard({
   slug,
   onChange,
+  startOpen = false,
 }: {
   slug: string;
   /** Called after the seeding changed, so the list below reloads too. */
   onChange?: () => void;
+  /** Load the pools right away (its own tab) instead of behind a button. */
+  startOpen?: boolean;
 }) {
   const admin = useAdmin();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(startOpen);
   const [data, setData] = useState<Pools | null>(null);
   const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(startOpen);
   const [picked, setPicked] = useState<PoolPlayer | null>(null);
   const [version, setVersion] = useState(0);
   const [fresh, setFresh] = useState(false);

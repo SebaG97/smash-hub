@@ -977,6 +977,16 @@ export function SeedingBoard({
   const [message, setMessage] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
+  // Sections as tabs, kept in the address (#pools) so a reload stays on the same one.
+  const [tab, setTab] = useState(() =>
+    typeof window === "undefined"
+      ? "seeds"
+      : window.location.hash.slice(1) || "seeds",
+  );
+  const choose = (id: string) => {
+    setTab(id);
+    window.history.replaceState(null, "", `#${id}`);
+  };
 
   const [version, setVersion] = useState(0);
   const load = useCallback(() => setVersion((v) => v + 1), []);
@@ -1048,6 +1058,19 @@ export function SeedingBoard({
     );
   if (view.public) return <PublicBoard view={view} />;
 
+  const tabs: [string, string][] = [
+    ["seeds", view.kind === "ranking" ? "Ranking" : "Seeds"],
+    ...(view.kind !== "ranking" && view.startgg_event_slug
+      ? ([
+          ["pools", "Pools"],
+          ["bracket", "Bracket"],
+        ] as [string, string][])
+      : []),
+    ["data", "Datos e identidades"],
+    ["images", "Imágenes"],
+  ];
+  const current = tabs.some(([id]) => id === tab) ? tab : "seeds";
+
   async function exportCsv() {
     const r = await fetch(
       `${api}/seeding/${encodeURIComponent(slug)}/export.csv`,
@@ -1115,32 +1138,6 @@ export function SeedingBoard({
           </>
         )}
       </p>
-      {/* Share images are for organizers, so they live here too (readers never see them). */}
-      <ShareImage
-        endpoint={`/og/${ranking ? "ranking" : "seeding"}/${view.slug}`}
-        filename={`${view.slug}.png`}
-        label="Descargar imagen para redes"
-        rows={view.seeds
-          .filter((s) => !ranking || s.eligible)
-          .map((s, i) => ({
-            place: ranking ? i + 1 : s.seed,
-            tag: s.gamer_tag,
-            mains: s.mains,
-          }))}
-      />
-      {ranking && <MonthlyImage view={view} />}
-      {!ranking && view.startgg_event_slug && (
-        <>
-          <PoolBoard
-            key={`pools-${view.slug}`}
-            slug={view.slug}
-            onChange={load}
-          />
-          <StartggUpload slug={view.slug} onDone={load} />
-          <BracketPreview key={view.slug} slug={view.slug} />
-        </>
-      )}
-
       <div className="seeding-actions">
         <button className="primary-button" onClick={exportCsv}>
           Exportar CSV
@@ -1179,210 +1176,278 @@ export function SeedingBoard({
         </p>
       )}
 
-      {admin && (
-        <section className="seeding-admin" aria-label="Herramientas">
-          <p>
-            Editando como <strong>{admin.name}</strong>.
-          </p>
-          <Recalculate
-            view={view}
-            admin={admin}
-            onDone={(text) => {
-              setMessage(text);
-              load();
-            }}
-          />
-        </section>
-      )}
       {message && (
         <p role="status" className="seeding-banner">
           {message}
         </p>
       )}
 
-      {view.methods?.length > 0 && view.run && (
-        <MethodPicker
-          view={view}
-          value={method}
-          onChange={(m) => setPreview(m === official ? null : m)}
-          admin={admin}
-          onAdopt={async (m) => {
-            if (
-              await act("POST", `${slug}/recalculate`, {
-                method: m,
-              })
-            ) {
-              setPreview(null);
-              setMessage(
-                `${view.methods.find((x) => x.id === m)?.label} es ahora el método oficial.`,
-              );
-            }
-          }}
-        />
-      )}
-
-      <DataPanel view={view} />
-      {admin && view.dataset.entrants > 0 && (
-        <IdentityPanel view={view} act={act} />
-      )}
-
-      <section
-        aria-label={ranking ? "Ranking" : "Seeds"}
-        className="data-section"
+      <div
+        className="event-tabs seeding-tabs"
+        role="tablist"
+        aria-label="Secciones"
       >
-        <h2>{ranking ? "Ranking" : "Seeds"}</h2>
-        <div className="seeding-table-wrap">
-          <table className="seeding-table">
-            <thead>
-              <tr>
-                <th scope="col">{ranking ? "Puesto" : "Seed"}</th>
-                <th scope="col">Jugador</th>
-                <th scope="col">Circuito</th>
-                <th scope="col">{methodLabel}</th>
-                <th scope="col">Glicko-2 ± RD</th>
-                <th scope="col">W-L</th>
-                <th scope="col">Confianza</th>
-                <th scope="col">Alertas</th>
-                {canMove && <th scope="col">Mover</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, index) => {
-                const place = previewing
-                  ? (row.ranks?.[method] ?? null)
-                  : ranking
-                    ? index + 1
-                    : row.seed;
-                return (
-                  <Fragment key={row.player_id}>
-                    <tr
-                      className={row.override ? "is-manual" : undefined}
-                      data-place={place ?? undefined}
-                    >
-                      <td>
-                        <strong>{place ?? "—"}</strong>
-                        {previewing && !ranking && (
-                          <small> (oficial {row.seed})</small>
-                        )}
-                        {!previewing && row.seed !== row.seed_algorithm && (
-                          <small> (método {row.seed_algorithm})</small>
-                        )}
-                      </td>
-                      <td>
-                        <button
-                          className="link-button"
-                          aria-expanded={open === row.player_id}
-                          onClick={() =>
-                            setOpen(
-                              open === row.player_id ? null : row.player_id,
-                            )
-                          }
+        {tabs.map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={id === current}
+            onClick={() => choose(id)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {current === "seeds" && (
+        <>
+          {view.methods?.length > 0 && view.run && (
+            <MethodPicker
+              view={view}
+              value={method}
+              onChange={(m) => setPreview(m === official ? null : m)}
+              admin={admin}
+              onAdopt={async (m) => {
+                if (
+                  await act("POST", `${slug}/recalculate`, {
+                    method: m,
+                  })
+                ) {
+                  setPreview(null);
+                  setMessage(
+                    `${view.methods.find((x) => x.id === m)?.label} es ahora el método oficial.`,
+                  );
+                }
+              }}
+            />
+          )}
+
+          <section
+            aria-label={ranking ? "Ranking" : "Seeds"}
+            className="data-section"
+          >
+            <h2>{ranking ? "Ranking" : "Seeds"}</h2>
+            <div className="seeding-table-wrap">
+              <table className="seeding-table">
+                <thead>
+                  <tr>
+                    <th scope="col">{ranking ? "Puesto" : "Seed"}</th>
+                    <th scope="col">Jugador</th>
+                    <th scope="col">Circuito</th>
+                    <th scope="col">{methodLabel}</th>
+                    <th scope="col">Glicko-2 ± RD</th>
+                    <th scope="col">W-L</th>
+                    <th scope="col">Confianza</th>
+                    <th scope="col">Alertas</th>
+                    {canMove && <th scope="col">Mover</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row, index) => {
+                    const place = previewing
+                      ? (row.ranks?.[method] ?? null)
+                      : ranking
+                        ? index + 1
+                        : row.seed;
+                    return (
+                      <Fragment key={row.player_id}>
+                        <tr
+                          className={row.override ? "is-manual" : undefined}
+                          data-place={place ?? undefined}
                         >
-                          {row.gamer_tag}
-                        </button>{" "}
-                        <MainIcons mains={row.mains} size={20} />
-                        {row.override && <span className="tag">manual</span>}
-                      </td>
-                      <td>{row.main_circuit || "—"}</td>
-                      <td>{scoreText(row, method)}</td>
-                      <td>
-                        {row.rating === null
-                          ? "—"
-                          : `${num(row.rating)} ± ${num(row.rd)}`}
-                      </td>
-                      <td>
-                        {row.wins}-{row.losses}
-                      </td>
-                      <td>{row.confidence}</td>
-                      <td className="seeding-flags">{row.flags.join(" · ")}</td>
-                      {canMove && (
-                        <td className="seeding-arrows">
-                          <button
-                            aria-label={`Subir a ${row.gamer_tag}`}
-                            disabled={row.seed === 1}
-                            onClick={() =>
-                              act("PUT", `${slug}/overrides/${row.player_id}`, {
-                                seed: row.seed - 1,
-                                reason:
-                                  row.override?.reason ||
-                                  "Ajuste manual desde la página",
-                              })
-                            }
-                          >
-                            ↑
-                          </button>
-                          <button
-                            aria-label={`Bajar a ${row.gamer_tag}`}
-                            disabled={row.seed === total}
-                            onClick={() =>
-                              act("PUT", `${slug}/overrides/${row.player_id}`, {
-                                seed: row.seed + 1,
-                                reason:
-                                  row.override?.reason ||
-                                  "Ajuste manual desde la página",
-                              })
-                            }
-                          >
-                            ↓
-                          </button>
-                        </td>
-                      )}
-                    </tr>
-                    {open === row.player_id && (
-                      <tr className="seeding-open">
-                        <td colSpan={columns}>
-                          <Details row={row} method={method} />
+                          <td>
+                            <strong>{place ?? "—"}</strong>
+                            {previewing && !ranking && (
+                              <small> (oficial {row.seed})</small>
+                            )}
+                            {!previewing && row.seed !== row.seed_algorithm && (
+                              <small> (método {row.seed_algorithm})</small>
+                            )}
+                          </td>
+                          <td>
+                            <button
+                              className="link-button"
+                              aria-expanded={open === row.player_id}
+                              onClick={() =>
+                                setOpen(
+                                  open === row.player_id ? null : row.player_id,
+                                )
+                              }
+                            >
+                              {row.gamer_tag}
+                            </button>{" "}
+                            <MainIcons mains={row.mains} size={20} />
+                            {row.override && (
+                              <span className="tag">manual</span>
+                            )}
+                          </td>
+                          <td>{row.main_circuit || "—"}</td>
+                          <td>{scoreText(row, method)}</td>
+                          <td>
+                            {row.rating === null
+                              ? "—"
+                              : `${num(row.rating)} ± ${num(row.rd)}`}
+                          </td>
+                          <td>
+                            {row.wins}-{row.losses}
+                          </td>
+                          <td>{row.confidence}</td>
+                          <td className="seeding-flags">
+                            {row.flags.join(" · ")}
+                          </td>
                           {canMove && (
-                            <div className="seeding-edit">
-                              <MoveForm
-                                row={row}
-                                total={total}
-                                onMove={(seed, reason) =>
+                            <td className="seeding-arrows">
+                              <button
+                                aria-label={`Subir a ${row.gamer_tag}`}
+                                disabled={row.seed === 1}
+                                onClick={() =>
                                   act(
                                     "PUT",
                                     `${slug}/overrides/${row.player_id}`,
-                                    { seed, reason },
+                                    {
+                                      seed: row.seed - 1,
+                                      reason:
+                                        row.override?.reason ||
+                                        "Ajuste manual desde la página",
+                                    },
                                   )
                                 }
-                              />
-                              {row.override && (
-                                <button
-                                  className="link-button"
-                                  onClick={() =>
-                                    act(
-                                      "DELETE",
-                                      `${slug}/overrides/${row.player_id}`,
-                                    )
-                                  }
-                                >
-                                  Quitar ajuste manual (volver al{" "}
-                                  {row.seed_algorithm}.º del método)
-                                </button>
-                              )}
-                            </div>
+                              >
+                                ↑
+                              </button>
+                              <button
+                                aria-label={`Bajar a ${row.gamer_tag}`}
+                                disabled={row.seed === total}
+                                onClick={() =>
+                                  act(
+                                    "PUT",
+                                    `${slug}/overrides/${row.player_id}`,
+                                    {
+                                      seed: row.seed + 1,
+                                      reason:
+                                        row.override?.reason ||
+                                        "Ajuste manual desde la página",
+                                    },
+                                  )
+                                }
+                              >
+                                ↓
+                              </button>
+                            </td>
                           )}
-                        </td>
-                      </tr>
-                    )}
-                  </Fragment>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        {ranking && (hidden.length > 0 || showAll) && (
-          <p className="seeding-lead">
-            <button
-              className="link-button"
-              onClick={() => setShowAll(!showAll)}
-            >
-              {showAll
-                ? "Ocultar a quienes no entran"
-                : `Mostrar ${hidden.length} jugadores que no entran (pocos torneos o inactivos)`}
-            </button>
-          </p>
-        )}
-      </section>
+                        </tr>
+                        {open === row.player_id && (
+                          <tr className="seeding-open">
+                            <td colSpan={columns}>
+                              <Details row={row} method={method} />
+                              {canMove && (
+                                <div className="seeding-edit">
+                                  <MoveForm
+                                    row={row}
+                                    total={total}
+                                    onMove={(seed, reason) =>
+                                      act(
+                                        "PUT",
+                                        `${slug}/overrides/${row.player_id}`,
+                                        { seed, reason },
+                                      )
+                                    }
+                                  />
+                                  {row.override && (
+                                    <button
+                                      className="link-button"
+                                      onClick={() =>
+                                        act(
+                                          "DELETE",
+                                          `${slug}/overrides/${row.player_id}`,
+                                        )
+                                      }
+                                    >
+                                      Quitar ajuste manual (volver al{" "}
+                                      {row.seed_algorithm}.º del método)
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {ranking && (hidden.length > 0 || showAll) && (
+              <p className="seeding-lead">
+                <button
+                  className="link-button"
+                  onClick={() => setShowAll(!showAll)}
+                >
+                  {showAll
+                    ? "Ocultar a quienes no entran"
+                    : `Mostrar ${hidden.length} jugadores que no entran (pocos torneos o inactivos)`}
+                </button>
+              </p>
+            )}
+          </section>
+        </>
+      )}
+      {current === "pools" && view.startgg_event_slug && (
+        <>
+          <PoolBoard
+            key={`pools-${view.slug}`}
+            slug={view.slug}
+            onChange={load}
+            startOpen
+          />
+          <StartggUpload slug={view.slug} onDone={load} />
+        </>
+      )}
+      {current === "bracket" && view.startgg_event_slug && (
+        <BracketPreview key={view.slug} slug={view.slug} />
+      )}
+      {current === "data" && (
+        <>
+          {admin && (
+            <section className="seeding-admin" aria-label="Herramientas">
+              <p>
+                Editando como <strong>{admin.name}</strong>.
+              </p>
+              <Recalculate
+                view={view}
+                admin={admin}
+                onDone={(text) => {
+                  setMessage(text);
+                  load();
+                }}
+              />
+            </section>
+          )}
+          <DataPanel view={view} />
+          {admin && view.dataset.entrants > 0 && (
+            <IdentityPanel view={view} act={act} />
+          )}
+        </>
+      )}
+      {current === "images" && (
+        <section aria-label="Imágenes para redes">
+          <ShareImage
+            endpoint={`/og/${ranking ? "ranking" : "seeding"}/${view.slug}`}
+            filename={`${view.slug}.png`}
+            label="Descargar imagen para redes"
+            rows={view.seeds
+              .filter((s) => !ranking || s.eligible)
+              .map((s, i) => ({
+                place: ranking ? i + 1 : s.seed,
+                tag: s.gamer_tag,
+                mains: s.mains,
+              }))}
+          />
+          {ranking && <MonthlyImage view={view} />}
+        </section>
+      )}
     </div>
   );
 }
