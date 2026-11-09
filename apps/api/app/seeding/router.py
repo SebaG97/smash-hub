@@ -387,6 +387,7 @@ def pool_view(request: Request, slug: str, actor: Admin, fresh: bool = False):
             raise HTTPException(422, str(exc)) from None
         found = _start_gg_pools(request, project, fresh)
         service._public_prefixes(session, rows, rows)
+        service.with_countries(session, rows)
         hub = hub_players(session, [r["player_id"] for r in rows])
         shown = teams.display(session, set(hub.values()))
         data = engine.cached(session)
@@ -544,3 +545,26 @@ def push_upload(request: Request, slug: str, body: PushRequest, actor: Admin):
     return dict(
         status="pushed", phase=phase, changed=len(found["changes"]), verified=not wrong, wrong=wrong
     )
+
+
+# ---------------------------------------------------------------- flags (Mission 32)
+
+
+class CountryRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    country: str | None = Field(default=None, pattern=r"^[A-Za-z]{2}$")
+
+
+@router.put("/countries/{player_id}")
+def set_country(request: Request, player_id: str, body: CountryRequest, actor: Admin):
+    """The flag shown for a start.gg player in every seeding image; null forgets it."""
+    if not player_id.isdigit() or len(player_id) > 20:
+        raise HTTPException(422, "Jugador inválido.")
+
+    def operation(session):
+        service.set_country(
+            session, player_id, body.country.upper() if body.country else None, actor
+        )
+        return {"player_id": player_id, "country": body.country.upper() if body.country else None}
+
+    return run(request, operation, write=True)

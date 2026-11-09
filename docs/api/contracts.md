@@ -285,3 +285,10 @@ Solo admins, para seedings publicados o no: las rutas reenvían la clave del org
 - `POST /og/seeding/{slug}/pools`: PNG de 1920×1080 con cada pool de start.gg en su columna (usa `/seeding/{slug}/pools`).
 
 Cada fila lleva seed, bandera del circuito donde más compite el jugador (flagcdn.com; «ONLINE» si compite sobre todo online), ícono del main, prefijo aprobado y tag. Para esto la vista de organizador del seeding agrega `prefix` a cada fila y la de pools agrega `circuit`.
+
+## Banderas de los jugadores (Misión 32)
+
+La bandera de las imágenes del seeding era el circuito donde más compite cada jugador, y los que juegan sobre todo online no tenían. Ahora los organizadores pueden elegirla por jugador de start.gg; vale para todos los seedings (`player_countries`, migración 0017).
+
+- `PUT /api/v1/seeding/countries/{id de start.gg}` (admin) con `{country: "PY" | null}` (dos letras); `null` la borra y vuelve la del circuito.
+- Las filas de la vista de organizador del seeding y de `/pools` agregan `country` (la elegida, si no el circuito cuando es un país) y `country_chosen`.

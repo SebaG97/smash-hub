@@ -22,6 +22,8 @@ export type PoolPlayer = {
   startgg_seed: number | null;
   /** Circuit where the player competes most ("PY", "ONLINE"…), for the image's flag. */
   circuit?: string | null;
+  /** Flag chosen by organizers, else the circuit's country (Mission 32). */
+  country?: string | null;
 };
 
 export type Pools = {

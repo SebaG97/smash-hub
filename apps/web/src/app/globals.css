@@ -1905,3 +1905,33 @@ a.tag-prefix:hover {
 .upload-bad {
   color: var(--gold);
 }
+
+/* Flags for seeding images (Mission 32) */
+.flag-picker ul {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0;
+  padding: 0;
+  list-style: none;
+}
+.flag-picker li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+.flag-seed {
+  width: 2.2em;
+  color: var(--ash);
+  text-align: right;
+}
+.flag-tag {
+  min-width: 8em;
+  font-weight: 700;
+}
+.flag-picker small {
+  color: var(--ash);
+}
+.flag-picker select {
+  max-width: 100%;
+}

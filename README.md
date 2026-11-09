@@ -164,3 +164,5 @@ Misión 29: seeding armado por pools (los de start.gg), con equilibrio de cada p
 Misión 30: botón para subir el seeding a start.gg con doble verificación, apagado salvo con `STARTGG_SEEDING_WRITES=true` (ADR-019).
 
 Misión 31: imágenes del seeding en lista (top 16 a 64) y de los pools en horizontal, con banderas, mains y prefijos.
+
+Misión 32: los organizadores eligen la bandera de cada jugador para las imágenes del seeding (migración 0017).

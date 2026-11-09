@@ -932,3 +932,20 @@ def test_pools_swap_two_players_and_adopt_startgg_order(project, monkeypatch):
         assert [s["player_id"] for s in seeds] == order
         view = client.get("/api/v1/seeding/cs/pools", headers=AUTH).json()
         assert [p["player_id"] for p in view["pools"][0]["players"]] == order
+
+
+def test_organizers_choose_a_players_flag_for_every_seeding(project):
+    with client_for(project) as client:
+        seeds = client.get("/api/v1/seeding/cs", headers=AUTH).json()["seeds"]
+        first = seeds[0]
+        assert first["country"] == first["main_circuit"] and not first["country_chosen"]
+        url = f"/api/v1/seeding/countries/{first['player_id']}"
+        assert client.put(url, json={"country": "ar"}).status_code == 401
+        assert client.put(url, json={"country": "ARG"}, headers=AUTH).status_code == 422
+        assert client.put(url, json={"country": "ar"}, headers=AUTH).json()["country"] == "AR"
+        client.put(url, json={"country": "uy"}, headers=AUTH)
+        again = client.get("/api/v1/seeding/cs", headers=AUTH).json()["seeds"][0]
+        assert (again["country"], again["country_chosen"]) == ("UY", True)
+        client.put(url, json={"country": None}, headers=AUTH)
+        back = client.get("/api/v1/seeding/cs", headers=AUTH).json()["seeds"][0]
+        assert (back["country"], back["country_chosen"]) == (first["main_circuit"], False)

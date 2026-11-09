@@ -5,6 +5,7 @@ import type React from "react";
 import { useRouter } from "next/navigation";
 import { AdminDownload } from "./admin-download";
 import { BracketPreview } from "./bracket";
+import { FlagPicker } from "./flag-picker";
 import { PoolBoard } from "./pool-board";
 import { StartggUpload } from "./startgg-upload";
 import { MainIcons, WinBar, mainColor } from "./mains";
@@ -963,7 +964,13 @@ function PublicBoard({ view }: { view: PublicSeedingView }) {
 }
 
 /** Organizers: the seeding and its pools as lists for social media (Mission 31). */
-function SeedListDownloads({ view }: { view: SeedingView }) {
+function SeedListDownloads({
+  view,
+  onChange,
+}: {
+  view: SeedingView;
+  onChange: () => void;
+}) {
   const [top, setTop] = useState(32);
   return (
     <div className="seed-list-downloads">
@@ -990,6 +997,7 @@ function SeedListDownloads({ view }: { view: SeedingView }) {
           label="Descargar pools (horizontal)"
         />
       )}
+      <FlagPicker rows={view.seeds.slice(0, top)} onChange={onChange} />
     </div>
   );
 }
@@ -1479,7 +1487,7 @@ export function SeedingBoard({
               }))}
           />
           {ranking && <MonthlyImage view={view} />}
-          {!ranking && <SeedListDownloads view={view} />}
+          {!ranking && <SeedListDownloads view={view} onChange={load} />}
         </section>
       )}
     </div>

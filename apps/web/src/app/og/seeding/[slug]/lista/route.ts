@@ -24,7 +24,7 @@ export async function POST(request: Request, { params }: Params) {
       tag: s.gamer_tag,
       prefix: s.prefix,
       main: s.mains?.[0]?.character,
-      circuit: s.main_circuit,
+      circuit: s.country ?? s.main_circuit,
     })),
   });
 }

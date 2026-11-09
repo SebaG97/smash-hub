@@ -209,7 +209,9 @@ function Footer() {
       }}
     >
       <div style={{ display: "flex" }}>Smash Club Paraguay</div>
-      <div style={{ display: "flex" }}>Bandera: circuito donde más compite</div>
+      <div style={{ display: "flex" }}>
+        Bandera: país del jugador o circuito donde más compite
+      </div>
     </div>
   );
 }
@@ -240,8 +242,9 @@ export async function seedListImage(data: {
   const rows = data.rows.slice(0, 64);
   const perColumn = Math.max(Math.ceil(rows.length / 2), 1);
   const gap = 6;
+  // Rows grow when there are few, so a top 16 fills the image too.
   const height = Math.min(
-    62,
+    100,
     Math.floor((1350 - 72 - 92 - 26 - 50 - gap * perColumn) / perColumn),
   );
   const [font, logo, art] = await Promise.all([

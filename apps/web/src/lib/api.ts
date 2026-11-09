@@ -180,6 +180,9 @@ export type SeedingRow = {
   gamer_tag: string;
   /** Approved team prefix (Mission 22). */
   prefix?: string | null;
+  /** Flag for images: chosen by organizers, else the circuit's country (Mission 32). */
+  country?: string | null;
+  country_chosen?: boolean;
   rating: number | null;
   rd: number | null;
   conservative: number | null;

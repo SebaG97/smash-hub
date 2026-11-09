@@ -162,3 +162,19 @@ class SeedingAuditEntry(Record, Base):
     action = Column(String(40), nullable=False)
     actor = Column(String(60), nullable=False)
     details = Column(JSON, nullable=False)
+
+
+class PlayerCountry(Base):
+    """Flag organizers chose for a start.gg player (Mission 32).
+
+    The seeding only knows the circuit where someone competes most, which is "ONLINE" for
+    players who mostly play online and a neighbor country for some travelers. Kept per
+    start.gg player, so it carries over to every seeding.
+    """
+
+    __tablename__ = "player_countries"
+    startgg_player_id = Column(String(20), primary_key=True)
+    country = Column(String(2), nullable=False)
+    actor = Column(String(60))
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
+    __table_args__ = (CheckConstraint("country ~ '^[A-Z]{2}$'", name="country"),)

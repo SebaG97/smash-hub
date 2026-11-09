@@ -26,7 +26,7 @@ export async function POST(request: Request, { params }: Params) {
         tag: x.tag,
         prefix: x.prefix,
         main: x.mains?.[0]?.character,
-        circuit: x.circuit,
+        circuit: x.country ?? x.circuit,
       })),
     })),
   });

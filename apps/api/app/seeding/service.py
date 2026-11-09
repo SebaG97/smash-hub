@@ -541,8 +541,9 @@ def clear_override(session, project, player_id, actor):
 
 def view(session, project):
     run, rows = final_seeding(session, project)
-    # Approved team prefixes for organizers too (their share images show them).
+    # Approved team prefixes and flags for organizers too (their share images show them).
     _public_prefixes(session, rows, rows)
+    with_countries(session, rows)
     sets = session.scalars(select(SeedingSet).where(SeedingSet.project_id == project.id)).all()
     entrants = session.scalars(
         select(SeedingEntrant).where(SeedingEntrant.project_id == project.id)
@@ -862,6 +863,42 @@ PUBLIC_ROW = {
     "seeding": ("seed", "gamer_tag", "mains"),
     "ranking": ("seed", "gamer_tag", "mains", "wins", "losses", "sets", "last_event"),
 }
+
+
+def with_countries(session, rows):
+    """Each row's flag: the one organizers chose, else the circuit where the player
+    competes most when it is a country (Mission 32)."""
+    from app.seeding.models import PlayerCountry
+
+    chosen = dict(
+        session.execute(
+            select(PlayerCountry.startgg_player_id, PlayerCountry.country).where(
+                PlayerCountry.startgg_player_id.in_([r["player_id"] for r in rows])
+            )
+        ).all()
+    )
+    for r in rows:
+        circuit = r.get("main_circuit")
+        own = circuit if circuit and len(circuit) == 2 else None
+        r["country"] = chosen.get(r["player_id"]) or own
+        r["country_chosen"] = r["player_id"] in chosen
+    return rows
+
+
+def set_country(session, player_id, country, actor):
+    """Choose (or with None, forget) the flag of a start.gg player."""
+    from app.seeding.models import PlayerCountry
+
+    found = session.get(PlayerCountry, player_id)
+    if country is None:
+        if found:
+            session.delete(found)
+        return
+    if found is None:
+        session.add(PlayerCountry(startgg_player_id=player_id, country=country, actor=actor))
+    else:
+        found.country, found.actor = country, actor
+        found.updated_at = datetime.now(UTC)
 
 
 def _public_prefixes(session, rows, seeds):
