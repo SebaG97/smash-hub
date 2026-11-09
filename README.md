@@ -166,3 +166,5 @@ Misión 30: botón para subir el seeding a start.gg con doble verificación, apa
 Misión 31: imágenes del seeding en lista (top 16 a 64) y de los pools en horizontal, con banderas, mains y prefijos.
 
 Misión 32: los organizadores eligen la bandera de cada jugador para las imágenes del seeding (migración 0017).
+
+Misión 33: «Partidas en vivo» en la portada, con jugadores, seeds, pool, ronda, BO3/BO5, marcador, setup y stream.

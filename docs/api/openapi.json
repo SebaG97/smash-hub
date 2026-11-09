@@ -4545,6 +4545,26 @@
         }
       }
     },
+    "/api/v1/live/matches": {
+      "get": {
+        "tags": [
+          "live"
+        ],
+        "summary": "Live Matches",
+        "description": "Sets being played or called right now in every live tournament (Mission 33).",
+        "operationId": "live_matches_api_v1_live_matches_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/live/{slug}": {
       "get": {
         "tags": [

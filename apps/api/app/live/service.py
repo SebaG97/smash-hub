@@ -4,6 +4,7 @@ Read only and never stored: the official results still come from the import. `fe
 start.gg and `build` is pure, so it can be tested without either start.gg or a database.
 """
 
+import re
 from collections import Counter
 from datetime import UTC, datetime
 
@@ -120,7 +121,9 @@ def status_of(result):
     if result.get("state") == 3:
         scores = [score_of(slot) for slot in result.get("slots") or []]
         return "dq" if -1 in scores else "played"
-    return "live" if result.get("state") in RUNNING else "pending"
+    if result.get("state") == 6:
+        return "called"  # called to a setup, not started yet
+    return "live" if result.get("state") == 2 else "pending"
 
 
 def shown(result):
@@ -131,7 +134,21 @@ def shown(result):
     return bool(present) or result.get("fullRoundText") != "Grand Final Reset"
 
 
-def set_view(result, approve, hub):
+def best_of(group_name, result):
+    """3 or 5 from the phase name ("Pools (BO3)"), else from a decisive score; None when
+    unknown. start.gg's totalGames says 5 even where organizers play best of 3."""
+    found = re.search(r"\bBO\s?(\d+)\b", group_name or "", re.IGNORECASE)
+    if found:
+        return int(found[1])
+    scores = [s for s in (score_of(slot) for slot in result.get("slots") or []) if s]
+    if scores and max(scores) >= 3:
+        return 5
+    if result.get("state") == 3 and scores and max(scores) == 2:
+        return 3
+    return None
+
+
+def set_view(result, approve, hub, *, group_name=None, known_mains=None):
     slots = (result.get("slots") or [])[:2]
     slots += [{}] * (2 - len(slots))
     ids = [str((s.get("entrant") or {}).get("id") or "") for s in slots]
@@ -165,7 +182,9 @@ def set_view(result, approve, hub):
             else dict(tag=None, prefix=None, startgg_player_id=None, seed=seed)
         )
         score = score_of(slot)
-        player = hub.get(found.pop("startgg_player_id"))
+        startgg_id = found.pop("startgg_player_id")
+        player = hub.get(startgg_id)
+        known = (known_mains or {}).get(startgg_id) or []
         sides.append(
             dict(
                 **found,
@@ -173,11 +192,19 @@ def set_view(result, approve, hub):
                 score=score if score is not None and score >= 0 else None,
                 winner=bool(entrant) and winner == ids[i],
                 characters=[dict(name=n, icon=None) for n in used[i]],
+                # The character picked last in this set, else the player's usual main.
+                main=used[i][-1] if used[i] else (known[0]["character"] if known else None),
             )
         )
     completed = result.get("completedAt")
+    stream = result.get("stream") or {}
     return dict(
         status=status_of(result),
+        best_of=best_of(group_name, result),
+        station=(result.get("station") or {}).get("number"),
+        stream=dict(name=stream["streamName"], source=stream.get("streamSource"))
+        if stream.get("streamName")
+        else None,
         completed_at=datetime.fromtimestamp(completed, UTC).isoformat() if completed else None,
         sides=sides,
         games=detail,
@@ -262,7 +289,9 @@ def build(raw, *, approve, hub, known_mains=None, costumes=None):
                 ],
             )
             if visible:
-                node.update(set_view(r, approve, hub))
+                node.update(
+                    set_view(r, approve, hub, group_name=group["name"], known_mains=known_mains)
+                )
             nodes.append(node)
         groups.append(
             dict(
@@ -322,3 +351,28 @@ def build(raw, *, approve, hub, known_mains=None, costumes=None):
         current=current or (played[-1] if played else groups[0]["id"] if groups else None),
         updated_at=datetime.now(UTC).isoformat(),
     )
+
+
+def matches(live, slug):
+    """Sets being played or called to a setup, for the home page (Mission 33)."""
+    found = []
+    for group in live["groups"]:
+        for column in group["winners"] + group["losers"]:
+            for s in column["sets"]:
+                if s["status"] in ("live", "called"):
+                    found.append(
+                        dict(
+                            id=s["id"],
+                            tournament=live["tournament"]["name"],
+                            slug=slug,
+                            group=group["name"],
+                            round=column["label"],
+                            status=s["status"],
+                            best_of=s.get("best_of"),
+                            station=s.get("station"),
+                            stream=s.get("stream"),
+                            sides=s["sides"],
+                        )
+                    )
+    # Sets being played first, then the ones called, by setup.
+    return sorted(found, key=lambda m: (m["status"] != "live", m["station"] or 999))

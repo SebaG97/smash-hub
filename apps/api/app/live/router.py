@@ -89,6 +89,25 @@ def live(request: Request):
     return {"items": tournaments(request)}
 
 
+MATCHES_SHOWN = 8
+
+
+@router.get("/matches")
+def live_matches(request: Request):
+    """Sets being played or called right now in every live tournament (Mission 33)."""
+    found = []
+    for t in tournaments(request):
+        if not t["active"]:
+            continue
+        try:
+            live = reading(request, t["slug"], None)
+        except HTTPException:
+            continue  # one tournament failing must not hide the others
+        found += service.matches(live, t["slug"])
+    found.sort(key=lambda m: (m["status"] != "live", m["station"] or 999))
+    return {"items": found[:MATCHES_SHOWN], "total": len(found)}
+
+
 @router.get("/{slug}")
 def tournament(
     request: Request,
@@ -99,6 +118,11 @@ def tournament(
     start.gg token on arbitrary ones."""
     if not any(t["slug"] == slug for t in tournaments(request)):
         raise HTTPException(404, "Ese torneo no está en vivo")
+    return reading(request, slug, event)
+
+
+def reading(request, slug, event):
+    """The shared, cached reading of one event (see LIVE_SECONDS)."""
     key = (slug, event)
     hit = _events.get(key)
     if hit and time.monotonic() - hit[0] < LIVE_SECONDS:

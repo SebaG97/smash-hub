@@ -5,6 +5,8 @@ query LiveSets($id: ID!, $page: Int!, $perPage: Int!) {
       pageInfo { total totalPages }
       nodes {
         id state round fullRoundText completedAt winnerId displayScore
+        station { number }
+        stream { streamName streamSource }
         games { orderNum winnerId selections { entrant { id } character { name } } }
         slots {
           prereqId prereqType prereqPlacement

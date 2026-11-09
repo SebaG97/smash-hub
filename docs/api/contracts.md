@@ -292,3 +292,10 @@ La bandera de las imágenes del seeding era el circuito donde más compite cada 
 
 - `PUT /api/v1/seeding/countries/{id de start.gg}` (admin) con `{country: "PY" | null}` (dos letras); `null` la borra y vuelve la del circuito.
 - Las filas de la vista de organizador del seeding y de `/pools` agregan `country` (la elegida, si no el circuito cuando es un país) y `country_chosen`.
+
+## Partidas en vivo (Misión 33)
+
+- Los sets de `/live/{slug}` agregan `best_of` (del nombre de la fase, «Pools (BO3)»; si no, 5 con un marcador de 3 y 3 con un set terminado 2–x; `null` si no se sabe: el `totalGames` de start.gg dice 5 incluso en pools BO3), `station` (número de setup), `stream` (`{name, source}` o `null`) y en cada lado `main` (el último personaje que usó en el set o, si no hay, su main en el hub). `status` distingue `called` (llamados a un setup, estado 6) de `live` (en juego, estado 2).
+- `GET /api/v1/live/matches` junta los sets `live` y después los `called` (por setup) de todos los torneos en curso, con `{id, tournament, slug, group, round, status, best_of, station, stream, sides}`; hasta 8 en `items` y el total en `total`. Usa la misma lectura de 60 segundos que la página en vivo; un torneo que falla no oculta a los demás.
+
+La portada muestra «Partidas en vivo» solo cuando hay alguna, y se actualiza cada minuto.

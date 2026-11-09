@@ -279,3 +279,55 @@ def test_only_listed_tournaments_are_read_and_a_failure_keeps_the_last_reading(d
         live_router._events[key] = (-999, live_router._events[key][1])
         assert c.get("/api/v1/live/sans").json()["stale"] is True
         assert c.get("/api/v1/live/Bad_Slug").status_code == 422
+
+
+def test_best_of_comes_from_the_phase_name_or_a_decisive_score():
+    played = result(1, 1, slot(1, 3), slot(2, 1), winner=1)
+    assert service.best_of("Pools (BO3) · 2", played) == 3  # the name wins
+    assert service.best_of("TOP 32 (bo5)", result(1, 1, slot(1), slot(2), state=1)) == 5
+    assert service.best_of("Bracket", played) == 5
+    assert service.best_of("Bracket", result(1, 1, slot(1, 2), slot(2, 0), winner=1)) == 3
+    # 2-1 in progress could still be a best of 5.
+    assert service.best_of("Bracket", result(1, 1, slot(1, 2), slot(2, 1), state=2)) is None
+
+
+def test_home_lists_sets_being_played_then_the_ones_called():
+    playing = dict(
+        result(10, 1, slot(1, 1, seed=1), slot(2, 0, seed=8), state=2), station={"number": 4}
+    )
+    called = dict(
+        result(11, 1, slot(3, seed=4), slot(4, seed=5), state=6),
+        station={"number": 1},
+        stream={"streamName": "smashpy", "streamSource": "TWITCH"},
+    )
+    data = raw([called, playing, result(12, 1, slot(5, 2), slot(6, 0), winner=5)])
+    data["groups"][0]["name"] = "Pools (BO3) · 1"
+    live = build(data, known_mains={"104": [dict(character="Zelda")]})
+    found = service.matches(live, "sans")
+    assert [(m["id"], m["status"], m["station"]) for m in found] == [
+        ("10", "live", 4),
+        ("11", "called", 1),
+    ]
+    first, second = found
+    assert (first["group"], first["round"], first["best_of"]) == (
+        "Pools (BO3) · 1",
+        "Winners ronda 1",
+        3,
+    )
+    assert [(s["seed"], s["score"]) for s in first["sides"]] == [(1, 1), (8, 0)]
+    assert second["stream"] == {"name": "smashpy", "source": "TWITCH"}
+    assert [s["main"] for s in second["sides"]] == [None, "Zelda"]  # P4 has a known main
+
+
+def test_matches_endpoint_skips_tournaments_that_fail(db, monkeypatch):
+    monkeypatch.setattr(live_router, "StartGGClient", FakeClient)
+    monkeypatch.setattr(live_router, "_list", {"at": -999, "items": None})
+
+    def reading(request, slug, event):
+        from fastapi import HTTPException
+
+        raise HTTPException(502, "start.gg no respondió")
+
+    monkeypatch.setattr(live_router, "reading", reading)
+    with client(db) as c:
+        assert c.get("/api/v1/live/matches").json() == {"items": [], "total": 0}

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { Main } from "../lib/api";
 import { BracketView, type BracketGroup } from "./bracket";
+import { characterIcon } from "../lib/characters";
 import { MainIcons } from "./mains";
 import { Prefix } from "./prefix";
 import { ShareImage } from "./share-image";
@@ -218,5 +219,94 @@ export function LivePage({ slug }: { slug: string }) {
         <p className="seeding-lead">start.gg todavía no armó el bracket.</p>
       )}
     </div>
+  );
+}
+
+export type LiveMatch = {
+  id: string;
+  tournament: string;
+  slug: string;
+  group: string;
+  round: string | null;
+  status: "live" | "called";
+  best_of: number | null;
+  station: number | null;
+  stream: { name: string; source: string | null } | null;
+  sides: {
+    tag: string | null;
+    prefix: string | null;
+    seed: number | null;
+    score: number | null;
+    main: string | null;
+  }[];
+};
+
+/** Home: sets being played right now, refreshed every minute (Mission 33). */
+export function LiveMatches() {
+  const [items, setItems] = useState<LiveMatch[]>([]);
+  useEffect(() => {
+    let active = true;
+    const load = () => {
+      if (document.hidden) return;
+      fetch(`${api}/live/matches`)
+        .then((r) => (r.ok ? r.json() : { items: [] }))
+        .then((d) => active && setItems(d.items ?? []))
+        .catch(() => undefined);
+    };
+    load();
+    const timer = setInterval(load, REFRESH_MS);
+    document.addEventListener("visibilitychange", load);
+    return () => {
+      active = false;
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", load);
+    };
+  }, []);
+  if (!items.length) return null;
+  return (
+    <section className="live-matches" aria-labelledby="live-matches-title">
+      <h2 id="live-matches-title">
+        <span className="live-dot on" aria-hidden="true" />
+        Partidas en vivo
+      </h2>
+      <ul>
+        {items.map((m) => (
+          <li key={m.id}>
+            <Link href={`/en-vivo/${m.slug}`}>
+              <p className="live-match-where">
+                {[m.group, m.round, m.best_of ? `BO${m.best_of}` : null]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+              {m.sides.map((side, i) => (
+                <span key={i} className="live-match-side">
+                  <small>{side.seed ?? ""}</small>
+                  {side.main && characterIcon(side.main) ? (
+                    <img
+                      src={characterIcon(side.main)!}
+                      alt={side.main}
+                      width={22}
+                      height={22}
+                    />
+                  ) : (
+                    <span />
+                  )}
+                  <span className="live-match-tag">
+                    <Prefix prefix={side.prefix} />
+                    {side.tag ?? "—"}
+                  </span>
+                  <b>{side.score ?? 0}</b>
+                </span>
+              ))}
+              <p className="live-match-status">
+                {m.status === "live" ? "Jugándose" : "Llamados a jugar"}
+                {m.station ? ` · Setup ${m.station}` : ""}
+                {m.stream ? ` · Stream: ${m.stream.name}` : ""}
+              </p>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

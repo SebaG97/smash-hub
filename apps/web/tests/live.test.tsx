@@ -2,6 +2,7 @@ import React from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import {
+  LiveMatches,
   LiveNotice,
   LivePage,
   type LiveTournament,
@@ -152,6 +153,45 @@ it("shows a notice on the home page only while something is on", async () => {
   unmount();
   respond({ items: [] });
   const { container } = render(<LiveNotice />);
+  await new Promise((r) => setTimeout(r, 0));
+  expect(container).toBeEmptyDOMElement();
+});
+
+it("shows the sets being played on the home page", async () => {
+  respond({
+    items: [
+      {
+        id: "1",
+        tournament: "SaN's 11",
+        slug: "sans-11",
+        group: "Pools (BO3) · 2",
+        round: "Winners ronda 1",
+        status: "live",
+        best_of: 3,
+        station: 4,
+        stream: { name: "smashpy", source: "TWITCH" },
+        sides: [
+          { tag: "Zio", prefix: "BG", seed: 5, score: 1, main: "Dark Pit" },
+          { tag: "Kirb", prefix: null, seed: 28, score: 0, main: null },
+        ],
+      },
+    ],
+    total: 1,
+  });
+  render(<LiveMatches />);
+  expect(
+    await screen.findByText("Pools (BO3) · 2 · Winners ronda 1 · BO3"),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByText("Jugándose · Setup 4 · Stream: smashpy"),
+  ).toBeInTheDocument();
+  expect(screen.getByRole("img", { name: "Dark Pit" })).toBeInTheDocument();
+  expect(screen.getByRole("link")).toHaveAttribute("href", "/en-vivo/sans-11");
+});
+
+it("hides the block when nothing is being played", async () => {
+  respond({ items: [], total: 0 });
+  const { container } = render(<LiveMatches />);
   await new Promise((r) => setTimeout(r, 0));
   expect(container).toBeEmptyDOMElement();
 });

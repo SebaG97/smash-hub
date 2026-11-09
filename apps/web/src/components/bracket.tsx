@@ -298,7 +298,7 @@ function SetCard({
   return (
     <button
       type="button"
-      className={`bracket-set${guess ? " guess" : ""}${set.status === "live" ? " live" : ""}${open ? " open" : ""}`}
+      className={`bracket-set${guess ? " guess" : ""}${set.status === "live" || set.status === "called" ? " live" : ""}${open ? " open" : ""}`}
       style={style}
       aria-expanded={open}
       aria-label={label}
@@ -372,11 +372,13 @@ function SetDetail({ set }: { set: BracketSet }) {
           ? "Cruce proyectado según el seeding publicado."
           : set.status === "live"
             ? "Se está jugando."
-            : set.status === "pending"
-              ? "Todavía no se jugó."
-              : [set.status === "dq" ? "Ganó por DQ" : null, when]
-                  .filter(Boolean)
-                  .join(" · ")}
+            : set.status === "called"
+              ? "Llamados a jugar."
+              : set.status === "pending"
+                ? "Todavía no se jugó."
+                : [set.status === "dq" ? "Ganó por DQ" : null, when]
+                    .filter(Boolean)
+                    .join(" · ")}
       </p>
       {set.games.length > 0 ? (
         <ol className="bracket-games">
