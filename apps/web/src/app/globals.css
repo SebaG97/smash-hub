@@ -1860,3 +1860,48 @@ a.tag-prefix:hover {
   border-left: 3px solid var(--fire);
   background: var(--surface);
 }
+
+/* Upload to start.gg (Mission 30) */
+.startgg-upload {
+  margin: 24px 0;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.startgg-upload h3 {
+  margin: 0 0 6px;
+}
+.upload-changes {
+  width: 100%;
+  max-width: 520px;
+  margin: 10px 0;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.upload-changes th,
+.upload-changes td {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+.upload-check {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0;
+}
+.upload-check input:not([type="checkbox"]) {
+  min-width: 0;
+  flex: 1 1 200px;
+  max-width: 320px;
+}
+.primary-button.danger {
+  background: var(--loss);
+}
+.upload-ok {
+  color: var(--win);
+}
+.upload-bad {
+  color: var(--gold);
+}

@@ -160,3 +160,5 @@ Misión 27: página en vivo (`/en-vivo/{slug}`) con bracket y posiciones leídos
 Misión 28: imagen para redes de los jugadores del mes, con los datos que explican por qué ganaron.
 
 Misión 29: seeding armado por pools (los de start.gg), con equilibrio de cada pool, avisos de cruces en primera ronda y la opción de traer el seeding cargado en start.gg.
+
+Misión 30: botón para subir el seeding a start.gg con doble verificación, apagado salvo con `STARTGG_SEEDING_WRITES=true` (ADR-019).

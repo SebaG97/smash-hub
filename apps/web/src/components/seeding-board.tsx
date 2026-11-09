@@ -5,6 +5,7 @@ import type React from "react";
 import { useRouter } from "next/navigation";
 import { BracketPreview } from "./bracket";
 import { PoolBoard } from "./pool-board";
+import { StartggUpload } from "./startgg-upload";
 import { MainIcons, WinBar, mainColor } from "./mains";
 import { Prefix } from "./prefix";
 import { ShareImage } from "./share-image";
@@ -1135,6 +1136,7 @@ export function SeedingBoard({
             slug={view.slug}
             onChange={load}
           />
+          <StartggUpload slug={view.slug} onDone={load} />
           <BracketPreview key={view.slug} slug={view.slug} />
         </>
       )}

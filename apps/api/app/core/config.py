@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     db_max_overflow: int = Field(default=2, ge=0, le=5)
     db_ca_cert: str | None = None
     startgg_api_token: SecretStr | None = None
+    # Uploading a seeding to start.gg (the hub's only write there) stays off unless set.
+    startgg_seeding_writes: bool = False
     # Shared key for seeding writes; unset disables every write route.
     admin_token: SecretStr | None = None
 

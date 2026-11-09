@@ -1,4 +1,4 @@
-"""Administrative seeding CLI. The start.gg write (push) lives only here, never in HTTP.
+"""Administrative seeding CLI. The start.gg write (push) is also a guarded web button (ADR-019).
 
 python -m app.cli.seeding create --slug center-stage-2026 --event-slug tournament/x/event/y \
     --event-date 2026-11-14T00:00:00-03:00 --window-start 2025-11-14T00:00:00-03:00
@@ -26,6 +26,7 @@ from app.core.config import get_settings
 from app.database import models  # noqa: F401
 from app.database.session import build_engine
 from app.integrations.startgg.client import ImportFailure, StartGGClient
+from app.seeding import push as push_service
 from app.seeding import service, startgg
 from app.seeding.models import SeedingProject
 
@@ -193,6 +194,8 @@ def mapping_change(field, key, value):
 
 
 async def push(args, settings):
+    """Same plan and checks as the web button (Mission 30): start.gg's first phase, the
+    phase every entrant is seeded into (not the lowest phaseOrder, which can be "TOP 8")."""
     engine = engine_for(settings, write=False)
     try:
         with Session(engine) as session:
@@ -204,38 +207,13 @@ async def push(args, settings):
     if not rows:
         raise ImportFailure("no_seeding_calculated")
     async with StartGGClient(settings.startgg_api_token) as client:
-        event = await startgg.fetch_event(client, event_slug)
-        phases = sorted(event.get("phases") or [], key=lambda p: p.get("phaseOrder") or 0)
-        phase = (
-            next((p for p in phases if str(p["id"]) == str(args.phase_id)), None)
-            if args.phase_id
-            else (phases[0] if phases else None)
-        )
-        if phase is None:
-            raise ImportFailure("startgg_phase_not_found")
-        seeds = await startgg.fetch_phase_seeds(client, str(phase["id"]))
-        by_player = {}
-        for seed in seeds:
-            parts = (seed.get("entrant") or {}).get("participants") or []
-            if len(parts) == 1 and (parts[0].get("player") or {}).get("id"):
-                by_player[str(parts[0]["player"]["id"])] = str(seed["id"])
-        mapping, missing = [], []
-        for r in rows:
-            if r["player_id"] in by_player:
-                mapping.append(
-                    {"seedId": by_player.pop(r["player_id"]), "seedNum": len(mapping) + 1}
-                )
-            else:
-                missing.append(r["gamer_tag"])
-        # Entrants in start.gg but not in our seeding keep the bottom seeds in their current order.
-        for seed in seeds:
-            if str(seed["id"]) in by_player.values():
-                mapping.append({"seedId": str(seed["id"]), "seedNum": len(mapping) + 1})
+        phase, seeds = await push_service.read(client, event_slug)
+        found = push_service.plan(rows, seeds)
         report = {
-            "phase": dict(id=phase["id"], name=phase["name"]),
-            "seeds": len(mapping),
-            "not_in_startgg": missing,
-            "only_in_startgg": len(by_player),
+            "phase": phase,
+            "changes": len(found["changes"]),
+            "not_seeded": found["not_seeded"],
+            "not_on_startgg": found["not_on_startgg"],
             "top": [r["gamer_tag"] for r in rows[:8]],
         }
         if not args.confirm:
@@ -244,7 +222,12 @@ async def push(args, settings):
                 **report,
                 "next": "repeat with --confirm to write to start.gg",
             }
-        await startgg.update_phase_seeding(client, str(phase["id"]), mapping)
+        if found["not_seeded"]:
+            raise ImportFailure("entrants_without_seed")
+        await push_service.write(client, phase, found["mapping"])
+        wrong = push_service.verify(
+            found["mapping"], (await push_service.read(client, event_slug))[1]
+        )
     engine = engine_for(settings, write=False)
     try:
         with Session(engine) as session:
@@ -254,13 +237,14 @@ async def push(args, settings):
                 project,
                 "push_startgg",
                 ACTOR,
-                phase_id=str(phase["id"]),
-                seeds=len(mapping),
+                phase_id=phase["id"],
+                changed=len(found["changes"]),
+                verified=not wrong,
             )
             session.commit()
     finally:
         engine.dispose()
-    return {"status": "pushed", **report}
+    return {"status": "pushed", "verified": not wrong, **report}
 
 
 def main():

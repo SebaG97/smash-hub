@@ -269,3 +269,10 @@ Solo admins y solo seedings de un evento de start.gg. start.gg decide en qué po
 - `POST /api/v1/seeding/{slug}/pools/adopt` copia el orden cargado en start.gg como ajustes manuales y reemplaza los anteriores. Los jugadores que ya no figuran inscriptos van al final. Devuelve `{placed, missing, not_signed_up}`; con `missing` el orden queda corrido hasta bajar datos nuevos y volver a traerlo.
 
 La web lo muestra en el panel del seeding como «Armar por pools»: tocar un jugador y después otro los intercambia.
+
+## Subir el seeding a start.gg (Misión 30, ADR-019)
+
+La única escritura del hub en start.gg. Admin y seedings de un evento de start.gg; se escribe en la primera fase (la que tiene a todos los inscriptos).
+
+- `GET /api/v1/seeding/{slug}/startgg` lee start.gg y devuelve `{enabled, phase, confirm_text, changes: [{tag, before, after}], unchanged, not_seeded, not_on_startgg, digest}`. `enabled` refleja `STARTGG_SEEDING_WRITES`.
+- `POST /api/v1/seeding/{slug}/startgg` con `{digest, confirm}` escribe y vuelve a leer start.gg. 409 si está apagado, si `confirm` no es el slug, si algún inscripto de start.gg no tiene seed en el hub, si no hay cambios o si el `digest` ya no coincide (algo cambió desde la revisión). 502 si start.gg rechaza el cambio. Devuelve `{phase, changed, verified, wrong}` y queda en el registro como `push_startgg`.

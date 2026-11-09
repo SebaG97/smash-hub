@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.core.admin import Admin, MaybeAdmin
 from app.integrations.startgg.client import ImportFailure, StartGGClient
-from app.seeding import pools, service, startgg
+from app.seeding import pools, push, service, startgg
 from app.seeding.engine import Method, Parameters
 from app.seeding.models import SeedingProject
 
@@ -447,3 +447,100 @@ def pool_adopt(request: Request, slug: str, actor: Admin):
         result = pools.adopt(session, project, rows, found, actor, service.audit)
         session.commit()
         return {"status": "adopted", **result}
+
+
+# ---------------------------------------------------------------- upload to start.gg (Mission 30)
+
+
+class PushRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    digest: str = Field(pattern=r"^[0-9a-f]{16}$")
+    confirm: str = Field(max_length=200)
+
+
+def _push_plan(request, slug):
+    """(project slug, phase, plan) from the hub's seeding and start.gg read right now."""
+    with session_for(request) as session:
+        try:
+            project, rows = _pool_seeding(session, slug)
+        except service.ProjectNotFound:
+            raise HTTPException(404, "Seeding no encontrado") from None
+        except service.InvalidRequest as exc:
+            raise HTTPException(422, str(exc)) from None
+        event_slug = project.startgg_event_slug
+    token = request.app.state.settings.startgg_api_token
+
+    async def run_read():
+        async with StartGGClient(token) as client:
+            return await push.read(client, event_slug)
+
+    try:
+        phase, seeds = asyncio.run(run_read())
+    except push.Blocked as exc:
+        raise HTTPException(422, str(exc)) from None
+    except ImportFailure:
+        raise HTTPException(502, "start.gg no respondió") from None
+    return phase, seeds, push.plan(rows, seeds)
+
+
+@router.get("/{slug}/startgg")
+def push_preview(request: Request, slug: str, actor: Admin):
+    """What uploading would change on start.gg. Reads only."""
+    phase, _, found = _push_plan(request, slug)
+    return dict(
+        enabled=request.app.state.settings.startgg_seeding_writes,
+        phase=phase,
+        confirm_text=slug,
+        **{k: v for k, v in found.items() if k != "mapping"},
+    )
+
+
+@router.post("/{slug}/startgg")
+def push_upload(request: Request, slug: str, body: PushRequest, actor: Admin):
+    """Write the hub's seeding to start.gg's first phase, then read it back to verify."""
+    phase, _, found = _push_plan(request, slug)
+    try:
+        push.check(
+            found,
+            enabled=request.app.state.settings.startgg_seeding_writes,
+            typed=body.confirm,
+            expected_text=slug,
+            digest=body.digest,
+        )
+    except push.Blocked as exc:
+        raise HTTPException(409, str(exc)) from None
+    token = request.app.state.settings.startgg_api_token
+    with session_for(request) as session:
+        project = service.project_by_slug(session, slug)
+        event_slug = project.startgg_event_slug
+
+    async def run_write():
+        async with StartGGClient(token) as client:
+            await push.write(client, phase, found["mapping"])
+            return (await push.read(client, event_slug))[1]
+
+    try:
+        after = asyncio.run(run_write())
+    except ImportFailure:
+        raise HTTPException(
+            502,
+            "start.gg rechazó el cambio o no respondió. Revisá que el token sea admin del torneo "
+            "y que la fase no haya empezado.",
+        ) from None
+    wrong = push.verify(found["mapping"], after)
+    with session_for(request) as session:
+        project = service.project_by_slug(session, slug)
+        service.audit(
+            session,
+            project,
+            "push_startgg",
+            actor,
+            phase_id=phase["id"],
+            changed=len(found["changes"]),
+            verified=not wrong,
+        )
+        session.commit()
+    pools._cache.pop(event_slug, None)
+    return dict(
+        status="pushed", phase=phase, changed=len(found["changes"]), verified=not wrong, wrong=wrong
+    )
