@@ -886,3 +886,49 @@ def test_the_week_still_open_counts_for_glicko():
     before, after = ratings(early), ratings(early + late)
     assert before["Ace"] > before["Bee"]
     assert after["Bee"] > before["Bee"] and after["Ace"] < before["Ace"]
+
+
+def test_pools_swap_two_players_and_adopt_startgg_order(project, monkeypatch):
+    from app.seeding import pools
+
+    with client_for(project) as client:
+        before = client.get("/api/v1/seeding/cs", headers=AUTH).json()["seeds"]
+        a, b = before[0], before[2]
+        r = client.post(
+            "/api/v1/seeding/cs/pools/swap",
+            json={"a": a["player_id"], "b": b["player_id"]},
+            headers=AUTH,
+        )
+        assert r.status_code == 200
+        after = {
+            s["player_id"]: s["seed"]
+            for s in client.get("/api/v1/seeding/cs", headers=AUTH).json()["seeds"]
+        }
+        assert (after[a["player_id"]], after[b["player_id"]]) == (3, 1)
+        assert after[before[1]["player_id"]] == 2  # nobody else moved
+        same = {"a": a["player_id"], "b": a["player_id"]}
+        assert (
+            client.post("/api/v1/seeding/cs/pools/swap", json=same, headers=AUTH).status_code == 422
+        )
+        assert (
+            client.post("/api/v1/seeding/cs/pools/swap", json={"a": "1", "b": "2"}).status_code
+            == 401
+        )
+
+        order = [s["player_id"] for s in before][::-1]
+        found = dict(
+            phase="Pools",
+            groups=[dict(id="g", name="1")],
+            seeds=[
+                dict(seed=i, group="g", pool_seed=i, player_id=p, tag=p)
+                for i, p in enumerate(order, 1)
+            ],
+            pairs=[],
+        )
+        monkeypatch.setattr(pools, "read", lambda token, slug, fresh=False: found)
+        r = client.post("/api/v1/seeding/cs/pools/adopt", headers=AUTH)
+        assert r.json()["placed"] == len(order)
+        seeds = client.get("/api/v1/seeding/cs", headers=AUTH).json()["seeds"]
+        assert [s["player_id"] for s in seeds] == order
+        view = client.get("/api/v1/seeding/cs/pools", headers=AUTH).json()
+        assert [p["player_id"] for p in view["pools"][0]["players"]] == order

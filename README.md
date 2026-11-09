@@ -158,3 +158,5 @@ Misión 26: el jugador del mes premia superar lo esperado: la posición pesa poc
 Misión 27: página en vivo (`/en-vivo/{slug}`) con bracket y posiciones leídos de start.gg mientras se juega, e imagen del top apenas termina la gran final.
 
 Misión 28: imagen para redes de los jugadores del mes, con los datos que explican por qué ganaron.
+
+Misión 29: seeding armado por pools (los de start.gg), con equilibrio de cada pool, avisos de cruces en primera ronda y la opción de traer el seeding cargado en start.gg.

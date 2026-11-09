@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.core.admin import Admin, MaybeAdmin
 from app.integrations.startgg.client import ImportFailure, StartGGClient
-from app.seeding import service, startgg
+from app.seeding import pools, service, startgg
 from app.seeding.engine import Method, Parameters
 from app.seeding.models import SeedingProject
 
@@ -337,3 +337,113 @@ def publish(request: Request, slug: str, body: PublishRequest, actor: Admin):
         return {"published": project.published}
 
     return run(request, operation, write=True)
+
+
+# ---------------------------------------------------------------- pools (Mission 29)
+
+
+class SwapRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    a: str = Field(pattern=r"^\d{1,20}$")
+    b: str = Field(pattern=r"^\d{1,20}$")
+
+
+def _pool_seeding(session, slug):
+    project = service.project_by_slug(session, slug)
+    if project.kind != "seeding" or not project.startgg_event_slug:
+        raise service.InvalidRequest("Solo los seedings de un evento de start.gg tienen pools.")
+    _, rows = service.final_seeding(session, project)
+    if not rows:
+        raise service.InvalidRequest("Todavía no hay un cálculo de este seeding.")
+    return project, rows
+
+
+def _start_gg_pools(request, project, fresh=False):
+    try:
+        found = pools.read(
+            request.app.state.settings.startgg_api_token, project.startgg_event_slug, fresh
+        )
+    except ImportFailure:
+        raise HTTPException(502, "start.gg no respondió") from None
+    if not found or not found["seeds"]:
+        raise HTTPException(422, "start.gg todavía no armó las fases de este evento.")
+    return found
+
+
+@router.get("/{slug}/pools")
+def pool_view(request: Request, slug: str, actor: Admin, fresh: bool = False):
+    """The seeding laid on start.gg's pools, with each pool's strength and first-round
+    warnings. Reads start.gg; writes nothing there."""
+    from app.insights import engine
+    from app.insights.preview import hub_players
+    from app.teams import service as teams
+
+    with session_for(request) as session:
+        try:
+            project, rows = _pool_seeding(session, slug)
+        except service.ProjectNotFound:
+            raise HTTPException(404, "Seeding no encontrado") from None
+        except service.InvalidRequest as exc:
+            raise HTTPException(422, str(exc)) from None
+        found = _start_gg_pools(request, project, fresh)
+        service._public_prefixes(session, rows, rows)
+        hub = hub_players(session, [r["player_id"] for r in rows])
+        shown = teams.display(session, set(hub.values()))
+        data = engine.cached(session)
+        return pools.build(
+            rows,
+            found,
+            hub=hub,
+            teams={p: v["team"] for p, v in shown.items() if v.get("team")},
+            ranked=data.ranked,
+            matches=data.matches,
+        )
+
+
+@router.post("/{slug}/pools/swap")
+def pool_swap(request: Request, slug: str, body: SwapRequest, actor: Admin):
+    """Two players trade seeds, and so places in the pools (two manual moves)."""
+
+    def operation(session):
+        project = service.project_by_slug(session, slug, lock=True)
+        _, rows = service.final_seeding(session, project)
+        by = {r["player_id"]: r for r in rows}
+        if body.a == body.b or body.a not in by or body.b not in by:
+            raise service.InvalidRequest("Elegí dos jugadores distintos del seeding.")
+        a, b = by[body.a], by[body.b]
+        service.set_override(
+            session,
+            project,
+            body.a,
+            b["seed"],
+            f"Pools: cambia de lugar con {b['gamer_tag']}",
+            actor,
+        )
+        service.set_override(
+            session,
+            project,
+            body.b,
+            a["seed"],
+            f"Pools: cambia de lugar con {a['gamer_tag']}",
+            actor,
+        )
+        return {"status": "swapped", "seeds": {body.a: b["seed"], body.b: a["seed"]}}
+
+    return run(request, operation, write=True)
+
+
+@router.post("/{slug}/pools/adopt")
+def pool_adopt(request: Request, slug: str, actor: Admin):
+    """Copy the seeding already loaded on start.gg into the hub, replacing manual moves."""
+    with session_for(request) as session:
+        try:
+            project, rows = _pool_seeding(session, slug)
+        except service.ProjectNotFound:
+            raise HTTPException(404, "Seeding no encontrado") from None
+        except service.InvalidRequest as exc:
+            raise HTTPException(422, str(exc)) from None
+        found = _start_gg_pools(request, project, fresh=True)
+        project = service.project_by_slug(session, slug, lock=True)
+        result = pools.adopt(session, project, rows, found, actor, service.audit)
+        session.commit()
+        return {"status": "adopted", **result}

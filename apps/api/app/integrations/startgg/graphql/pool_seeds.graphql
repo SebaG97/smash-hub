@@ -1,0 +1,13 @@
+query PoolSeeds($id: ID!, $page: Int!, $perPage: Int!) {
+  phase(id: $id) {
+    id
+    seeds(query: {page: $page, perPage: $perPage}) {
+      pageInfo { total totalPages }
+      nodes {
+        id seedNum groupSeedNum
+        phaseGroup { id displayIdentifier }
+        entrant { name participants { gamerTag player { id } } }
+      }
+    }
+  }
+}

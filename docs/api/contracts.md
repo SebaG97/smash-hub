@@ -259,3 +259,13 @@ La web muestra un aviso en la portada y la página `/en-vivo/{slug}`, que se act
 ## Imagen del jugador del mes (Misión 28)
 
 Cada resultado de `player_of_month` agrega `wins`: hasta 3 jugadores vencidos con mejor seed, `[{tag, seed}]`, de la mayor sorpresa a la menor y sin repetir. La web genera en `/og/jugador-del-mes?month=YYYY-MM` (sin mes, el último) un PNG de 1080×1350 con un panel por región: render del main, prefijo, tag, puntos, qué hizo en cada torneo y quiénes le siguen. Los admins lo descargan y pueden reemplazar el render por una imagen propia, igual que en las otras imágenes.
+
+## Seeding por pools (Misión 29)
+
+Solo admins y solo seedings de un evento de start.gg. start.gg decide en qué pool cae cada número de seed cuando arma la fase, así que el hub lee ese mapa (solo lectura, guardado 2 minutos) y pone ahí su propio seeding. Nada se escribe en start.gg.
+
+- `GET /api/v1/seeding/{slug}/pools?fresh=true` devuelve `{phase, pools, outside, warnings, missing, startgg_seeded}`. Cada pool es `{id, name, players, top20, rating}`: jugadores en su orden dentro del pool (`{seed, pool_seed, player_id, tag, prefix, mains, rating, ranking, startgg_seed}`), cuántos del top 20 del ranking publicado tiene y su rating medio. `warnings` lista los cruces de primera ronda entre compañeros de equipo (prefijos aprobados) y las revanchas de los últimos 45 días. `missing` son inscriptos de start.gg que el hub todavía no bajó; `outside`, jugadores del hub sin lugar en start.gg. `fresh=true` vuelve a leer start.gg.
+- `POST /api/v1/seeding/{slug}/pools/swap` con `{a, b}` (ids de start.gg) intercambia los seeds de dos jugadores, y con eso sus lugares en los pools, como dos ajustes manuales con motivo «Pools: cambia de lugar con …».
+- `POST /api/v1/seeding/{slug}/pools/adopt` copia el orden cargado en start.gg como ajustes manuales y reemplaza los anteriores. Los jugadores que ya no figuran inscriptos van al final. Devuelve `{placed, missing, not_signed_up}`; con `missing` el orden queda corrido hasta bajar datos nuevos y volver a traerlo.
+
+La web lo muestra en el panel del seeding como «Armar por pools»: tocar un jugador y después otro los intercambia.

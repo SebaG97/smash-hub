@@ -1772,3 +1772,91 @@ a.tag-prefix:hover {
     animation: none;
   }
 }
+
+/* Seeding by pools (Mission 29) */
+.pool-board {
+  margin: 24px 0;
+}
+.pool-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+.pool-grid section {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  min-width: 0;
+}
+.pool-grid h3 {
+  margin: 0;
+}
+.pool-summary {
+  margin: 2px 0 8px;
+  color: var(--ash);
+  font-size: 0.85rem;
+}
+.pool-grid ol,
+.pool-outside {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pool-player {
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  align-items: center;
+  gap: 2px 8px;
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: var(--paper);
+  color: inherit;
+  font: inherit;
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+}
+.pool-player:hover {
+  border-color: var(--line);
+}
+.pool-player.picked {
+  border-color: var(--fire);
+  outline: 1px solid var(--fire);
+}
+.pool-player.flagged {
+  border-color: var(--gold);
+}
+.pool-player small {
+  grid-column: 2 / -1;
+  color: var(--ash);
+  font-size: 0.75rem;
+}
+.pool-player .pool-startgg {
+  color: var(--gold);
+}
+.pool-seed {
+  grid-row: span 2;
+  color: var(--ash);
+  font-size: 0.8rem;
+  text-align: center;
+}
+.pool-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.pool-warnings {
+  margin: 0 0 14px;
+  padding-left: 20px;
+  color: var(--gold);
+}
+.pool-picked {
+  padding: 8px 12px;
+  border-left: 3px solid var(--fire);
+  background: var(--surface);
+}
