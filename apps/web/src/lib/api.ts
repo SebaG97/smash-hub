@@ -178,6 +178,8 @@ export type SeedingRow = {
   seed_algorithm: number;
   player_id: string;
   gamer_tag: string;
+  /** Approved team prefix (Mission 22). */
+  prefix?: string | null;
   rating: number | null;
   rd: number | null;
   conservative: number | null;

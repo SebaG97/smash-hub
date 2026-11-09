@@ -276,3 +276,12 @@ La única escritura del hub en start.gg. Admin y seedings de un evento de start.
 
 - `GET /api/v1/seeding/{slug}/startgg` lee start.gg y devuelve `{enabled, phase, confirm_text, changes: [{tag, before, after}], unchanged, not_seeded, not_on_startgg, digest}`. `enabled` refleja `STARTGG_SEEDING_WRITES`.
 - `POST /api/v1/seeding/{slug}/startgg` con `{digest, confirm}` escribe y vuelve a leer start.gg. 409 si está apagado, si `confirm` no es el slug, si algún inscripto de start.gg no tiene seed en el hub, si no hay cambios o si el `digest` ya no coincide (algo cambió desde la revisión). 502 si start.gg rechaza el cambio. Devuelve `{phase, changed, verified, wrong}` y queda en el registro como `push_startgg`.
+
+## Imágenes del seeding en lista (Misión 31)
+
+Solo admins, para seedings publicados o no: las rutas reenvían la clave del organizador a la API.
+
+- `POST /og/seeding/{slug}/lista?top=32` (4 a 64): PNG de 1080×1350 con los primeros seeds en dos columnas.
+- `POST /og/seeding/{slug}/pools`: PNG de 1920×1080 con cada pool de start.gg en su columna (usa `/seeding/{slug}/pools`).
+
+Cada fila lleva seed, bandera del circuito donde más compite el jugador (flagcdn.com; «ONLINE» si compite sobre todo online), ícono del main, prefijo aprobado y tag. Para esto la vista de organizador del seeding agrega `prefix` a cada fila y la de pools agrega `circuit`.

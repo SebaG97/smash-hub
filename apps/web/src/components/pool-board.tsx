@@ -20,6 +20,8 @@ export type PoolPlayer = {
   rating: number | null;
   ranking: number | null;
   startgg_seed: number | null;
+  /** Circuit where the player competes most ("PY", "ONLINE"…), for the image's flag. */
+  circuit?: string | null;
 };
 
 export type Pools = {

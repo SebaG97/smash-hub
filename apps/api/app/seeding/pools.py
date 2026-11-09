@@ -102,6 +102,7 @@ def build(rows, found, *, hub=None, teams=None, ranked=(), matches=(), tags=None
             tag=r["gamer_tag"],
             prefix=r.get("prefix"),
             mains=(r.get("mains") or [])[:1],
+            circuit=r.get("main_circuit"),
             rating=r.get("rating"),
             ranking=ranking.get(player),
             startgg_seed=on_startgg.get(r["player_id"]),

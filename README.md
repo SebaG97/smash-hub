@@ -162,3 +162,5 @@ Misión 28: imagen para redes de los jugadores del mes, con los datos que explic
 Misión 29: seeding armado por pools (los de start.gg), con equilibrio de cada pool, avisos de cruces en primera ronda y la opción de traer el seeding cargado en start.gg.
 
 Misión 30: botón para subir el seeding a start.gg con doble verificación, apagado salvo con `STARTGG_SEEDING_WRITES=true` (ADR-019).
+
+Misión 31: imágenes del seeding en lista (top 16 a 64) y de los pools en horizontal, con banderas, mains y prefijos.

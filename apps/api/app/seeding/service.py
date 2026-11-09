@@ -541,6 +541,8 @@ def clear_override(session, project, player_id, actor):
 
 def view(session, project):
     run, rows = final_seeding(session, project)
+    # Approved team prefixes for organizers too (their share images show them).
+    _public_prefixes(session, rows, rows)
     sets = session.scalars(select(SeedingSet).where(SeedingSet.project_id == project.id)).all()
     entrants = session.scalars(
         select(SeedingEntrant).where(SeedingEntrant.project_id == project.id)

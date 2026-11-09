@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type React from "react";
 import { useRouter } from "next/navigation";
+import { AdminDownload } from "./admin-download";
 import { BracketPreview } from "./bracket";
 import { PoolBoard } from "./pool-board";
 import { StartggUpload } from "./startgg-upload";
@@ -961,6 +962,38 @@ function PublicBoard({ view }: { view: PublicSeedingView }) {
   );
 }
 
+/** Organizers: the seeding and its pools as lists for social media (Mission 31). */
+function SeedListDownloads({ view }: { view: SeedingView }) {
+  const [top, setTop] = useState(32);
+  return (
+    <div className="seed-list-downloads">
+      <label>
+        Seeds en la lista{" "}
+        <select value={top} onChange={(e) => setTop(Number(e.target.value))}>
+          {[16, 32, 48, 64].map((n) => (
+            <option key={n} value={n}>
+              Top {n}
+            </option>
+          ))}
+        </select>
+      </label>
+      <AdminDownload
+        key={top}
+        endpoint={`/og/seeding/${view.slug}/lista?top=${top}`}
+        filename={`${view.slug}-top-${top}.png`}
+        label={`Descargar lista de seeds (top ${top})`}
+      />
+      {view.startgg_event_slug && (
+        <AdminDownload
+          endpoint={`/og/seeding/${view.slug}/pools`}
+          filename={`${view.slug}-pools.png`}
+          label="Descargar pools (horizontal)"
+        />
+      )}
+    </div>
+  );
+}
+
 export function SeedingBoard({
   slug,
   base = "seeding",
@@ -1446,6 +1479,7 @@ export function SeedingBoard({
               }))}
           />
           {ranking && <MonthlyImage view={view} />}
+          {!ranking && <SeedListDownloads view={view} />}
         </section>
       )}
     </div>
