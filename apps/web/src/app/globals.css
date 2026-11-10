@@ -1472,39 +1472,97 @@ body {
 .preview-entrants tr td:first-child {
   border-left: 4px solid var(--main, transparent);
 }
-.visitors {
-  list-style: none;
+.preview-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 0;
   padding: 0;
+  list-style: none;
 }
-.visitors > li {
+.preview-stats li {
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ash);
+}
+.preview-stats strong {
+  color: var(--bone);
+  font-family: var(--display);
+  font-size: 1.15rem;
+}
+.preview-stats li.ok {
+  border-color: var(--win, var(--gold));
+  color: var(--bone);
+}
+.preview-search {
+  margin: 12px 0;
+}
+.preview-search input {
+  width: 100%;
+  max-width: 360px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--bone);
+  font: inherit;
+}
+.preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  gap: 0 32px;
+  align-items: start;
+}
+.preview-grid h2 {
+  margin-top: 18px;
+}
+.tournament-preview .flag {
+  margin-right: 4px;
+}
+.startgg-record small {
+  margin-left: 4px;
+  color: var(--ash);
+  font-size: 0.75rem;
+}
+.pager {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px 16px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--line);
+  gap: 6px;
+  margin: 14px 0;
 }
-.visitors .place {
-  min-width: 2rem;
+.pager button {
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--bone);
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
 }
-.visitor-profile {
-  flex: 1 1 16rem;
-  margin: 0;
-  color: var(--muted, inherit);
+.pager button[aria-current="page"] {
+  border-color: var(--fire);
+  background: var(--fire);
+  color: var(--on-fire);
+  font-weight: 700;
 }
-.visitor-card {
-  flex-basis: 100%;
-  padding: 12px 14px;
-  background: var(--slab);
-  border-left: 4px solid var(--gold);
+.pager button:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
-.visitor-card h3 {
-  margin: 12px 0 4px;
+.public-pools .pool-player {
+  cursor: default;
+  border-left: 3px solid var(--main, transparent);
 }
-.visitor-card ul {
-  margin: 0;
-  padding-left: 18px;
+.public-pools .pool-player.match {
+  border-color: var(--gold);
+  outline: 1px solid var(--gold);
+}
+.public-pools .pool-name a {
+  color: inherit;
 }
 
 /* Tournament art from start.gg (Mission 19) */

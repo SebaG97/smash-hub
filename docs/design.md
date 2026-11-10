@@ -69,6 +69,8 @@ En el listado de torneos y en cada torneo, los organizadores tienen la casilla �
 
 En la previa, «Sin resultados en el hub» lista a cada inscrito sin sets importados con el botón «Ver datos de start.gg». Al abrirlo se cargan, solo para ese jugador, su récord de sets presenciales del último año, cuántos torneos jugó, dónde juega, sus mains, sus tres mejores resultados y sus últimos torneos (con enlace a start.gg), en una tarjeta `Losa` con borde oro.
 
+> Reemplazado en «Previa con pestañas y pools»: la lista y el botón ya no están; el récord de start.gg y los mains de los jugadores de afuera se ven directo en la tabla de seeds.
+
 ## Logos y banners (Misión 19)
 
 Los torneos muestran su arte de start.gg: el banner arriba de la ficha del torneo y de la previa (ancho completo, bordes redondeados, recortado a 2:1), y el logo cuadrado al lado del nombre en el listado de torneos, en «Próximos torneos» de la portada y en la lista de próximos torneos de Seeding. Si un torneo no tiene banner, el logo va junto al título. Al compartir el link de una previa, la vista previa usa el banner. Las fotos de los jugadores de start.gg no se usan.
@@ -84,3 +86,14 @@ El prefijo aprobado va antes del tag, más chico y en gris, separado por una bar
 ## Ranking del mes (Misión 23)
 
 En la página del ranking, los organizadores tienen «Ranking del mes»: un selector de mes y el botón «Descargar ranking del mes». La imagen es vertical (1080×1350, formato 4:5 de Instagram): encabezado con logo, nombre y «Al cierre de octubre de 2026» en dorado; una línea gris con los requisitos para entrar; dos columnas de filas alternadas con el borde del color del main, puesto (1.º dorado, 2.º y 3.º fuego), cambio respecto al mes anterior, ícono, prefijo gris y récord; al pie, los destacados y la leyenda de los signos.
+
+## Previa con pestañas y pools
+
+La previa (`/previa/{slug}`) se ordena en pestañas: **Resumen**, **Pools** (solo con el seeding oficial publicado), **Bracket** (si hay proyección) y **Seeds** («Inscritos» mientras no se publique). La pestaña queda en la dirección (`#pools`, `#seeds`…), así un link compartido abre directo en ella.
+
+- **En números:** debajo del título, píldoras con los inscritos, cuántos países hay (si es más de uno), cuántos vienen de afuera y si el seeding oficial está publicado (borde de victoria) o no.
+- **Resumen:** favoritos, quiénes vienen en racha, cruces probables y rivalidades en una grilla de dos columnas que pasa a una en el celular. Sin seeding publicado, una línea avisa que los seeds, los pools, los favoritos y los cruces aparecen cuando se publique.
+- **Pools:** el seeding oficial repartido en los pools de la primera fase de start.gg, de solo lectura y sin las herramientas de los organizadores. Cada jugador lleva su seed dentro del pool, bandera, tag (con enlace a su ficha si está en el hub), mains y seed general. Lo sirve `GET /api/v1/insights/upcoming/{slug}/pools` (ver `docs/api/contracts.md`); si start.gg todavía no armó los pools, la API responde 404 y la pestaña muestra el aviso genérico «No se encontró este registro.».
+- **Seeds:** la tabla de inscritos con seed, bandera, récord y forma de los últimos 60 días, de a 32 por página con un paginador por rangos («1–32», «33–64»…). A quien no tiene sets en el hub se le muestra el récord de start.gg que usó el seeding oficial, marcado «start.gg».
+- **Buscador:** en Pools y Seeds, «Buscá un jugador…» filtra por tag y prefijo sin importar tildes ni mayúsculas. En Pools deja solo los pools donde aparece y resalta al jugador con borde oro; en Seeds vuelve a la primera página.
+- **Banderas:** cada inscrito lleva la bandera que eligieron los organizadores para las imágenes de seeding o, si no eligieron, la del circuito donde más juega. El nombre del país aparece al pasar el mouse y lo leen los lectores de pantalla.

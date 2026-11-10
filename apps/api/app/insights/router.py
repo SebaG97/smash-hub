@@ -177,23 +177,7 @@ def upcoming(request: Request, slug: str = Path(pattern=r"^[a-z0-9-]{1,120}$")):
     """Preview of an upcoming tournament: entrants from start.gg, the rest from the hub."""
     # Only the start.gg answer is cached: the projection is rebuilt every time, so
     # publishing, unpublishing or moving a seeding shows up right away.
-    hit = _previews.get(slug)
-    if hit and time.monotonic() - hit[0] < PREVIEW_SECONDS:
-        tournament, event, entrants = hit[1]
-    else:
-        token = request.app.state.settings.startgg_api_token
-
-        async def fetch():
-            async with StartGGClient(token) as client:
-                return await preview.fetch(client, slug)
-
-        try:
-            tournament, event, entrants = asyncio.run(fetch())
-        except ImportFailure as exc:
-            if "not_found" in str(exc):
-                raise HTTPException(404, "Tournament not found") from None
-            raise HTTPException(502, "start.gg did not answer") from None
-        _previews[slug] = (time.monotonic(), (tournament, event, entrants))
+    tournament, event, entrants = _upcoming(request, slug)
     with Session(request.app.state.engine) as s:
         order, source, profiles = preview.projected_order(s, event and event.get("slug"))
         ids = preview.hub_players(s, [e["startgg_player_id"] for e in entrants])
@@ -222,6 +206,51 @@ def upcoming(request: Request, slug: str = Path(pattern=r"^[a-z0-9-]{1,120}$")):
         else None
     )
     return result
+
+
+def _upcoming(request, slug):
+    """start.gg's tournament, singles event and entrants, kept PREVIEW_SECONDS."""
+    hit = _previews.get(slug)
+    if hit and time.monotonic() - hit[0] < PREVIEW_SECONDS:
+        return hit[1]
+    token = request.app.state.settings.startgg_api_token
+
+    async def fetch():
+        async with StartGGClient(token) as client:
+            return await preview.fetch(client, slug)
+
+    try:
+        found = asyncio.run(fetch())
+    except ImportFailure as exc:
+        if "not_found" in str(exc):
+            raise HTTPException(404, "Tournament not found") from None
+        raise HTTPException(502, "start.gg did not answer") from None
+    _previews[slug] = (time.monotonic(), found)
+    return found
+
+
+@router.get("/upcoming/{slug}/pools")
+def upcoming_pools(request: Request, slug: str = Path(pattern=r"^[a-z0-9-]{1,120}$")):
+    """The published seeding laid on start.gg's pools, for readers (read only)."""
+    from app.seeding import pools
+    from app.seeding import service as seeding
+
+    _, event, _ = _upcoming(request, slug)
+    with Session(request.app.state.engine) as s:
+        project = preview.published_seeding(s, event and event.get("slug"))
+        if project is None:
+            raise HTTPException(404, "No published seeding")
+        try:
+            found = pools.read(token_of(request), project.startgg_event_slug)
+        except ImportFailure:
+            raise HTTPException(502, "start.gg did not answer") from None
+        if not found or not found["seeds"]:
+            raise HTTPException(404, "start.gg has no pools yet")
+        _, rows = seeding.final_seeding(s, project)
+        seeding._public_prefixes(s, rows, rows)
+        seeding.with_countries(s, rows)
+        ids = preview.hub_players(s, [r["player_id"] for r in rows])
+        return preview.public_pools(pools.build(rows, found), ids)
 
 
 def token_of(request):

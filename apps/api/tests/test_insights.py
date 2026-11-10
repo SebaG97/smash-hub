@@ -583,3 +583,35 @@ def test_player_of_month_goes_to_the_surprise_not_the_top_seed():
     # MasterHand: 7 x0.25 + 4 tiers x3 x0.6 = 8.9; filho: 15 x0.25 = 3.8.
     assert (east["winner"]["tag"], east["winner"]["points"]) == ("MasterHand", 8.9)
     assert east["runners"] == [{"id": "f", "tag": "filho dele", "points": 3.8}]
+
+
+def test_preview_pools_for_readers_hide_organizer_tools():
+    from uuid import uuid4
+
+    from app.insights import preview
+    from app.seeding import pools
+
+    hub = uuid4()
+    rows = [
+        dict(seed=1, player_id="1", gamer_tag="Wesker", rating=1900, main_circuit="PY"),
+        dict(
+            seed=2, player_id="2", gamer_tag="Chag", country="MX", mains=[{"character": "Min Min"}]
+        ),
+    ]
+    found = dict(
+        phase="Pools",
+        groups=[dict(id="g1", name="A1"), dict(id="g2", name="A2"), dict(id="g3", name="A3")],
+        seeds=[
+            dict(seed=1, group="g1", pool_seed=1, player_id="1", tag="Wesker"),
+            dict(seed=2, group="g2", pool_seed=1, player_id="2", tag="Chag"),
+        ],
+        pairs=[],
+    )
+    result = preview.public_pools(pools.build(rows, found), {"1": hub})
+    assert result["phase"] == "Pools"
+    assert [p["name"] for p in result["pools"]] == ["Pool A1", "Pool A2"]  # empty A3 left out
+    wesker = result["pools"][0]["players"][0]
+    assert wesker["id"] == str(hub) and wesker["pool_seed"] == 1
+    chag = result["pools"][1]["players"][0]
+    assert (chag["id"], chag["country"], chag["mains"]) == (None, "MX", [{"character": "Min Min"}])
+    assert "rating" not in chag and "startgg_seed" not in chag

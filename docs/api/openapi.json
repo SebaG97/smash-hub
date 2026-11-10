@@ -4097,6 +4097,48 @@
         }
       }
     },
+    "/api/v1/insights/upcoming/{slug}/pools": {
+      "get": {
+        "tags": [
+          "insights"
+        ],
+        "summary": "Upcoming Pools",
+        "description": "The published seeding laid on start.gg's pools, for readers (read only).",
+        "operationId": "upcoming_pools_api_v1_insights_upcoming__slug__pools_get",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9-]{1,120}$",
+              "title": "Slug"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/insights/startgg-players/{player_id}": {
       "get": {
         "tags": [

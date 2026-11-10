@@ -1,8 +1,9 @@
 import React from "react";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { TournamentPreviewPage } from "../src/components/tournament-preview";
 
+beforeEach(() => window.history.replaceState(null, "", "/"));
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -20,80 +21,150 @@ const h2h = {
     winner: "Wesker",
   },
 };
+const chag = {
+  id: null,
+  tag: "Chag",
+  seed: 3,
+  ranked: true,
+  startgg_player_id: "70916",
+  country: "MX",
+  mains: [{ character: "Min Min", games: 9, share: 90 }],
+  startgg: {
+    wins: 40,
+    losses: 10,
+    events: 12,
+    country: "MX",
+    last_event: "2026-10-19",
+    best: [],
+    mains: [{ character: "Min Min", games: 9, share: 90 }],
+  },
+};
+const tournament = {
+  name: "Center Stage 2026",
+  slug: "center-stage-2026-1",
+  url: "https://www.start.gg/tournament/center-stage-2026-1",
+  starts_at: "2026-11-14T19:00:00+00:00",
+  city: "Asunción",
+  venue: null,
+  attendees: 76,
+  images: {
+    profile: "https://images.start.gg/logo.png",
+    banner: "https://images.start.gg/banner.png",
+  },
+};
 
-it("shows favorites, streaks, crossings and projected seeds", async () => {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async () => ({
-      ok: true,
-      json: async () => ({
-        tournament: {
-          name: "Center Stage 2026",
-          slug: "center-stage-2026-1",
-          url: "https://www.start.gg/tournament/center-stage-2026-1",
-          starts_at: "2026-11-14T19:00:00+00:00",
-          city: "Asunción",
-          venue: null,
-          attendees: 76,
-          images: {
-            profile: "https://images.start.gg/logo.png",
-            banner: "https://images.start.gg/banner.png",
-          },
+function preview(extra = {}) {
+  return {
+    tournament,
+    event: { name: "Ultimate Singles", entrants: 3 },
+    seeding: { source: "seeding", label: "Seeding oficial publicado (CS)" },
+    entrants: [
+      {
+        ...wesker,
+        ranked: true,
+        wins: 84,
+        losses: 13,
+        streak: 9,
+        country: "PY",
+      },
+      { ...zio, ranked: true, wins: 56, losses: 23, streak: 0, country: "PY" },
+      chag,
+    ],
+    favorites: [
+      { ...wesker, ranked: true, wins: 84, losses: 13, streak: 9 },
+      { ...zio, ranked: true, wins: 56, losses: 23, streak: 0 },
+      chag,
+    ],
+    on_fire: [{ ...wesker, ranked: true, streak: 9 }],
+    crossings: [{ stage: "Final de winners", a: wesker, b: zio, h2h }],
+    rivalries: [],
+    newcomers: { count: 1, tags: ["Chag"] },
+    ...extra,
+  };
+}
+
+const pools = {
+  phase: "Pools",
+  pools: [
+    {
+      id: "g1",
+      name: "Pool A1",
+      players: [
+        {
+          seed: 1,
+          pool_seed: 1,
+          player_id: "1",
+          id: "p1",
+          tag: "Wesker",
+          prefix: null,
+          mains: [],
+          country: "PY",
         },
-        event: { name: "Ultimate Singles", entrants: 3 },
-        seeding: { source: "seeding", label: "Seeding oficial publicado (CS)" },
-        entrants: [
-          { ...wesker, ranked: true, wins: 84, losses: 13, streak: 9 },
-          { ...zio, ranked: true, wins: 56, losses: 23, streak: 0 },
-          {
-            id: null,
-            tag: "Chag",
-            seed: 3,
-            ranked: false,
-            startgg_player_id: "70916",
-          },
-        ],
-        favorites: [
-          { ...wesker, ranked: true, wins: 84, losses: 13, streak: 9 },
-          { ...zio, ranked: true, wins: 56, losses: 23, streak: 0 },
-        ],
-        on_fire: [{ ...wesker, ranked: true, streak: 9 }],
-        crossings: [{ stage: "Final de winners", a: wesker, b: zio, h2h }],
-        rivalries: [],
-        newcomers: { count: 1, tags: ["Chag"] },
-      }),
-    })),
-  );
+      ],
+    },
+    {
+      id: "g2",
+      name: "Pool A2",
+      players: [
+        {
+          seed: 3,
+          pool_seed: 1,
+          player_id: "70916",
+          id: null,
+          tag: "Chag",
+          prefix: "ISG",
+          mains: [],
+          country: "MX",
+        },
+      ],
+    },
+  ],
+};
+
+function serve(body: unknown) {
+  const fetchMock = vi.fn(async (url: string) => ({
+    ok: true,
+    json: async () => (url.endsWith("/pools") ? pools : body),
+  }));
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+}
+
+it("opens on a summary with favorites, streaks and crossings", async () => {
+  serve(preview());
   render(<TournamentPreviewPage slug="center-stage-2026-1" />);
   expect(
     await screen.findByRole("heading", { name: "Previa: Center Stage 2026" }),
   ).toBeInTheDocument();
-  expect(
-    screen.getByText(/3 inscritos en Ultimate Singles/),
-  ).toBeInTheDocument();
+  expect(screen.getByText("inscritos")).toHaveTextContent("3 inscritos");
+  expect(screen.getByText("países")).toHaveTextContent("2 países");
+  expect(screen.getByText("de afuera")).toHaveTextContent("1 de afuera");
   expect(
     screen.getByText("9 sets ganados seguidos, seed 1"),
   ).toBeInTheDocument();
   expect(screen.getByText("Final de winners")).toBeInTheDocument();
   expect(screen.getByText("Wesker 9–3 Zio")).toBeInTheDocument();
-  expect(
-    screen.getByRole("heading", { name: "Inscritos y seeds" }),
-  ).toBeInTheDocument();
+  // A favorite without hub results shows the seeding's start.gg record.
+  expect(screen.getByTitle(/Sets de start.gg/)).toHaveTextContent(
+    "40–10 start.gg",
+  );
+  expect(screen.getByRole("img", { name: "México" })).toBeInTheDocument();
+  // No list of "players without hub results" anymore.
+  expect(screen.queryByText(/Sin resultados en el hub/)).toBeNull();
   // start.gg banner on top; the logo only shows when there is no banner.
   expect(
     screen.getByRole("img", { name: "Banner de Center Stage 2026" }),
   ).toHaveAttribute("src", "https://images.start.gg/banner.png");
   expect(document.querySelector(".tournament-logo")).toBeNull();
-  expect(
-    screen.getByRole("columnheader", { name: "Seed" }),
-  ).toBeInTheDocument();
-  // Players without a hub profile are listed without a link.
-  expect(screen.queryByRole("link", { name: "Chag" })).not.toBeInTheDocument();
-  expect(screen.getByText(/1 inscrito no tiene sets/)).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Ver en start.gg" })).toHaveAttribute(
     "href",
     "https://www.start.gg/tournament/center-stage-2026-1",
   );
+  expect(screen.getAllByRole("tab").map((t) => t.textContent)).toEqual([
+    "Resumen",
+    "Pools",
+    "Seeds",
+  ]);
 });
 
 it("explains a missing tournament", async () => {
@@ -107,147 +178,78 @@ it("explains a missing tournament", async () => {
   );
 });
 
-it("loads start.gg data of an entrant without hub results on demand", async () => {
-  const fetchMock = vi.fn(async (url: string) => ({
-    ok: true,
-    json: async () =>
-      url.includes("startgg-players/70916")
-        ? {
-            player_id: "70916",
-            tag: "ISG | Chag",
-            country: "MX",
-            since: "2025-10-28",
-            wins: 291,
-            losses: 91,
-            tournaments: 60,
-            mains: [{ character: "Min Min", games: 9, share: 90 }],
-            best: [
-              {
-                tournament: "Pound Cake",
-                url: "https://www.start.gg/tournament/pound-cake",
-                entrants: 150,
-                placement: 1,
-                date: "2026-10-19",
-                country: "CO",
-              },
-            ],
-            recent: [],
-          }
-        : {
-            tournament: {
-              name: "Center Stage 2026",
-              slug: "cs",
-              url: "https://www.start.gg/tournament/cs",
-              starts_at: null,
-              city: null,
-              venue: null,
-              attendees: 1,
-            },
-            event: { name: "Ultimate Singles", entrants: 1 },
-            seeding: {
-              source: "none",
-              label: "Todavía no hay un seeding oficial publicado",
-            },
-            entrants: [
-              {
-                id: null,
-                tag: "Chag",
-                seed: null,
-                ranked: false,
-                startgg_player_id: "70916",
-              },
-            ],
-            favorites: [],
-            on_fire: [],
-            crossings: [],
-            rivalries: [],
-            newcomers: { count: 1, tags: ["Chag"] },
-          },
+it("pages the seeds and searches them", async () => {
+  const many = Array.from({ length: 70 }, (_, i) => ({
+    id: `h${i + 1}`,
+    tag: i === 49 ? "José" : `Player ${i + 1}`,
+    seed: i + 1,
+    ranked: true,
+    wins: 1,
+    losses: 1,
   }));
-  vi.stubGlobal("fetch", fetchMock);
+  serve(preview({ entrants: many, event: { name: "Singles", entrants: 70 } }));
   render(<TournamentPreviewPage slug="cs" />);
-  // Without the official seeding there are no seeds, favorites or crossings.
+  fireEvent.click(await screen.findByRole("tab", { name: "Seeds" }));
+  expect(window.location.hash).toBe("#seeds");
+  expect(screen.getAllByRole("row")).toHaveLength(33); // header + 32
+  expect(screen.getByRole("link", { name: "Player 1" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "33–64" }));
+  expect(screen.getByRole("link", { name: "Player 33" })).toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: "Player 1" })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Siguiente →" }));
+  expect(screen.getAllByRole("row")).toHaveLength(7); // header + 6
+  // Searching ignores accents and starts again on the first page.
+  fireEvent.change(screen.getByRole("searchbox", { name: "Buscar jugador" }), {
+    target: { value: "jose" },
+  });
+  expect(screen.getAllByRole("row")).toHaveLength(2);
+  expect(screen.getByRole("link", { name: "José" })).toBeInTheDocument();
   expect(
-    await screen.findByRole("heading", { name: "Inscritos" }),
-  ).toBeInTheDocument();
-  expect(
-    screen.queryByRole("columnheader", { name: "Seed" }),
-  ).not.toBeInTheDocument();
-  expect(
-    screen.queryByRole("heading", { name: "Favoritos" }),
-  ).not.toBeInTheDocument();
-  expect(screen.getByText(/aparecen cuando se publique/)).toBeInTheDocument();
-  fireEvent.click(
-    await screen.findByRole("button", { name: "Ver datos de start.gg" }),
-  );
-  expect(await screen.findByText("291–91")).toBeInTheDocument();
-  expect(screen.getByText(/Juega sobre todo en México/)).toBeInTheDocument();
-  // Bare dates stay on their day in Asunción.
-  expect(screen.getByText(/1\.º de 150 en/)).toHaveTextContent(
-    "1.º de 150 en Pound Cake (Colombia), 19 oct. 2026",
-  );
-  expect(fetchMock).toHaveBeenCalledTimes(2);
+    screen.queryByRole("navigation", { name: "Páginas de seeds" }),
+  ).toBeNull();
 });
 
-it("shows the official seeding's start.gg numbers for entrants without hub results", async () => {
-  const fetchMock = vi.fn(async () => ({
-    ok: true,
-    json: async () => ({
-      tournament: {
-        name: "Center Stage 2026",
-        slug: "cs",
-        url: "https://www.start.gg/tournament/cs",
-        starts_at: null,
-        city: null,
-        venue: null,
-        attendees: 1,
-      },
-      event: { name: "Ultimate Singles", entrants: 1 },
-      seeding: { source: "seeding", label: "Seeding oficial publicado (CS)" },
-      entrants: [
-        {
-          id: null,
-          tag: "Chag",
-          seed: 1,
-          ranked: true,
-          startgg_player_id: "70916",
-          mains: [{ character: "Min Min", games: 9, share: 90 }],
-          startgg: {
-            wins: 40,
-            losses: 10,
-            events: 12,
-            country: "MX",
-            last_event: "2026-10-19",
-            best: [
-              {
-                placement: 1,
-                entrants: 150,
-                tournament: "Pound Cake",
-                date: "2026-10-19",
-              },
-            ],
-            mains: [{ character: "Min Min", games: 9, share: 90 }],
-          },
-        },
-      ],
-      favorites: [],
-      on_fire: [],
-      crossings: [],
-      rivalries: [],
-      newcomers: { count: 1, tags: ["Chag"] },
-    }),
-  }));
-  vi.stubGlobal("fetch", fetchMock);
+it("shows the official seeding in start.gg's pools", async () => {
+  const fetchMock = serve(preview());
   render(<TournamentPreviewPage slug="cs" />);
-  expect(await screen.findByText("40–10")).toBeInTheDocument();
-  expect(screen.getByText(/México ·/)).toHaveTextContent(
-    "México · 40–10 en 12 torneos · mejor: 1.º de 150 en Pound Cake",
-  );
-  // Their character shows in the visitors list and in the seeds table.
-  expect(screen.getAllByAltText(/Min Min/).length).toBeGreaterThanOrEqual(2);
-  // The full year is still one click away, without asking for it up front.
+  fireEvent.click(await screen.findByRole("tab", { name: "Pools" }));
   expect(
-    screen.getByRole("button", { name: "Último año en start.gg" }),
+    await screen.findByRole("region", { name: "Pool A1" }),
   ).toBeInTheDocument();
-  expect(fetchMock).toHaveBeenCalledTimes(1);
+  expect(fetchMock).toHaveBeenCalledWith(
+    expect.stringContaining("insights/upcoming/cs/pools"),
+    expect.anything(),
+  );
+  fireEvent.change(screen.getByRole("searchbox", { name: "Buscar jugador" }), {
+    target: { value: "isg" },
+  });
+  // Only pools with a match stay, and the match is marked.
+  expect(screen.queryByRole("region", { name: "Pool A1" })).toBeNull();
+  expect(screen.getByText("Chag").closest("li")).toHaveClass("match");
+});
+
+it("without the official seeding shows entrants but no seeds or pools", async () => {
+  serve(
+    preview({
+      seeding: {
+        source: "none",
+        label: "Todavía no hay un seeding oficial publicado",
+      },
+      entrants: [{ ...wesker, seed: null, ranked: false, wins: 3, losses: 1 }],
+      favorites: [],
+      crossings: [],
+      event: { name: "Singles", entrants: 1 },
+    }),
+  );
+  render(<TournamentPreviewPage slug="cs" />);
+  expect(
+    await screen.findByText(/aparecen cuando se publique/),
+  ).toBeInTheDocument();
+  expect(screen.getAllByRole("tab").map((t) => t.textContent)).toEqual([
+    "Resumen",
+    "Inscritos",
+  ]);
+  fireEvent.click(screen.getByRole("tab", { name: "Inscritos" }));
+  expect(screen.queryByRole("columnheader", { name: "Seed" })).toBeNull();
+  expect(screen.getByRole("link", { name: "Wesker" })).toBeInTheDocument();
 });

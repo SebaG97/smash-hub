@@ -71,7 +71,10 @@ export default function RootLayout({
         <footer>
           <Link className="footer-brand" href="/">
             Smash Club Paraguay
-            <span>Para la comunidad de Smash de Paraguay. Desarrollado por SegirSistems</span>
+            <span>
+              Para la comunidad de Smash de Paraguay. Desarrollado por
+              SegirSistems
+            </span>
           </Link>
           <Link href="/admin" className="footer-admin">
             Organizadores

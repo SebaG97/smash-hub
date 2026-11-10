@@ -54,6 +54,22 @@ async def fetch(client, slug):
     return tournament, event, entrants
 
 
+def published_seeding(session, event_slug):
+    """The published seeding of this very start.gg event, or None."""
+    from app.seeding.models import SeedingProject
+
+    if not event_slug:
+        return None
+    return session.scalar(
+        select(SeedingProject).where(
+            SeedingProject.published.is_(True),
+            SeedingProject.current_run_id.is_not(None),
+            SeedingProject.kind == "seeding",
+            SeedingProject.startgg_event_slug == event_slug,
+        )
+    )
+
+
 def projected_order(session, event_slug):
     """{start.gg player id: seed}, where it comes from and the seeding's start.gg profiles.
 
@@ -62,23 +78,11 @@ def projected_order(session, event_slug):
     profiles cover every entrant, foreign players included (see startgg_profile).
     """
     from app.seeding import service
-    from app.seeding.models import SeedingProject
 
-    published = select(SeedingProject).where(
-        SeedingProject.published.is_(True), SeedingProject.current_run_id.is_not(None)
-    )
-    seeding = (
-        session.scalar(
-            published.where(
-                SeedingProject.kind == "seeding",
-                SeedingProject.startgg_event_slug == event_slug,
-            )
-        )
-        if event_slug
-        else None
-    )
+    seeding = published_seeding(session, event_slug)
     if seeding is not None:
         _, rows = service.final_seeding(session, seeding)
+        service.with_countries(session, rows)
         return (
             {r["player_id"]: r["seed"] for r in rows},
             dict(source="seeding", label=f"Seeding oficial publicado ({seeding.name})"),
@@ -89,12 +93,14 @@ def projected_order(session, event_slug):
 
 def startgg_profile(row):
     """What the published seeding already knows about an entrant from start.gg."""
+    # The flag organizers chose (with_countries), else the circuit where they play most.
     circuit = row.get("main_circuit")
+    country = row.get("country") or (circuit if circuit and len(circuit) == 2 else None)
     return dict(
         wins=row.get("wins") or 0,
         losses=row.get("losses") or 0,
         events=row.get("events") or 0,
-        country=circuit if circuit not in (None, "ONLINE", "?") else None,
+        country=country,
         last_event=row.get("last_event"),
         best=[
             dict(
@@ -191,6 +197,7 @@ def build(data, *, tournament, event, entrants, ids, order, source, profiles=Non
         )
         person = people[-1]
         profile = profiles.get(e["startgg_player_id"])
+        person["country"] = profile["country"] if profile else None
         if profile and not person.get("wins") and not person.get("losses"):
             person["startgg"] = profile
             if profile["mains"]:
@@ -246,6 +253,24 @@ def build(data, *, tournament, event, entrants, ids, order, source, profiles=Non
         crossings=crossings,
         rivalries=rivalries,
         newcomers=dict(count=len(newcomers), tags=[p["tag"] for p in newcomers[:12]]),
+    )
+
+
+def public_pools(found_pools, ids):
+    """The seeding's pools for readers: who is in each pool, without organizer tools."""
+    keep = ("seed", "pool_seed", "player_id", "tag", "prefix", "mains", "country")
+
+    def player(p):
+        hub = ids.get(p["player_id"])
+        return {k: p.get(k) for k in keep} | dict(id=str(hub) if hub else None)
+
+    return dict(
+        phase=found_pools["phase"],
+        pools=[
+            dict(id=pool["id"], name=pool["name"], players=[player(p) for p in pool["players"]])
+            for pool in found_pools["pools"]
+            if pool["players"]
+        ],
     )
 
 
