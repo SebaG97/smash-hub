@@ -329,6 +329,41 @@ def test_preview_projects_seeds_and_finds_crossings():
     ]
     assert result["newcomers"] == {"count": 4, "tags": ["P2", "P6", "P7", "P99"]}
 
+    # The published seeding's start.gg numbers fill in entrants without hub results only.
+    row = dict(
+        wins=40,
+        losses=10,
+        events=12,
+        main_circuit="MX",
+        last_event="2026-10-19",
+        best_placements=[
+            dict(placement=1, entrants=150, tournament="Pound Cake", date="2026-10-19", score=7)
+        ],
+        mains=[{"character": "Min Min"}],
+    )
+    profiled = preview.build(
+        data,
+        tournament={"name": "Open", "slug": "tournament/open"},
+        event={"name": "Singles"},
+        entrants=entrants,
+        ids=hub,
+        order=order,
+        source={"source": "seeding", "label": "Seeding oficial"},
+        profiles={"99": preview.startgg_profile(row), "1": preview.startgg_profile(row)},
+    )
+    visitor = profiled["entrants"][-1]
+    assert visitor["startgg"]["country"] == "MX"
+    assert (visitor["startgg"]["wins"], visitor["startgg"]["losses"]) == (40, 10)
+    assert visitor["startgg"]["best"][0]["tournament"] == "Pound Cake"
+    assert visitor["mains"] == [{"character": "Min Min"}]
+    assert "startgg" not in profiled["entrants"][0]  # P1 has hub results
+    assert preview.startgg_profile(dict(main_circuit="ONLINE"))["country"] is None
+    # The projected bracket shows the visitor's character too.
+    from app.brackets.service import _projected_side
+
+    side = _projected_side(visitor)
+    assert side["characters"] == [{"name": "Min Min", "icon": None}]
+
     # Without a published official seeding there are no seeds, favorites or crossings.
     unofficial = preview.build(
         data,

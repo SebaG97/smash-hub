@@ -195,7 +195,7 @@ def upcoming(request: Request, slug: str = Path(pattern=r"^[a-z0-9-]{1,120}$")):
             raise HTTPException(502, "start.gg did not answer") from None
         _previews[slug] = (time.monotonic(), (tournament, event, entrants))
     with Session(request.app.state.engine) as s:
-        order, source = preview.projected_order(s, event and event.get("slug"))
+        order, source, profiles = preview.projected_order(s, event and event.get("slug"))
         ids = preview.hub_players(s, [e["startgg_player_id"] for e in entrants])
         result = preview.build(
             engine.cached(s),
@@ -205,8 +205,15 @@ def upcoming(request: Request, slug: str = Path(pattern=r"^[a-z0-9-]{1,120}$")):
             ids=ids,
             order=order,
             source=source,
+            profiles=profiles,
         )
         _with_mains(s, result["entrants"], None)
+        # Hub players whose imported sets carry no characters take the seeding's start.gg
+        # picks, so the table and the bracket show everyone's character.
+        for p in result["entrants"]:
+            picks = (profiles.get(p["startgg_player_id"]) or {}).get("mains")
+            if not p.get("mains") and picks:
+                p["mains"] = picks[:1]
     # Mission 25: start.gg's first phase (pools or the bracket) with the hub's published
     # seeds in it; never with start.gg's own seeds.
     result["bracket"] = (

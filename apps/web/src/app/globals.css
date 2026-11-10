@@ -1488,6 +1488,11 @@ body {
 .visitors .place {
   min-width: 2rem;
 }
+.visitor-profile {
+  flex: 1 1 16rem;
+  margin: 0;
+  color: var(--muted, inherit);
+}
 .visitor-card {
   flex-basis: 100%;
   padding: 12px 14px;

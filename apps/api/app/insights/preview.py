@@ -55,10 +55,11 @@ async def fetch(client, slug):
 
 
 def projected_order(session, event_slug):
-    """{start.gg player id: seed} and where it comes from.
+    """{start.gg player id: seed}, where it comes from and the seeding's start.gg profiles.
 
     Only a published seeding of this very event counts: without one the preview shows no
-    seeds at all, so readers never mistake a projection for the official bracket.
+    seeds at all, so readers never mistake a projection for the official bracket. The
+    profiles cover every entrant, foreign players included (see startgg_profile).
     """
     from app.seeding import service
     from app.seeding.models import SeedingProject
@@ -78,10 +79,34 @@ def projected_order(session, event_slug):
     )
     if seeding is not None:
         _, rows = service.final_seeding(session, seeding)
-        return {r["player_id"]: r["seed"] for r in rows}, dict(
-            source="seeding", label=f"Seeding oficial publicado ({seeding.name})"
+        return (
+            {r["player_id"]: r["seed"] for r in rows},
+            dict(source="seeding", label=f"Seeding oficial publicado ({seeding.name})"),
+            {r["player_id"]: startgg_profile(r) for r in rows},
         )
-    return {}, dict(source="none", label="Todavía no hay un seeding oficial publicado")
+    return {}, dict(source="none", label="Todavía no hay un seeding oficial publicado"), {}
+
+
+def startgg_profile(row):
+    """What the published seeding already knows about an entrant from start.gg."""
+    circuit = row.get("main_circuit")
+    return dict(
+        wins=row.get("wins") or 0,
+        losses=row.get("losses") or 0,
+        events=row.get("events") or 0,
+        country=circuit if circuit not in (None, "ONLINE", "?") else None,
+        last_event=row.get("last_event"),
+        best=[
+            dict(
+                placement=e["placement"],
+                entrants=e["entrants"],
+                tournament=e["tournament"],
+                date=e["date"],
+            )
+            for e in (row.get("best_placements") or [])[:3]
+        ],
+        mains=row.get("mains") or [],
+    )
 
 
 def hub_players(session, startgg_ids):
@@ -130,8 +155,12 @@ def head_to_head(data, a, b):
     )
 
 
-def build(data, *, tournament, event, entrants, ids, order, source):
-    """The preview payload; pure so it can be tested without start.gg or a database."""
+def build(data, *, tournament, event, entrants, ids, order, source, profiles=None):
+    """The preview payload; pure so it can be tested without start.gg or a database.
+
+    profiles ({start.gg player id: startgg_profile}) fill in entrants without hub results.
+    """
+    profiles = profiles or {}
     stats = {
         sgg: form(data, ids[sgg])
         for sgg in (e["startgg_player_id"] for e in entrants)
@@ -160,6 +189,12 @@ def build(data, *, tournament, event, entrants, ids, order, source):
                 **(stats.get(e["startgg_player_id"]) or {}),
             )
         )
+        person = people[-1]
+        profile = profiles.get(e["startgg_player_id"])
+        if profile and not person.get("wins") and not person.get("losses"):
+            person["startgg"] = profile
+            if profile["mains"]:
+                person["mains"] = profile["mains"][:1]
     position = {p["startgg_player_id"]: place for place, p in enumerate(people)}
     by_seed = {p["seed"]: p for p in people if p["seed"]}
     crossings = []

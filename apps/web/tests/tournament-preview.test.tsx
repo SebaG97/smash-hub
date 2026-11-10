@@ -188,3 +188,66 @@ it("loads start.gg data of an entrant without hub results on demand", async () =
   );
   expect(fetchMock).toHaveBeenCalledTimes(2);
 });
+
+it("shows the official seeding's start.gg numbers for entrants without hub results", async () => {
+  const fetchMock = vi.fn(async () => ({
+    ok: true,
+    json: async () => ({
+      tournament: {
+        name: "Center Stage 2026",
+        slug: "cs",
+        url: "https://www.start.gg/tournament/cs",
+        starts_at: null,
+        city: null,
+        venue: null,
+        attendees: 1,
+      },
+      event: { name: "Ultimate Singles", entrants: 1 },
+      seeding: { source: "seeding", label: "Seeding oficial publicado (CS)" },
+      entrants: [
+        {
+          id: null,
+          tag: "Chag",
+          seed: 1,
+          ranked: true,
+          startgg_player_id: "70916",
+          mains: [{ character: "Min Min", games: 9, share: 90 }],
+          startgg: {
+            wins: 40,
+            losses: 10,
+            events: 12,
+            country: "MX",
+            last_event: "2026-10-19",
+            best: [
+              {
+                placement: 1,
+                entrants: 150,
+                tournament: "Pound Cake",
+                date: "2026-10-19",
+              },
+            ],
+            mains: [{ character: "Min Min", games: 9, share: 90 }],
+          },
+        },
+      ],
+      favorites: [],
+      on_fire: [],
+      crossings: [],
+      rivalries: [],
+      newcomers: { count: 1, tags: ["Chag"] },
+    }),
+  }));
+  vi.stubGlobal("fetch", fetchMock);
+  render(<TournamentPreviewPage slug="cs" />);
+  expect(await screen.findByText("40–10")).toBeInTheDocument();
+  expect(screen.getByText(/México ·/)).toHaveTextContent(
+    "México · 40–10 en 12 torneos · mejor: 1.º de 150 en Pound Cake",
+  );
+  // Their character shows in the visitors list and in the seeds table.
+  expect(screen.getAllByAltText(/Min Min/).length).toBeGreaterThanOrEqual(2);
+  // The full year is still one click away, without asking for it up front.
+  expect(
+    screen.getByRole("button", { name: "Último año en start.gg" }),
+  ).toBeInTheDocument();
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+});

@@ -28,6 +28,22 @@ type Person = {
   streak?: number;
   mains?: Main[];
   prefix?: string | null;
+  // What the published seeding read from start.gg, for entrants without hub results.
+  startgg?: StartggProfile;
+};
+type StartggProfile = {
+  wins: number;
+  losses: number;
+  events: number;
+  country: string | null;
+  last_event: string | null;
+  best: {
+    placement: number;
+    entrants: number | null;
+    tournament: string;
+    date: string;
+  }[];
+  mains: Main[];
 };
 type Ref = { id: string | null; tag: string; seed: number | null };
 type HeadToHead = {
@@ -254,8 +270,10 @@ export function TournamentPreviewPage({ slug }: { slug: string }) {
                           ? "inscrito no tiene"
                           : "inscritos no tienen"}{" "}
                         sets en los torneos importados: es su primer torneo o
-                        vienen de afuera. Sus datos se pueden ver desde
-                        start.gg.
+                        vienen de afuera.
+                        {official
+                          ? " Sus números salen de start.gg, del período que usó el seeding oficial."
+                          : " Sus datos se pueden ver desde start.gg."}
                       </p>
                       <ul className="visitors">
                         {d.entrants
@@ -373,6 +391,29 @@ function EventLine({ e }: { e: VisitorEvent }) {
   );
 }
 
+/** The published seeding's start.gg numbers for an entrant without hub results. */
+function Profile({ p }: { p: StartggProfile }) {
+  if (p.wins + p.losses === 0)
+    return <p className="visitor-profile">Sin sets en start.gg en el período.</p>;
+  const best = p.best[0];
+  return (
+    <p className="visitor-profile">
+      {p.country && <>{country(p.country)} · </>}
+      <strong>
+        {p.wins}–{p.losses}
+      </strong>{" "}
+      en {p.events} {p.events === 1 ? "torneo" : "torneos"}
+      {best && (
+        <>
+          {" "}
+          · mejor: {best.placement}.º
+          {best.entrants ? ` de ${best.entrants}` : ""} en {best.tournament}
+        </>
+      )}
+    </p>
+  );
+}
+
 /** An entrant without hub results: their last year on start.gg, loaded on demand. */
 function Visitor({ person }: { person: Person }) {
   const [open, setOpen] = useState(false);
@@ -380,8 +421,10 @@ function Visitor({ person }: { person: Person }) {
     <li>
       <span className="who">
         {person.seed && <span className="place">{person.seed}</span>}
+        <MainIcons mains={person.startgg?.mains.slice(0, 1)} size={24} />
         <strong>{person.tag}</strong>
       </span>
+      {person.startgg && <Profile p={person.startgg} />}
       {person.startgg_player_id && (
         <button
           type="button"
@@ -389,7 +432,11 @@ function Visitor({ person }: { person: Person }) {
           aria-expanded={open}
           onClick={() => setOpen(!open)}
         >
-          {open ? "Ocultar" : "Ver datos de start.gg"}
+          {open
+            ? "Ocultar"
+            : person.startgg
+              ? "Último año en start.gg"
+              : "Ver datos de start.gg"}
         </button>
       )}
       {open && person.startgg_player_id && (

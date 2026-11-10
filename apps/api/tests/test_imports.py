@@ -383,13 +383,19 @@ def test_upcoming_preview_endpoint_reads_startgg_entrants(db, snapshot, monkeypa
         # rebuilt, so publishing or unpublishing a seeding shows up right away.
         from app.insights import preview
 
-        official = ({"9": 1}, dict(source="seeding", label="Seeding oficial publicado"))
+        profile = dict(wins=5, losses=1, events=2, country="AR", last_event=None, best=[], mains=[])
+        official = (
+            {"9": 1},
+            dict(source="seeding", label="Seeding oficial publicado"),
+            {"9": profile},
+        )
         with monkeypatch.context() as patch:
             patch.setattr(preview, "projected_order", lambda s, slug: official)
             body = client.get("/api/v1/insights/upcoming/center-stage").json()
         assert calls.count("upcoming_tournament") == 1
         assert body["seeding"]["source"] == "seeding"
         assert [(p["seed"], p["tag"]) for p in body["entrants"]] == [(1, "Visita"), (2, "A")]
+        assert body["entrants"][0]["startgg"]["country"] == "AR"
         assert body["bracket"] is None  # start.gg has no bracket and 2 players are too few
         body = client.get("/api/v1/insights/upcoming/center-stage").json()
         assert body["seeding"]["source"] == "none"
