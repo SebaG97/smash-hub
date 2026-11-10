@@ -146,7 +146,12 @@ export function TournamentPreviewPage({ slug }: { slug: string }) {
       <p>
         <Link href="/">← Inicio</Link>
       </p>
-      <Resource<TournamentPreview> path={`insights/upcoming/${slug}`}>
+      {/* The first load after a deploy waits for start.gg's bracket (~20 s); later
+          ones are served from the API's cache. */}
+      <Resource<TournamentPreview>
+        path={`insights/upcoming/${slug}`}
+        timeout={45000}
+      >
         {(d) => <PreviewBody d={d} slug={slug} />}
       </Resource>
     </div>
@@ -555,7 +560,10 @@ type PublicPools = {
 /** The official seeding laid on start.gg's pools, read only. */
 function PoolsTab({ slug, query }: { slug: string; query: string }) {
   return (
-    <Resource<PublicPools> path={`insights/upcoming/${slug}/pools`}>
+    <Resource<PublicPools>
+      path={`insights/upcoming/${slug}/pools`}
+      timeout={45000}
+    >
       {(data) => {
         const searching = query.trim() !== "";
         const pools = data.pools

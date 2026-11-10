@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException, Path, Query, Request
 from sqlalchemy.orm import Session
 
 from app.brackets import service as brackets
+from app.core import stale
 from app.insights import engine, preview, visitors
 from app.integrations.startgg.client import ImportFailure, StartGGClient
 from app.integrations.startgg.images import tournament_images
@@ -209,24 +210,26 @@ def upcoming(request: Request, slug: str = Path(pattern=r"^[a-z0-9-]{1,120}$")):
 
 
 def _upcoming(request, slug):
-    """start.gg's tournament, singles event and entrants, kept PREVIEW_SECONDS."""
-    hit = _previews.get(slug)
-    if hit and time.monotonic() - hit[0] < PREVIEW_SECONDS:
-        return hit[1]
+    """start.gg's tournament, singles event and entrants, refreshed every PREVIEW_SECONDS.
+
+    Once a preview loaded, a stale copy answers right away while start.gg is asked again in
+    the background, so the page stays up when start.gg is slow or down.
+    """
     token = request.app.state.settings.startgg_api_token
 
-    async def fetch():
-        async with StartGGClient(token) as client:
-            return await preview.fetch(client, slug)
+    def load():
+        async def fetch():
+            async with StartGGClient(token) as client:
+                return await preview.fetch(client, slug)
+
+        return asyncio.run(fetch())
 
     try:
-        found = asyncio.run(fetch())
+        return stale.cached(_previews, slug, PREVIEW_SECONDS, load)
     except ImportFailure as exc:
         if "not_found" in str(exc):
             raise HTTPException(404, "Tournament not found") from None
         raise HTTPException(502, "start.gg did not answer") from None
-    _previews[slug] = (time.monotonic(), found)
-    return found
 
 
 @router.get("/upcoming/{slug}/pools")

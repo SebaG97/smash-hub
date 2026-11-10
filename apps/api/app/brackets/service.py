@@ -7,7 +7,6 @@ published seeding, never from start.gg's own seeds.
 """
 
 import asyncio
-import time
 from collections import defaultdict
 
 from sqlalchemy import select
@@ -23,6 +22,7 @@ from app.competitions.models import (
     Tournament,
     TournamentParticipant,
 )
+from app.core import stale
 from app.games.models import Character
 from app.integrations.models import ExternalMapping
 from app.integrations.startgg.client import ImportFailure, StartGGClient
@@ -297,22 +297,21 @@ async def fetch_structure(client, event_id):
 
 
 def structure(token, event_id):
-    """fetch_structure, cached; None when start.gg has no bracket or does not answer."""
+    """fetch_structure, refreshed in the background once stale (start.gg takes ~20 s for a
+    big bracket); None when start.gg has no bracket or never answered."""
     key = str(event_id)
-    hit = _structures.get(key)
-    if hit and time.monotonic() - hit[0] < STRUCTURE_SECONDS:
-        return hit[1]
 
-    async def fetch():
-        async with StartGGClient(token) as client:
-            return await fetch_structure(client, key)
+    def load():
+        async def fetch():
+            async with StartGGClient(token) as client:
+                return await fetch_structure(client, key)
+
+        return asyncio.run(fetch())
 
     try:
-        found = asyncio.run(fetch())
+        return stale.cached(_structures, key, STRUCTURE_SECONDS, load)
     except ImportFailure:
-        return hit[1] if hit else None
-    _structures[key] = (time.monotonic(), found)
-    return found
+        return None
 
 
 def seeded(found, people):

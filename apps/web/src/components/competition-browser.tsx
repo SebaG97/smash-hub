@@ -63,11 +63,14 @@ export function Resource<T>({
   path,
   children,
   optional = false,
+  timeout = 12000,
 }: {
   path: string;
   children: (data: T) => ReactNode;
   /** Extra blocks: render nothing while loading or when the data is missing. */
   optional?: boolean;
+  /** Milliseconds before giving up; slow start.gg answers need more than the default. */
+  timeout?: number;
 }) {
   const [state, setState] = useState<{
     path: string;
@@ -79,7 +82,7 @@ export function Resource<T>({
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
-    const timer = setTimeout(() => controller.abort(), 12000);
+    const timer = setTimeout(() => controller.abort(), timeout);
     fetch(`${api.replace(/\/$/, "")}/${path}`, { signal: controller.signal })
       .then(async (r) => {
         if (!r.ok)
@@ -109,7 +112,7 @@ export function Resource<T>({
       controller.abort();
       clearTimeout(timer);
     };
-  }, [path, retry]);
+  }, [path, retry, timeout]);
   if (optional && (state.path !== path || state.loading || state.error))
     return null;
   if (state.path !== path || state.loading)
