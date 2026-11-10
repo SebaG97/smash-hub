@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AdminBadge } from "../components/admin-panel";
+import { UserBadge } from "../components/prode";
 import { Logo } from "../components/logo";
 import { NavLinks } from "../components/nav-links";
 import { siteOrigin } from "../lib/previews";
@@ -65,6 +66,7 @@ export default function RootLayout({
             <span>Smash Club Paraguay</span>
           </Link>
           <NavLinks />
+          <UserBadge />
           <AdminBadge />
         </header>
         <main id="contenido">{children}</main>

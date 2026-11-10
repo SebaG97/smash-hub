@@ -5,6 +5,7 @@ import { useState } from "react";
 import type React from "react";
 import type { Main } from "../lib/api";
 import { BracketView, ProjectionNotes, type Bracket } from "./bracket";
+import { ProdeTab } from "./prode";
 import { Resource } from "./competition-browser";
 import { flagEmoji } from "./flag-picker";
 import { MainIcons, WinBar, mainColor } from "./mains";
@@ -197,6 +198,7 @@ function PreviewBody({ d, slug }: { d: TournamentPreview; slug: string }) {
     ...(official && d.event ? ([["pools", "Pools"]] as Tab[]) : []),
     ...(d.bracket ? ([["bracket", "Bracket"]] as Tab[]) : []),
     ["seeds", official ? "Seeds" : "Inscritos"],
+    ["prode", "Prode"],
   ];
   // The tab lives in the address (#pools) so a shared link opens on it.
   // The page only renders on the client, once the preview has loaded.
@@ -308,6 +310,7 @@ function PreviewBody({ d, slug }: { d: TournamentPreview; slug: string }) {
             {current === "seeds" && (
               <SeedsTab d={d} official={official} query={query} />
             )}
+            {current === "prode" && <ProdeTab slug={slug} />}
           </div>
         </>
       )}

@@ -2052,3 +2052,191 @@ a.tag-prefix:hover {
   color: var(--gold);
   font-size: 1.1rem;
 }
+
+/* Prode (Mission SH-PRODE-01, ADR-020). */
+.user-badge {
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+.user-badge a,
+.user-badge .link-button {
+  color: var(--bone);
+}
+.prode h3 {
+  margin: 24px 0 8px;
+}
+.prode-login {
+  padding: 16px;
+  background: var(--slab);
+  border-left: 5px solid var(--fire);
+}
+.prode-login p {
+  margin-top: 0;
+}
+.prode-form {
+  display: grid;
+  gap: 18px;
+  margin-top: 12px;
+}
+.prode-podium {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 12px;
+}
+.prode-podium label {
+  display: grid;
+  gap: 6px;
+}
+.prode-podium span,
+.prode-top8 legend {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 1.2rem;
+}
+.prode-warning {
+  color: var(--gold);
+}
+.prode-top8 {
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 12px;
+  margin: 0;
+  min-width: 0;
+}
+.prode-top8 input[type="search"] {
+  width: 100%;
+  margin: 8px 0;
+}
+.prode-chosen,
+.prode-pool {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.prode-chosen li {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 4px 4px 10px;
+  background: var(--fire);
+  color: var(--on-fire);
+  border-radius: 3px;
+  font-weight: 700;
+}
+.prode-chosen li.gone {
+  background: var(--gold);
+}
+.prode-chosen button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 1.1rem;
+  line-height: 1;
+  min-width: 28px;
+  min-height: 28px;
+}
+.prode-pool {
+  max-height: 320px;
+  overflow-y: auto;
+}
+.prode-pool button {
+  padding: 8px 10px;
+  min-height: 40px;
+  background: var(--slab);
+  color: var(--bone);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+}
+.prode-pool button[aria-pressed="true"] {
+  border-color: var(--fire);
+  color: var(--fire);
+  font-weight: 700;
+}
+.prode-pool button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.prode-save {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+}
+.prode-admin {
+  margin-top: 28px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--gold);
+}
+.prode-admin h3 {
+  color: var(--gold);
+  margin-top: 0;
+}
+.prode-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.prode-actions button:not(.primary-button) {
+  padding: 9px 14px;
+  background: var(--slab);
+  color: var(--bone);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+}
+.prode-mine {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 4px;
+}
+.prode-mine li::before {
+  content: "· ";
+  color: var(--ash);
+}
+.prode-mine li[data-result="hit"]::before {
+  content: "✓ ";
+  color: var(--win);
+}
+.prode-mine li[data-result="miss"] {
+  color: var(--ash);
+}
+.prode-mine li[data-result="miss"]::before {
+  content: "✗ ";
+  color: var(--loss);
+}
+.prode-ranking tr.me td {
+  color: var(--gold);
+  font-weight: 700;
+}
+.prode-contests {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0;
+  display: grid;
+  gap: 8px;
+}
+.prode-contests li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding: 10px 12px;
+  background: var(--slab);
+}
+.prode-contests a {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 1.15rem;
+}
+.prode-contests span[data-status="open"] {
+  color: var(--win);
+  font-weight: 700;
+}
+.prode-contests small {
+  color: var(--ash);
+}

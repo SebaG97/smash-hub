@@ -301,3 +301,30 @@ La bandera de las imágenes del seeding era el circuito donde más compite cada 
 - `GET /api/v1/live/matches` junta los sets `live` y después los `called` (por setup) de todos los torneos en curso, con `{id, tournament, slug, group, round, status, best_of, station, stream, sides}`; hasta 8 en `items` y el total en `total`. Usa la misma lectura de 60 segundos que la página en vivo; un torneo que falla no oculta a los demás.
 
 La portada muestra «Partidas en vivo» solo cuando hay alguna, y se actualiza cada minuto.
+
+## Prode (Misión SH-PRODE-01, ADR-020)
+
+### Ingreso con start.gg
+
+- `GET /api/v1/auth/startgg/login?next=<ruta>`: redirige (303) a start.gg con `scope=user.identity` y un `state` guardado en la cookie firmada `sh_oauth` (10 min). `next` solo admite rutas del sitio; cualquier otra cosa vuelve a `/`. Sin configuración OAuth responde 503.
+- `GET /api/v1/auth/startgg/callback`: verifica el `state`, cambia el código por un token, lee `currentUser` y crea o actualiza el usuario. Fija `sh_session` y redirige a la web (`CORS_ORIGINS[0]` + `next`). Si algo falla, redirige a `/prode?ingreso=estado|startgg|bloqueado`.
+- `GET /api/v1/auth/me` → `{enabled, user: {id, name, slug, startgg_player_id} | null}`.
+- `POST /api/v1/auth/logout` (204) revoca la sesión. Exige `X-Requested-With: smashhub`.
+
+### Lectura pública
+
+- `GET /api/v1/prode` → `{contests: [{id, tournament_slug, name, status, locks_at, participants}], leaderboard: [{rank, user_id, name, points, contests, precision}]}`. El ranking suma los concursos `settled`; `precision` es el porcentaje de aciertos sobre lo pronosticado.
+- `GET /api/v1/prode/tournaments/{slug}` → el concurso (404 si no hay) con `{id, tournament_slug, name, event_name, status (open | locked | settled), locks_at, settled_at, rules, participants, candidates: [{startgg_player_id, tag, prefix, seed, id, withdrawn}], mine: {champion, runner_up, top8}, results, ranking}`. Mientras está abierto, cierra solo al llegar `locks_at` y sincroniza los inscriptos con start.gg (la previa, 15 min). `ranking` (`{rank, user_id, name, points, exact_hits, hits, picks}`) aparece recién al cerrar; `picks` son los pronósticos de esa persona.
+- `GET /api/v1/prode/users/{id}` → `{id, name, player_id, points, contests, precision, achievements, history}`.
+- `GET /api/v1/prode/players/{player_id}/achievements` → `{user_id, achievements}` del jugador del hub, por su cuenta de start.gg.
+- Cada logro es `{kind, title, detail, rare, contest, tournament_slug, at}`.
+
+### Escrituras
+
+- `PUT /api/v1/prode/contests/{id}/picks` (cookie `sh_session` y `X-Requested-With: smashhub`) con `{champion, runner_up, top8: [≤ 8]}` (IDs de jugador de start.gg). Responde 401 sin sesión, 403 sin el encabezado, 409 si cerró y 422 si alguien no está inscripto, si campeón y subcampeón son la misma persona o si hay más de 8. Devuelve el concurso actualizado.
+- Organizadores (clave de ADR-011):
+  - `POST /api/v1/prode/tournaments/{slug}` (201) abre el Prode del evento de singles de la previa.
+  - `POST /api/v1/prode/contests/{id}/lock` lo cierra.
+  - `POST /api/v1/prode/contests/{id}/reopen` lo reabre, con `{locks_at}` opcional.
+  - `POST /api/v1/prode/contests/{id}/void` lo anula.
+  - `POST /api/v1/prode/contests/{id}/settle` liquida con las posiciones finales de start.gg (409 si todavía no hay campeón y Top 8 finales; 502 si start.gg no responde). Se puede repetir.

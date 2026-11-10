@@ -20,6 +20,11 @@ class Settings(BaseSettings):
     startgg_seeding_writes: bool = False
     # Shared key for seeding writes; unset disables every write route.
     admin_token: SecretStr | None = None
+    # Prode sign-in with start.gg (OAuth app from developer.start.gg); unset disables it.
+    startgg_oauth_client_id: str | None = None
+    startgg_oauth_client_secret: SecretStr | None = None
+    # Must match the redirect registered in start.gg: <site>/api/v1/auth/startgg/callback.
+    startgg_oauth_redirect_uri: str | None = None
 
     @model_validator(mode="after")
     def validate_security(self):
@@ -39,6 +44,11 @@ class Settings(BaseSettings):
             raise ValueError("CORS requires explicit HTTP origins")
         if self.admin_token is not None and len(self.admin_token.get_secret_value()) < 24:
             raise ValueError("ADMIN_TOKEN must have at least 24 characters")
+        uri = self.startgg_oauth_redirect_uri
+        if uri and not uri.startswith(("http://", "https://")):
+            raise ValueError("STARTGG_OAUTH_REDIRECT_URI must be an HTTP URL")
+        if self.environment == "production" and uri and not uri.startswith("https://"):
+            raise ValueError("Production requires an HTTPS STARTGG_OAUTH_REDIRECT_URI")
         if self.environment == "production":
             if not self.db_ca_cert or not all(o.startswith("https://") for o in self.cors_origins):
                 raise ValueError("Production requires a CA path and HTTPS origins")

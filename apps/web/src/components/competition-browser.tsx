@@ -5,6 +5,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { PlayerMatchups } from "./characters";
 import { ImportPanel } from "./import-panel";
 import { PlayerAchievements, TournamentSummaryBlock } from "./insights";
+import { PlayerProdeAchievements } from "./prode";
 import { characterColor, characterIcon } from "../lib/characters";
 import {
   CostumePicker,
@@ -518,6 +519,7 @@ function PlayerSummary({ p }: { p: PlayerDetail }) {
         )}
       </section>
       <PlayerAchievements id={p.id} />
+      <PlayerProdeAchievements id={p.id} />
     </>
   );
 }

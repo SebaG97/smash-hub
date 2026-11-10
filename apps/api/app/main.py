@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import ValidationError
 
+from app.auth.router import router as auth_router
 from app.brackets.router import router as brackets_router
 from app.competitions.router import router as competitions_router
 from app.core.config import Settings, get_settings
@@ -14,6 +15,7 @@ from app.health.router import router
 from app.insights.router import router as insights_router
 from app.integrations.router import router as imports_router
 from app.live.router import router as live_router
+from app.prode.router import router as prode_router
 from app.seeding.router import router as seeding_router
 from app.statistics.router import router as statistics_router
 from app.teams.router import router as teams_router
@@ -49,9 +51,17 @@ def create_app(settings: Settings | None = None, engine=None) -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
-        # Writes exist only under /seeding and require the admin key (ADR-011).
+        # Organizer writes need the admin key (ADR-011); Prode writes need the session
+        # cookie plus X-Requested-With, which only these origins may send (ADR-020).
+        allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "DELETE"],
-        allow_headers=["Accept", "Content-Type", "Authorization", "X-Admin-Name"],
+        allow_headers=[
+            "Accept",
+            "Content-Type",
+            "Authorization",
+            "X-Admin-Name",
+            "X-Requested-With",
+        ],
     )
     app.include_router(router)
     app.include_router(competitions_router)
@@ -62,5 +72,7 @@ def create_app(settings: Settings | None = None, engine=None) -> FastAPI:
     app.include_router(teams_router)
     app.include_router(brackets_router)
     app.include_router(live_router)
+    app.include_router(auth_router)
+    app.include_router(prode_router)
 
     return app

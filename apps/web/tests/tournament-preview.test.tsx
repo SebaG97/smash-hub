@@ -164,6 +164,7 @@ it("opens on a summary with favorites, streaks and crossings", async () => {
     "Resumen",
     "Pools",
     "Seeds",
+    "Prode",
   ]);
 });
 
@@ -248,6 +249,7 @@ it("without the official seeding shows entrants but no seeds or pools", async ()
   expect(screen.getAllByRole("tab").map((t) => t.textContent)).toEqual([
     "Resumen",
     "Inscritos",
+    "Prode",
   ]);
   fireEvent.click(screen.getByRole("tab", { name: "Inscritos" }));
   expect(screen.queryByRole("columnheader", { name: "Seed" })).toBeNull();

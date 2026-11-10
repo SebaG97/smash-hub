@@ -1,4 +1,5 @@
 # Import all modules to register metadata for migrations and tests.
+from app.auth.models import User, UserSession
 from app.communities.models import Community, CommunityGame, Country, Region
 from app.competitions.models import (
     EntrantMember,
@@ -13,6 +14,16 @@ from app.competitions.models import (
 from app.games.models import Character, Game
 from app.integrations.models import DataSource, ExternalMapping, ImportJob
 from app.players.models import ExternalIdentity, Player, PlayerAlias
+from app.prode.models import (
+    ProdeAchievement,
+    ProdeAuditEntry,
+    ProdeCandidate,
+    ProdeContest,
+    ProdePrediction,
+    ProdePredictionHistory,
+    ProdeQuestion,
+    ProdeScore,
+)
 from app.rankings.models import (
     RankingSnapshot,
     RatingCalculationRun,
@@ -33,6 +44,16 @@ from app.seeding.models import (
 from app.teams.models import TeamPrefix
 
 __all__ = [
+    "User",
+    "UserSession",
+    "ProdeAchievement",
+    "ProdeAuditEntry",
+    "ProdeCandidate",
+    "ProdeContest",
+    "ProdePrediction",
+    "ProdePredictionHistory",
+    "ProdeQuestion",
+    "ProdeScore",
     "TeamPrefix",
     "SeedingAuditEntry",
     "SeedingEntrant",

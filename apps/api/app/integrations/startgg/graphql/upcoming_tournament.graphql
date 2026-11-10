@@ -3,7 +3,7 @@ query UpcomingTournament($slug: String!) {
     id name slug startAt city venueName numAttendees isOnline
     images { type url }
     events(limit: 50) {
-      id name slug numEntrants isOnline
+      id name slug numEntrants isOnline startAt
       teamRosterSize { maxPlayers }
       videogame { id }
     }

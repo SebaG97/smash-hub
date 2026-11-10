@@ -428,3 +428,22 @@ Tablas aisladas del modelo competitivo: usan IDs de start.gg y no tienen FKs hac
 ### Migración 0010
 
 `seeding_entrants.mains` (JSON): personajes más elegidos por el inscrito en sus 40 sets más recientes de start.gg, en cualquier torneo. Se completa al bajar los datos del seeding.
+
+### Migración 0018 (ADR-020)
+
+Tablas nuevas, sin cambios en las existentes:
+
+| Tabla | Contenido |
+| --- | --- |
+| `users` | Cuenta de start.gg que juega el Prode: `provider`, `provider_user_id` (únicos juntos), `display_name`, `slug`, `startgg_player_id` (indexado) y `banned_at`. |
+| `user_sessions` | Sesiones: `user_id`, `token_hash` (SHA-256, único), `expires_at` y `revoked_at`. |
+| `prode_contests` | Un concurso por evento de start.gg (`startgg_event_slug` único): `tournament_slug`, `startgg_event_id`, `name`, `event_name`, `status` (open, locked, settled o void), `locks_at`, `locked_at`, `settled_at`, `rules` (JSON con los puntos), `rules_version` y `created_by`. |
+| `prode_candidates` | Inscriptos que se pueden elegir (únicos por concurso y jugador de start.gg), con `tag`, `prefix`, `seed` y `withdrawn_at`. |
+| `prode_questions` | Una por concurso y `kind` (champion, runner_up, top8), con `status`, `result` (JSON), `result_source` y `settled_at`. |
+| `prode_predictions` | Respuesta de un usuario a una pregunta (única por pregunta y usuario); `value` en JSON. |
+| `prode_prediction_history` | Cada valor guardado; la aplicación solo inserta. |
+| `prode_scores` | Derivada: puntos, aciertos exactos, aciertos, pronósticos, posición y último guardado por concurso y usuario. Se rehace al liquidar. |
+| `prode_achievements` | Logros por usuario, concurso (nulo en los acumulados) y `kind`, con `title`, `detail` y `rare`. Se rehacen al liquidar. |
+| `prode_audit_entries` | Acciones de organizadores; la aplicación solo inserta. |
+
+Todas las FKs borran en cascada desde el concurso o el usuario.
