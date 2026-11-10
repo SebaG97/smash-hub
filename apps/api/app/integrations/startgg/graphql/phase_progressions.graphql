@@ -1,0 +1,12 @@
+query PhaseProgressions($id: ID!, $page: Int!, $perPage: Int!) {
+  phase(id: $id) {
+    id
+    seeds(query: {page: $page, perPage: $perPage}) {
+      pageInfo { total totalPages }
+      nodes {
+        id seedNum
+        progressionSource { originPlacement originPhaseGroup { id } }
+      }
+    }
+  }
+}

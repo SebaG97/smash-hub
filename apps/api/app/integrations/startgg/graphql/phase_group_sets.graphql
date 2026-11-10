@@ -1,7 +1,7 @@
 query PhaseGroupSets($id: ID!, $page: Int!, $perPage: Int!) {
   phaseGroup(id: $id) {
     id
-    sets(page: $page, perPage: $perPage, sortType: STANDARD) {
+    sets(page: $page, perPage: $perPage, sortType: STANDARD, filters: {showByes: true}) {
       pageInfo { total totalPages }
       nodes {
         id round fullRoundText

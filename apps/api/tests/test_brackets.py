@@ -254,3 +254,65 @@ def test_bracket_preview_is_for_organizers_only(db):
             headers={"Authorization": "Bearer secret-key-for-tests-only-0123"},
         )
         assert missing.status_code == 404
+
+
+def lost(id, placement=2):
+    return dict(prereqType="set", prereqId=id, prereqPlacement=placement, seed=None)
+
+
+def phase_seed(id):
+    return dict(prereqType="seed", prereqId=id, seed=None)
+
+
+def test_projection_follows_losers_and_later_phases():
+    found = dict(
+        later=["Final"],
+        groups=[
+            dict(
+                id="g1",
+                name="Pools · 1",
+                sets=[
+                    pool_set("w1", 1, by_seed(1), by_seed(4)),
+                    pool_set("w2", 1, by_seed(2), by_seed(3)),
+                    pool_set("wf", 2, from_set("w1"), from_set("w2")),
+                    pool_set("l1", -1, lost("w1"), lost("w2"), label="Losers Round 1"),
+                ],
+            )
+        ],
+        phases=[
+            dict(
+                name="Final",
+                # The pool's winners side goes to seed t1, its losers side to t2.
+                sources={
+                    "t2": dict(group="g1", placement=3, num=2),
+                    "t1": dict(group="g1", placement=1, num=1),
+                },
+                groups=[
+                    dict(
+                        id="f",
+                        name="Final",
+                        sets=[
+                            pool_set(
+                                "gf", 1, phase_seed("t1"), phase_seed("t2"), label="Grand Final"
+                            ),
+                            pool_set(
+                                "gr", 2, from_set("gf"), lost("gf"), label="Grand Final Reset"
+                            ),
+                        ],
+                    )
+                ],
+            )
+        ],
+    )
+    people = [dict(seed=n, tag=f"P{n}", id=None, mains=[]) for n in range(1, 5)]
+    result = service.seeded(found, people)
+    assert result["later"] == []
+    pool, final = result["groups"]
+    assert pool["seeded"] and not final["seeded"]
+
+    def cells(columns):
+        return [[[x["tag"] for x in s["sides"]] for s in c["sets"]] for c in columns]
+
+    assert cells(pool["losers"]) == [[["P4", "P3"]]]
+    # P1 leaves by winners, P3 by losers; the better seed wins, so no reset.
+    assert cells(final["winners"]) == [[["P1", "P3"]]]

@@ -26,6 +26,7 @@ from app.core import stale
 from app.games.models import Character
 from app.integrations.models import ExternalMapping
 from app.integrations.startgg.client import ImportFailure, StartGGClient
+from app.seeding.startgg import paged
 from app.teams import service as teams
 
 HIDDEN = {"bye", "placeholder", "conditional_unused"}
@@ -270,8 +271,28 @@ def first_phase(data):
     return max(phases, key=lambda p: (p["numSeeds"], -(p.get("phaseOrder") or 0)))
 
 
+async def _group_sets(client, node):
+    # Byes included: without them the losers side misses the sets that shape it.
+    return await paged(
+        client, "phase_group_sets", "phaseGroup", "sets", {"id": str(node["id"])}, per_page=40
+    )
+
+
+def _source(seed):
+    origin = seed.get("progressionSource") or {}
+    return dict(
+        group=str((origin.get("originPhaseGroup") or {}).get("id")),
+        placement=origin.get("originPlacement") or 0,
+        num=seed.get("seedNum") or 0,
+    )
+
+
 async def fetch_structure(client, event_id):
-    """start.gg's preview sets of the event's first phase, one list per phase group."""
+    """start.gg's preview sets of every phase, in order of play.
+
+    `groups` are the first phase's (one per pool); `phases` the ones after it, each with
+    its groups and, per seed, the pool and placement it is filled from (progressionSource).
+    """
     data = await client.query("event_phases", {"id": event_id})
     first = first_phase(data)
     if first is None:
@@ -279,21 +300,40 @@ async def fetch_structure(client, event_id):
     nodes = (first.get("phaseGroups") or {}).get("nodes") or []
     groups = []
     for node in sorted(nodes, key=lambda n: str(n.get("displayIdentifier") or "")):
-        sets = await client.pages("phase_group_sets", "phaseGroup", "sets", str(node["id"]))
         name = first.get("name") or "Bracket"
         if len(nodes) > 1:
             name = f"{name} · {node.get('displayIdentifier') or ''}".strip(" ·")
-        groups.append(dict(id=str(node["id"]), name=name, sets=sets))
+        groups.append(dict(id=str(node["id"]), name=name, sets=await _group_sets(client, node)))
     # start.gg's phaseOrder does not always follow play ("TOP 8" before "TOP 32"): bigger
     # phases come first.
-    phases = sorted(
+    later = sorted(
         (p for p in data["event"]["phases"] if p["id"] != first["id"]),
         key=lambda p: (
             -(((p.get("seeds") or {}).get("pageInfo") or {}).get("total") or 0),
             p.get("phaseOrder") or 0,
         ),
     )
-    return dict(groups=groups, later=[p["name"] for p in phases if p.get("name")])
+    phases = []
+    for phase in later:
+        seeds = await paged(
+            client, "phase_progressions", "phase", "seeds", {"id": str(phase["id"])}, per_page=64
+        )
+        sources = {
+            str(seed["id"]): _source(seed)
+            for seed in seeds
+            if (seed.get("progressionSource") or {}).get("originPhaseGroup")
+        }
+        inner = (phase.get("phaseGroups") or {}).get("nodes") or []
+        phase_groups = []
+        for node in sorted(inner, key=lambda n: str(n.get("displayIdentifier") or "")):
+            name = phase.get("name") or "Bracket"
+            if len(inner) > 1:
+                name = f"{name} · {node.get('displayIdentifier') or ''}".strip(" ·")
+            phase_groups.append(
+                dict(id=str(node["id"]), name=name, sets=await _group_sets(client, node))
+            )
+        phases.append(dict(name=phase.get("name"), groups=phase_groups, sources=sources))
+    return dict(groups=groups, phases=phases, later=[p["name"] for p in later if p.get("name")])
 
 
 def structure(token, event_id):
@@ -314,64 +354,148 @@ def structure(token, event_id):
         return None
 
 
-def seeded(found, people):
-    """Winners side of every group of start.gg's first phase, with the hub's seeds in it.
+def _play(sets, person_in):
+    """Every set of one phase group if the better seed always wins.
 
-    Each slot of start.gg's empty bracket names the seed number that goes there, so the
-    player with that seed in the hub's seeding takes it. Later rounds show who gets there if
-    the better seed always wins.
+    person_in(slot) gives who a seed slot holds. Returns {set id: (sides, winner, loser)}.
+    """
+    by_id = {str(s["id"]): s for s in sets}
+    done = {}
+
+    def outcome(key):
+        if key in done:
+            return done[key]
+        done[key] = ([None, None], None, None)  # guards against a malformed loop
+        sides = []
+        for slot in by_id[key].get("slots") or []:
+            kind, origin = slot.get("prereqType"), str(slot.get("prereqId"))
+            if kind == "seed":
+                sides.append(person_in(slot))
+            elif kind == "set" and origin in by_id:
+                _, winner, loser = outcome(origin)
+                sides.append(winner if slot.get("prereqPlacement") == 1 else loser)
+            elif (slot.get("seed") or {}).get("seedNum"):
+                # A seed coming from a bye start.gg left out is named on this slot.
+                sides.append(person_in(slot))
+            else:  # a bye, or a set start.gg did not send
+                sides.append(None)
+        real = [p for p in sides if p]
+        winner = min(real, key=lambda p: p["seed"]) if real else None
+        loser = next((p for p in real if p is not winner), None) if len(real) == 2 else None
+        done[key] = (sides, winner, loser)
+        return done[key]
+
+    for key in by_id:
+        outcome(key)
+    return done
+
+
+def _reset(result):
+    """The grand final reset: both slots come from the same set."""
+    slots = result.get("slots") or []
+    origins = {str(s.get("prereqId")) for s in slots if s.get("prereqType") == "set"}
+    return len(slots) == 2 and len(origins) == 1
+
+
+def _projected_group(group, played, *, order, seeded):
+    nodes = []
+    for result in group["sets"]:
+        if _reset(result):
+            continue  # the better seed wins the grand final: no reset
+        sides, _, _ = played[str(result["id"])]
+        real = [p for p in sides if p]
+        nodes.append(
+            dict(
+                id=str(result["id"]),
+                round=result.get("round"),
+                label=result.get("fullRoundText"),
+                shown=len(real) == 2,
+                prereqs=[
+                    (str(slot["prereqId"]), slot.get("prereqPlacement"))
+                    for slot in result.get("slots") or []
+                    if slot.get("prereqType") == "set" and slot.get("prereqId")
+                ],
+                status="projected",
+                completed_at=None,
+                sides=[_projected_side(p) for p in (sides + [None, None])[:2]],
+                games=[],
+            )
+        )
+    if not any(n["shown"] for n in nodes):
+        return None
+    return dict(
+        id=group["id"],
+        name=group["name"],
+        order=order,
+        type="DOUBLE_ELIMINATION",
+        # Only the first phase's opening sets come straight from the seeding.
+        seeded=seeded,
+        **arrange(nodes),
+    )
+
+
+def _exits(group, played):
+    """Who leaves a group for the next phase: winners of the sets nothing in the group
+    follows, the winners side first, each side by seed."""
+    followed = {
+        (str(slot.get("prereqId")), slot.get("prereqPlacement"))
+        for result in group["sets"]
+        for slot in result.get("slots") or []
+        if slot.get("prereqType") == "set"
+    }
+    out = []
+    for result in group["sets"]:
+        key = str(result["id"])
+        winner = played[key][1]
+        if winner and (key, 1) not in followed and not _reset(result):
+            out.append(((result.get("round") or 0) < 0, winner["seed"], winner))
+    return [p for _, _, p in sorted(out, key=lambda x: (x[0], x[1]))]
+
+
+def seeded(found, people):
+    """start.gg's whole event with the hub's seeds in it, winners and losers of every
+    phase, if the better seed always wins.
+
+    Each slot of start.gg's empty first phase names the seed that goes there. Later phases
+    name the pool and placement each of their seeds comes from, so whoever leaves a pool
+    goes there (the better seed takes the better spot among equal placements).
     """
     by_seed = {p["seed"]: p for p in people if p.get("seed")}
-    groups = []
+    groups, exits = [], {}
+
+    def first_slot(slot):
+        return by_seed.get((slot.get("seed") or {}).get("seedNum"))
+
     for group in found["groups"]:
-        ahead, nodes = {}, []
-        winners = sorted(
-            (s for s in group["sets"] if (s.get("round") or 0) > 0), key=lambda s: s["round"]
-        )
-        for s in winners:
-            sides = []
-            for slot in s.get("slots") or []:
-                # A seed that skips round 1 (bye) is named on its round-2 slot.
-                if (slot.get("seed") or {}).get("seedNum"):
-                    sides.append(by_seed.get(slot["seed"]["seedNum"]))
-                elif slot.get("prereqType") == "set" and slot.get("prereqPlacement") == 1:
-                    sides.append(ahead.get(str(slot.get("prereqId"))))
-                else:
-                    sides.append(None)
-            real = [p for p in sides if p]
-            ahead[str(s["id"])] = min(real, key=lambda p: p["seed"]) if real else None
-            nodes.append(
-                dict(
-                    id=str(s["id"]),
-                    round=s["round"],
-                    label=s.get("fullRoundText"),
-                    shown=len(real) == 2,
-                    prereqs=[
-                        (str(slot["prereqId"]), slot.get("prereqPlacement"))
-                        for slot in s.get("slots") or []
-                        if slot.get("prereqType") == "set" and slot.get("prereqId")
-                    ],
-                    status="projected",
-                    completed_at=None,
-                    sides=[_projected_side(p) for p in (sides + [None, None])[:2]],
-                    games=[],
-                )
-            )
-        if any(n["shown"] for n in nodes):
-            laid = arrange(nodes)
-            laid["losers"] = []
-            groups.append(
-                dict(
-                    id=group["id"],
-                    name=group["name"],
-                    order=len(groups) + 1,
-                    type="DOUBLE_ELIMINATION",
-                    **laid,
-                )
-            )
+        played = _play(group["sets"], first_slot)
+        exits[group["id"]] = _exits(group, played)
+        laid = _projected_group(group, played, order=len(groups) + 1, seeded=True)
+        if laid:
+            groups.append(laid)
     if not groups:
         return None
-    return dict(projected=True, source="startgg", later=found["later"], groups=groups)
+    # Phases start.gg cannot fill yet (no progressions) stay as names.
+    later = [] if "phases" in found else list(found.get("later") or [])
+    for phase in found.get("phases") or []:
+        filled = {}
+        for origin, leaving in exits.items():
+            spots = sorted(
+                (s for s in phase["sources"].items() if s[1]["group"] == origin),
+                key=lambda s: (s[1]["placement"], s[1]["num"]),
+            )
+            filled.update((seed_id, p) for (seed_id, _), p in zip(spots, leaving, strict=False))
+        if not filled:
+            later.append(phase["name"])
+            continue
+        next_exits = {}
+        for group in phase["groups"]:
+            played = _play(group["sets"], lambda slot, f=filled: f.get(str(slot.get("prereqId"))))
+            next_exits[group["id"]] = _exits(group, played)
+            laid = _projected_group(group, played, order=len(groups) + 1, seeded=False)
+            if laid:
+                groups.append(laid)
+        exits = next_exits
+    return dict(projected=True, source="startgg", later=later, groups=groups)
 
 
 def projection(token, event_id, people):

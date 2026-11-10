@@ -244,7 +244,7 @@ def upcoming_pools(request: Request, slug: str = Path(pattern=r"^[a-z0-9-]{1,120
         if project is None:
             raise HTTPException(404, "No published seeding")
         try:
-            found = pools.read(token_of(request), project.startgg_event_slug)
+            found = pools.read_public(token_of(request), project.startgg_event_slug)
         except ImportFailure:
             raise HTTPException(502, "start.gg did not answer") from None
         if not found or not found["seeds"]:

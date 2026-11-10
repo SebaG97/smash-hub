@@ -11,6 +11,7 @@ import time
 from datetime import timedelta
 
 from app.brackets.service import fetch_structure, first_phase
+from app.core import stale
 from app.integrations.startgg.client import StartGGClient
 from app.seeding import startgg
 from app.seeding.models import SeedingOverride
@@ -76,6 +77,20 @@ def read(token, event_slug, fresh=False):
     found = asyncio.run(run())
     _cache[event_slug] = (time.monotonic(), found)
     return found
+
+
+def read_public(token, event_slug):
+    """read for the public preview: never waits on start.gg (~30 s) once read before; a
+    stale copy answers while a background refresh brings the organizers' moves in."""
+
+    def load():
+        async def run():
+            async with StartGGClient(token) as client:
+                return await fetch(client, event_slug)
+
+        return asyncio.run(run())
+
+    return stale.cached(_cache, event_slug, CACHE_SECONDS, load)
 
 
 def build(rows, found, *, hub=None, teams=None, ranked=(), matches=(), tags=None):

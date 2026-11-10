@@ -46,6 +46,8 @@ export type BracketGroup = {
   winners: BracketColumn[];
   losers: BracketColumn[];
   height: number;
+  /** Projections: false when even the first round is a guess (losers, later phases). */
+  seeded?: boolean;
 };
 export type Bracket = {
   projected: boolean;
@@ -136,7 +138,7 @@ export function ProjectionNotes({ bracket }: { bracket: Bracket }) {
     <p className="seeding-lead">
       {bracket.source === "hub"
         ? "start.gg todavía no armó el bracket: es el lado de winners de un bracket único según los seeds."
-        : "Lado de winners de cada grupo de start.gg con nuestros seeds; las rondas siguientes suponen que gana el de mejor seed."}
+        : "Las llaves reales de start.gg con nuestros seeds. Solo la primera ronda de cada pool es segura: lo demás (losers y fases siguientes) supone que siempre gana el de mejor seed."}
       {bracket.later?.length
         ? ` Después siguen: ${bracket.later.join(", ")}.`
         : ""}
@@ -197,6 +199,7 @@ export function BracketView({
             <Tree
               columns={current[side]}
               projected={bracket.projected}
+              settled={side === "winners" && current.seeded !== false}
               open={open}
               onOpen={(id) => setOpen(id === open ? null : id)}
             />
@@ -211,11 +214,14 @@ export function BracketView({
 function Tree({
   columns,
   projected,
+  settled,
   open,
   onOpen,
 }: {
   columns: BracketColumn[];
   projected: boolean;
+  /** The first column comes straight from the seeding (not a guess). */
+  settled: boolean;
   open: string | null;
   onOpen: (id: string) => void;
 }) {
@@ -263,7 +269,7 @@ function Tree({
             <SetCard
               key={s.id}
               set={s}
-              guess={projected && i > 0}
+              guess={projected && (i > 0 || !settled)}
               open={open === s.id}
               onOpen={() => onOpen(s.id)}
               style={{
