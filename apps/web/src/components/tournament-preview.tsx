@@ -5,7 +5,9 @@ import { useState } from "react";
 import type React from "react";
 import type { Main } from "../lib/api";
 import { BracketView, ProjectionNotes, type Bracket } from "./bracket";
+import type { RulebookSummary } from "../lib/rulebooks/types";
 import { Resource } from "./competition-browser";
+import { RulebookPanel } from "./rulebook";
 import { flagEmoji } from "./flag-picker";
 import { MainIcons, WinBar, mainColor } from "./mains";
 import { Prefix } from "./prefix";
@@ -140,7 +142,14 @@ function H2H({ a, b, h2h }: { a: Ref; b: Ref; h2h: HeadToHead }) {
 }
 
 /** /previa/[slug]: what to expect from an upcoming tournament. */
-export function TournamentPreviewPage({ slug }: { slug: string }) {
+export function TournamentPreviewPage({
+  slug,
+  rules = null,
+}: {
+  slug: string;
+  /** The tournament's official rulebook, when it has one (lib/rulebooks). */
+  rules?: RulebookSummary | null;
+}) {
   return (
     <div className="competition-page tournament-preview">
       <p>
@@ -152,7 +161,7 @@ export function TournamentPreviewPage({ slug }: { slug: string }) {
         path={`insights/upcoming/${slug}`}
         timeout={45000}
       >
-        {(d) => <PreviewBody d={d} slug={slug} />}
+        {(d) => <PreviewBody d={d} slug={slug} rules={rules} />}
       </Resource>
     </div>
   );
@@ -190,13 +199,23 @@ function matches(query: string, tag: string, prefix?: string | null) {
 
 type Tab = [id: string, label: string];
 
-function PreviewBody({ d, slug }: { d: TournamentPreview; slug: string }) {
+function PreviewBody({
+  d,
+  slug,
+  rules,
+}: {
+  d: TournamentPreview;
+  slug: string;
+  rules: RulebookSummary | null;
+}) {
   const official = d.seeding.source === "seeding";
   const tabs: Tab[] = [
     ["resumen", "Resumen"],
     ...(official && d.event ? ([["pools", "Pools"]] as Tab[]) : []),
     ...(d.bracket ? ([["bracket", "Bracket"]] as Tab[]) : []),
     ["seeds", official ? "Seeds" : "Inscritos"],
+    // No tab at all for tournaments without a rulebook.
+    ...(rules ? ([["reglamento", "Reglamento"]] as Tab[]) : []),
   ];
   // The tab lives in the address (#pools) so a shared link opens on it.
   // The page only renders on the client, once the preview has loaded.
@@ -238,10 +257,16 @@ function PreviewBody({ d, slug }: { d: TournamentPreview; slug: string }) {
           Ver en start.gg
         </a>
       </p>
-      {!d.event ? (
-        <p>Todavía no tiene un evento de singles de Ultimate.</p>
-      ) : d.entrants.length === 0 ? (
-        <p>Todavía no hay inscritos.</p>
+      {!d.event || d.entrants.length === 0 ? (
+        <>
+          <p>
+            {!d.event
+              ? "Todavía no tiene un evento de singles de Ultimate."
+              : "Todavía no hay inscritos."}
+          </p>
+          {/* No tabs yet, but the rules are already worth reading. */}
+          {rules && <RulebookPanel rules={rules} />}
+        </>
       ) : (
         <>
           <ul className="preview-stats" aria-label="En números">
@@ -307,6 +332,9 @@ function PreviewBody({ d, slug }: { d: TournamentPreview; slug: string }) {
             )}
             {current === "seeds" && (
               <SeedsTab d={d} official={official} query={query} />
+            )}
+            {current === "reglamento" && rules && (
+              <RulebookPanel rules={rules} />
             )}
           </div>
         </>

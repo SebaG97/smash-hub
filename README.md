@@ -8,6 +8,8 @@ Misión 05: página de seeding por evento (`/seeding`) con propuesta explicada (
 
 Misión 05.1: seis métodos de cálculo comparables en la misma página (combinado, Glicko-2, Elo, Bradley-Terry, puntos por posición y % de victorias Wilson), con vista previa y método oficial; ranking del circuito paraguayo en `/rankings` con los torneos presenciales de start.gg (ADR-012).
 
+Misión SH-RULES-01: reglamento oficial por torneo, público, en una pestaña de la previa y en un lector web (`/reglamentos/<id>`) con índice, más el PDF oficial para abrir o descargar. Primer documento: Center Stage 2026 v1.0. Cómo agregar o actualizar reglamentos: [docs/architecture/reglamentos.md](docs/architecture/reglamentos.md).
+
 ## Inicio local
 
 Requisitos: Git, Docker Desktop con motor Linux y Docker Compose v2. Puertos predeterminados: web 3000 y API 8000. PostgreSQL no publica puertos.

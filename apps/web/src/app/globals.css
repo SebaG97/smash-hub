@@ -2052,3 +2052,189 @@ a.tag-prefix:hover {
   color: var(--gold);
   font-size: 1.1rem;
 }
+
+/* ---------------------------------------------------------------- rulebooks */
+/* /reglamentos/[id] and the Reglamento tab of the previa. Reading first: one
+   comfortable column, the index beside it on wide screens and above it on phones. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.secondary-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 14px;
+  background: var(--slab);
+  color: var(--bone);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  text-decoration: none;
+}
+.competition-page a.secondary-button {
+  text-decoration: none;
+}
+.secondary-button:hover {
+  border-color: var(--fire);
+}
+.secondary-button small {
+  color: var(--ash);
+}
+/* Not the site navigation: undo the global nav rules. */
+nav.rulebook-nav {
+  display: block;
+  order: initial;
+  width: auto;
+  margin-left: 0;
+  overflow: visible;
+  font-family: var(--text);
+  font-weight: 400;
+  font-size: 1rem;
+}
+nav.rulebook-nav a {
+  color: inherit;
+  border-bottom: 0;
+}
+.rulebook-panel h2 {
+  margin-bottom: 4px;
+}
+.rulebook-panel h3,
+.rulebook-toc h2 {
+  font-size: 1.1rem;
+  color: var(--ash);
+  margin: 24px 0 8px;
+}
+.rulebook-index {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.rulebook-index li {
+  border-bottom: 1px solid var(--line);
+}
+.rulebook-index a {
+  display: block;
+  padding: 10px 0;
+  text-decoration: none;
+}
+.rulebook-index a:hover {
+  text-decoration: underline;
+  text-decoration-color: var(--fire);
+}
+.rulebook-index .sub a {
+  padding-left: 1.6rem;
+  font-size: 0.95rem;
+}
+.rule-number {
+  color: var(--fire);
+  font-family: var(--display);
+  font-weight: 800;
+  margin-right: 4px;
+}
+.rulebook-official {
+  border-left: 4px solid var(--fire);
+  padding: 4px 0 4px 14px;
+}
+.rulebook-layout {
+  display: grid;
+  grid-template-columns: 17rem minmax(0, 46rem);
+  gap: 48px;
+  align-items: start;
+}
+.rulebook-toc {
+  position: sticky;
+  top: 16px;
+}
+.rulebook-toc h2 {
+  margin-top: 0;
+}
+.rulebook-text {
+  overflow-wrap: anywhere;
+}
+.rulebook-text p,
+.rulebook-text li,
+.rulebook-text dd {
+  line-height: 1.65;
+}
+.rule-chapter {
+  /* Anchors land below the top edge, not glued to it. */
+  scroll-margin-top: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--line);
+  margin-bottom: 28px;
+}
+.rule-section {
+  scroll-margin-top: 16px;
+}
+.rule-chapter > h2 {
+  font-size: 2rem;
+  margin: 0 0 12px;
+}
+.rule-section h3 {
+  font-size: 1.45rem;
+  margin: 28px 0 8px;
+}
+.rule-section h4,
+.rule-section h5 {
+  font-size: 1.15rem;
+  margin: 22px 0 6px;
+}
+.rulebook-text ul {
+  padding-left: 1.3rem;
+}
+.rulebook-text li + li {
+  margin-top: 6px;
+}
+.rule-terms div {
+  margin: 0 0 12px;
+}
+.rule-terms dt {
+  display: inline;
+  font-weight: 700;
+}
+.rule-terms dd {
+  display: inline;
+  margin: 0;
+}
+.rulebook-text .rule-notes {
+  list-style: none;
+  padding: 0 0 0 14px;
+  border-left: 2px solid var(--line);
+  color: var(--ash);
+  font-size: 0.92rem;
+}
+.rulebook-bar {
+  display: none;
+}
+@media (max-width: 900px) {
+  .rulebook-layout {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .rulebook-toc {
+    position: static;
+    margin-bottom: 24px;
+  }
+  /* Index, PDF and back-to-top within thumb reach while reading. */
+  nav.rulebook-nav.rulebook-bar {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    justify-content: space-around;
+    margin: 24px 0 0;
+    padding: 4px 0 calc(4px + env(safe-area-inset-bottom));
+    background: var(--slab);
+    border-top: 1px solid var(--line);
+  }
+  .rulebook-bar a {
+    padding: 10px 12px;
+    text-decoration: none;
+    font-family: var(--display);
+    font-weight: 800;
+    font-size: 1.05rem;
+  }
+}

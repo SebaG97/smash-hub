@@ -4,6 +4,7 @@ import {
   type TournamentPreview,
 } from "../../../components/tournament-preview";
 import { apiJson, preview } from "../../../lib/previews";
+import { rulebookForTournament } from "../../../lib/rulebooks";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -30,5 +31,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function Page({ params }: Props) {
   const { slug } = await params;
-  return <TournamentPreviewPage slug={slug} />;
+  // Only the summary crosses to the client; the rule text stays on /reglamentos.
+  return (
+    <TournamentPreviewPage slug={slug} rules={rulebookForTournament(slug)} />
+  );
 }
