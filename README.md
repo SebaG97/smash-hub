@@ -10,6 +10,8 @@ Misión 05.1: seis métodos de cálculo comparables en la misma página (combina
 
 Misión SH-AUTH-01: cuentas propias (registro, ingreso, recuperación de contraseña asistida por un superadministrador), roles usuario/administrador/superadministrador, acceso administrativo con la propia cuenta y vinculación verificada de cuentas con fichas de jugador (ADR-021). Primer superadministrador y transición desde la clave compartida: [docs/operations/accounts.md](docs/operations/accounts.md).
 
+Misión SH-RULES-01: reglamento oficial por torneo, público, en una pestaña de la previa y en un lector web (`/reglamentos/<id>`) con índice, más el PDF oficial para abrir o descargar. Primer documento: Center Stage 2026 v1.0. Cómo agregar o actualizar reglamentos: [docs/architecture/reglamentos.md](docs/architecture/reglamentos.md).
+
 ## Inicio local
 
 Requisitos: Git, Docker Desktop con motor Linux y Docker Compose v2. Puertos predeterminados: web 3000 y API 8000. PostgreSQL no publica puertos.
