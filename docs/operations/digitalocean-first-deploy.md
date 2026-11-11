@@ -202,3 +202,7 @@ python -m app.runtime seeding --allow-production create-ranking --slug ranking-p
 1. `migrate` → `APPROVED_MIGRATION` = `0010`.
 2. **Force rebuild and deploy** (`Running upgrade 0009 -> 0010`).
 3. En el seeding, con la sesión de organizador: **Recalcular** con «Bajar datos nuevos de start.gg». La descarga suma un paso, «Bajando los personajes de cada jugador», y al terminar todos tienen íconos.
+
+## Actualización a SH-PRODE-RELEASE-01 (Prode y cuentas propias)
+
+Migraciones 0018 y 0019 (`APPROVED_MIGRATION=0019`), `ADMIN_TOKEN_EXPIRES`, `CLIENT_IP_HEADER=do-connecting-ip` y primer superadministrador. Orden exacto, verificación y rollback: [prode-release.md](prode-release.md).
