@@ -2,6 +2,7 @@
 
 import copy
 
+from accounts import LEGACY_EXPIRES
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -244,6 +245,7 @@ def test_bracket_preview_is_for_organizers_only(db):
                 _env_file=None,
                 database_url="postgresql://unused:unused@localhost/x",
                 admin_token="secret-key-for-tests-only-0123",
+                admin_token_expires=LEGACY_EXPIRES,
             ),
             engine=db,
         )

@@ -8,7 +8,7 @@ import {
   characterRender,
 } from "../lib/characters";
 import { problem } from "./seeding-board";
-import { useAdmin } from "../lib/admin";
+import { adminHeaders, useAdmin } from "../lib/admin";
 
 const api = (process.env.NEXT_PUBLIC_API_URL || "/api/v1").replace(/\/$/, "");
 
@@ -82,9 +82,9 @@ export function RankingFlag({
               `${api}/tournaments/${tournamentId}/ranking`,
               {
                 method: "PUT",
+                credentials: "include",
                 headers: {
-                  Authorization: `Bearer ${admin.key}`,
-                  "X-Admin-Name": admin.name,
+                  ...adminHeaders(admin),
                   "Content-Type": "application/json",
                 },
                 body: JSON.stringify({ counts: next }),
@@ -136,9 +136,9 @@ export function MainEventFlag({
     setError("");
     const r = await fetch(`${api}/events/${event.id}/main`, {
       method: "PUT",
+      credentials: "include",
       headers: {
-        Authorization: `Bearer ${admin.key}`,
-        "X-Admin-Name": admin.name,
+        ...adminHeaders(admin),
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ main }),
@@ -210,9 +210,9 @@ export function SeedingFlag({
               `${api}/tournaments/${tournamentId}/seeding`,
               {
                 method: "PUT",
+                credentials: "include",
                 headers: {
-                  Authorization: `Bearer ${admin.key}`,
-                  "X-Admin-Name": admin.name,
+                  ...adminHeaders(admin),
                   "Content-Type": "application/json",
                 },
                 body: JSON.stringify({ reliable: next }),
@@ -280,9 +280,9 @@ export function CostumePicker({
     setError("");
     const r = await fetch(`${api}/players/${playerId}/costume`, {
       method: "PUT",
+      credentials: "include",
       headers: {
-        Authorization: `Bearer ${admin!.key}`,
-        "X-Admin-Name": admin!.name,
+        ...adminHeaders(admin),
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ character, costume }),

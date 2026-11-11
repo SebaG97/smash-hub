@@ -72,6 +72,7 @@ export function PoolBoard({
     if (!open || !admin) return;
     let active = true;
     fetch(`${api}/seeding/${slug}/pools${fresh ? "?fresh=true" : ""}`, {
+      credentials: "include",
       headers: adminHeaders(admin),
     })
       .then(async (r) => {
@@ -101,6 +102,7 @@ export function PoolBoard({
     setBusy(true);
     const r = await fetch(`${api}/seeding/${slug}/pools/${path}`, {
       method: "POST",
+      credentials: "include",
       headers: { ...adminHeaders(admin), "Content-Type": "application/json" },
       body: body === undefined ? undefined : JSON.stringify(body),
     }).catch(() => null);

@@ -56,9 +56,15 @@ def db(pg_engine):
 
 @pytest.fixture(autouse=True)
 def fresh_admin_limiter():
-    """Each test starts without failed admin attempts from earlier tests."""
+    """Each test starts without failed attempts or sign-ups from earlier tests."""
+    from app.auth import service
     from app.core import admin
 
+    limiters = service.THROTTLES
     admin._failures.clear()
+    for limiter in limiters:
+        limiter.clear()
     yield
     admin._failures.clear()
+    for limiter in limiters:
+        limiter.clear()

@@ -47,7 +47,10 @@ function serve(user: object | null, body: Contest) {
         return {
           ok: true,
           status: 200,
-          json: async () => ({ enabled: true, user }),
+          json: async () => ({
+            user,
+            legacy_admin_key: false,
+          }),
         };
       const sent = init?.body ? JSON.parse(String(init.body)) : null;
       return {
@@ -60,14 +63,16 @@ function serve(user: object | null, body: Contest) {
   return calls;
 }
 
-it("asks to sign in with start.gg before playing", async () => {
+it("asks to sign in with a Smash Hub account before playing", async () => {
   serve(null, contest());
   const { ProdeTab: Tab } = await import("../src/components/prode");
   render(<Tab slug="cs" />);
-  const login = await screen.findByRole("link", {
-    name: "Ingresar con start.gg",
-  });
-  expect(login.getAttribute("href")).toContain("/auth/startgg/login?next=");
+  const login = await screen.findByRole("link", { name: "Ingresar" });
+  expect(login.getAttribute("href")).toMatch(/^\/ingresar\?next=%2F/);
+  expect(screen.getByRole("link", { name: /creá una cuenta/ })).toHaveAttribute(
+    "href",
+    "/registro",
+  );
   expect(screen.getByText(/cierra el/)).toBeInTheDocument();
 });
 

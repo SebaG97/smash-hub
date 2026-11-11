@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { SeedingRow } from "../lib/api";
-import { useAdmin } from "../lib/admin";
+import { adminHeaders, useAdmin } from "../lib/admin";
 
 /** Organizers choose each player's flag for the seeding images (Mission 32). */
 
@@ -51,9 +51,9 @@ export function FlagPicker({
     setError("");
     const r = await fetch(`${api}/seeding/countries/${row.player_id}`, {
       method: "PUT",
+      credentials: "include",
       headers: {
-        Authorization: `Bearer ${admin!.key}`,
-        "X-Admin-Name": admin!.name,
+        ...adminHeaders(admin),
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ country: country || null }),

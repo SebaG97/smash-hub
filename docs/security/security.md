@@ -38,7 +38,7 @@ Cinco rutas nuevas son GET públicos de lectura; requieren UUID y parámetros ti
 - Toda escritura queda en `seeding_audit_entries` (acción, nombre, detalles, fecha). La aplicación no actualiza ni borra esas filas.
 - La API solo *lee* start.gg (descarga de sets, una por proyecto a la vez, código de error seguro si falla). Escribir los seeds en start.gg requiere la CLI con `--confirm`.
 - El seeding es público en lectura: tags, IDs de start.gg y resultados que ya son públicos en start.gg; no incluye ubicación ni contacto.
-- Pendiente: cuentas individuales con roles, límite de peticiones compartido entre réplicas y rotación de la clave.
+- Pendiente: cuentas individuales con roles (resuelto en SH-AUTH-01), límite de peticiones compartido entre réplicas y rotación de la clave.
 
 ## Misión 06: importación web
 
@@ -51,3 +51,19 @@ Cinco rutas nuevas son GET públicos de lectura; requieren UUID y parámetros ti
 - Con la clave (`Authorization`), las mismas rutas devuelven la vista completa. Una clave incorrecta responde 401, no la vista pública.
 - `GET /seeding/{slug}/export.csv` exige la clave. `PUT /seeding/{slug}/publish` publica o despublica, y queda en el registro.
 - La web tiene una sola sesión de organizador (`/admin`, enlace discreto en el pie). Sin sesión no muestra formularios ni herramientas.
+
+## Misión SH-AUTH-01: cuentas propias y roles
+
+Detalle en [ADR-021](../adr/ADR-021.md) y [arquitectura de cuentas](../architecture/accounts.md).
+
+- Contraseñas con Argon2id (`argon2-cffi`); se rehashean al ingresar si cambian los parámetros. Reglas NIST: 10 a 128 caracteres, sin contraseñas comunes ni el propio usuario o correo. Nunca se loguean ni se devuelven.
+- Sesión en cookie `sh_session` `HttpOnly`, `SameSite=Lax` y `Secure` en producción; la base guarda solo el SHA-256 del token. 30 días (7 para cuentas administrativas). Rotación al ingresar y revocación al salir, al cambiar o recuperar la contraseña, al cambiar el rol y al desactivar. El frontend no guarda credenciales en `localStorage` ni `sessionStorage` (única excepción: la clave compartida heredada, solo en la pestaña y solo durante la transición).
+- CSRF: `X-Requested-With: smashhub` obligatorio en toda escritura con cookie, incluidos registro, ingreso y recuperación. CORS con orígenes explícitos y `allow_credentials`.
+- Fuerza bruta: Sin bloqueos de cuenta: esperas progresivas en memoria (la API corre en una sola instancia; un reinicio las olvida). Por dirección y cuenta, 5 fallos libres y después 1 s, 2 s, 4 s… hasta 15 minutos: solo espera quien sigue fallando desde esa dirección. Por cuenta desde cualquier dirección, 20 fallos libres y como máximo 60 segundos: es todo lo que un tercero puede imponerle a una cuenta ajena. Por dirección contra cualquier cuenta, 30 libres y hasta 15 minutos. Los intentos rechazados durante una espera no se evalúan ni suman. La clave de cuenta es lo que se escribió, exista o no la cuenta, así que el 429 no revela cuentas. El ingreso correcto limpia la espera de esa cuenta. La respuesta 429 trae `Retry-After`. Registro: 20 intentos por hora por dirección. Mensaje único para usuario inexistente y contraseña incorrecta, con igual costo de verificación.
+- Dirección del cliente: La dirección del cliente sale del socket, salvo que `CLIENT_IP_HEADER` esté configurada (producción: `do-connecting-ip`, donde el ingress de App Platform pone la IP del visitante; `X-Forwarded-For` trae la del ingress). Solo se lee ese encabezado, solo su último valor (el que agrega el proxy) y solo si es una IP válida; si no, se usa el socket. Sin la variable no se confía en ningún encabezado.
+- Recuperación asistida, sin correo: solo un superadmin emite el enlace (24 horas, un uso, 256 bits, solo el hash en la base). El token aparece únicamente en esa respuesta (`Cache-Control: no-store`), nunca en logs ni en la auditoría, y viaja en el fragmento de la URL; la página lo quita de la barra de direcciones y usa `referrer: no-referrer`. Emitir otro, desactivar la cuenta o que el emisor deje de ser superadmin lo invalidan; usarlo cierra todas las sesiones. Tokens inválidos repetidos desde una dirección esperan de forma progresiva.
+- Roles verificados en el backend en cada petición. El registro público no acepta `role`. Nadie cambia su propio rol, se desactiva ni aprueba o vincula su propia cuenta; siempre queda un superadmin activo.
+- Auditoría de solo inserción en `auth_audit_entries`: registros, ingresos y fallos de ingreso (con la dirección), cambios de contraseña y de rol, desactivaciones, enlaces de recuperación emitidos, vinculaciones y cada escritura administrativa (`admin_request`) o uso de la clave compartida (`legacy_admin_request`). Los correos solo los ven su dueño y los superadmins.
+- Clave compartida heredada: solo con `ADMIN_TOKEN_EXPIRES` vigente (máximo 90 días), nunca para gestionar cuentas, y con advertencia en el log en cada uso. Retiro en [operations/accounts.md](../operations/accounts.md#transición-desde-la-clave-compartida).
+- Primer superadmin por CLI, sin credenciales en el repositorio; la contraseña solo se pide de forma interactiva.
+- Riesgos conocidos: sin 2FA, recuperación por correo ni verificación de correo; el registro revela si un usuario o correo existe; un tercero puede imponer a una cuenta esperas de hasta 60 segundos; las esperas son por proceso (válido mientras la API tenga una sola instancia); que el ingress de App Platform descarte un `do-connecting-ip` enviado por el cliente no está documentado y se verifica al desplegar.

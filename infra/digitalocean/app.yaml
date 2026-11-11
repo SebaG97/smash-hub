@@ -58,23 +58,23 @@ services:
         scope: RUN_TIME
         value: "2"
       # Mission 05 secrets: set their values in the control panel, never in Git.
-      # Without ADMIN_TOKEN the seeding page stays read-only (ADR-011).
+      # Legacy shared admin key (ADR-011), transition only (ADR-021): it works only
+      # while ADMIN_TOKEN_EXPIRES (ISO date with time zone, <= 90 days ahead) is in the
+      # future. Delete both once every organizer signs in with their own account.
       - key: ADMIN_TOKEN
         scope: RUN_TIME
         type: SECRET
+      - key: ADMIN_TOKEN_EXPIRES
+        scope: RUN_TIME
       # Read-only use: seeding data refresh. Pushing seeds to start.gg stays CLI-only.
       - key: STARTGG_API_TOKEN
         scope: RUN_TIME
         type: SECRET
-      # Prode sign-in with start.gg (ADR-020). Unset keeps sign-in off.
-      - key: STARTGG_OAUTH_CLIENT_ID
+      # App Platform's ingress puts the visitor's IP here (X-Forwarded-For carries the
+      # ingress's own address). Used for sign-in throttling and the audit (ADR-021).
+      - key: CLIENT_IP_HEADER
         scope: RUN_TIME
-      - key: STARTGG_OAUTH_CLIENT_SECRET
-        scope: RUN_TIME
-        type: SECRET
-      - key: STARTGG_OAUTH_REDIRECT_URI
-        scope: RUN_TIME
-        value: ${APP_URL}/api/v1/auth/startgg/callback
+        value: do-connecting-ip
 databases:
   - name: hub-db
     engine: PG

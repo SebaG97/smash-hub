@@ -82,7 +82,7 @@ Todos requieren `game_id: UUID`; opcionales `mode=singles|doubles` (default sing
 | PUT /seeding/{slug}/overrides/{player_id} | admin | `{seed, reason}` fija el seed del jugador |
 | DELETE /seeding/{slug}/overrides/{player_id} | admin | Quita el ajuste manual |
 
-Clave: `Authorization: Bearer <ADMIN_TOKEN>`; `X-Admin-Name` es opcional y solo va al registro. Errores: 401 clave incorrecta, 429 demasiados fallos, 503 edición deshabilitada, 404 proyecto inexistente, 409 descarga en curso, 422 período o seed inválidos (`detail` en español). Las fechas llevan zona horaria y el final del período es exclusivo. `window_start` no puede ser anterior a los datos descargados salvo con `refresh`.
+Acceso (ADR-021): sesión `sh_session` de una cuenta `admin` o `superadmin` (las escrituras, con `X-Requested-With: smashhub`); el registro guarda su usuario. Durante la transición también `Authorization: Bearer <ADMIN_TOKEN>` (con `X-Admin-Name` opcional, registrado como `clave:<nombre>`) mientras `ADMIN_TOKEN_EXPIRES` esté vigente. Errores: 401 sin sesión o clave incorrecta o vencida, 403 sesión sin rol o sin el encabezado, 429 demasiados fallos, 404 proyecto inexistente, 409 descarga en curso, 422 período o seed inválidos (`detail` en español). Las fechas llevan zona horaria y el final del período es exclusivo. `window_start` no puede ser anterior a los datos descargados salvo con `refresh`.
 
 ### Métodos y rankings (Misión 05.1, ADR-012)
 
@@ -153,7 +153,7 @@ Imágenes para redes (web, PNG 1080×1080): `/og/tournament/{id}`, `/og/ranking/
 - `PUT /api/v1/players/{id}/costume` (admin) recibe `{character, costume}`. 401 sin clave, 404 si el jugador no existe, 422 con un personaje desconocido o un traje fuera de 1–8.
 - `GET /api/v1/insights/tournaments/{id}` acepta `limit` (1–16, por defecto 8); la imagen pide 12.
 - Web: `/renders/{personaje}/{traje}?w=160|320|640` devuelve el render oficial recortado (PNG). Las imágenes de `/og/*` muestran el podio con los 12 primeros.
-- `POST` a `/og/tournament/{id}`, `/og/ranking/{slug}` y `/og/seeding/{slug}` (multipart, clave de organizador en `Authorization`): campos `image-0` a `image-11` reemplazan la imagen de cada fila. 401 sin clave válida, 413 si una pesa más de 5 MB, 422 si no es una imagen. No se guardan.
+- `POST` a `/og/tournament/{id}`, `/og/ranking/{slug}` y `/og/seeding/{slug}` (multipart, como organizador: la cookie de sesión, que la ruta reenvía a la API, o la clave en `Authorization` durante la transición): campos `image-0` a `image-11` reemplazan la imagen de cada fila. 401 sin organizador válido, 413 si una pesa más de 5 MB, 422 si no es una imagen. No se guardan.
 
 ## Personajes, matchups y vistas previas (Misión 15)
 
@@ -304,25 +304,62 @@ La portada muestra «Partidas en vivo» solo cuando hay alguna, y se actualiza c
 
 ## Prode (Misión SH-PRODE-01, ADR-020)
 
-### Ingreso con start.gg
+### Cuentas (Misión SH-AUTH-01, ADR-021)
 
-- `GET /api/v1/auth/startgg/login?next=<ruta>`: redirige (303) a start.gg con `scope=user.identity` y un `state` guardado en la cookie firmada `sh_oauth` (10 min). `next` solo admite rutas del sitio; cualquier otra cosa vuelve a `/`. Sin configuración OAuth responde 503.
-- `GET /api/v1/auth/startgg/callback`: verifica el `state`, cambia el código por un token, lee `currentUser` y crea o actualiza el usuario. Fija `sh_session` y redirige a la web (`CORS_ORIGINS[0]` + `next`). Si algo falla, redirige a `/prode?ingreso=estado|startgg|bloqueado`.
-- `GET /api/v1/auth/me` → `{enabled, user: {id, name, slug, startgg_player_id} | null}`.
-- `POST /api/v1/auth/logout` (204) revoca la sesión. Exige `X-Requested-With: smashhub`.
+El ingreso con start.gg se retiró: `/api/v1/auth/startgg/*` ya no existe (404). Toda escritura con cookie exige `X-Requested-With: smashhub` (403 sin él). Los errores traen `detail` en español.
+
+- `GET /api/v1/auth/me` → `{user: {id, username, display_name, name, role, email, player: {id, tag} | null} | null, legacy_admin_key}`.
+- `POST /api/v1/auth/register` (201) `{username, email, password, display_name?}` → como `/me` y fija `sh_session`. 409 si el usuario o el correo existen, 422 si el formato o la contraseña no sirven (o si se manda cualquier otro campo, como `role`), 429 con más de 20 intentos de registro por hora desde una dirección.
+- `POST /api/v1/auth/login` `{login, password}` (usuario o correo) → como `/me` y fija una sesión nueva. 401 con un mensaje único para usuario inexistente o contraseña incorrecta, 403 si la cuenta está desactivada, 429 con `Retry-After` mientras dure una espera progresiva (por dirección y cuenta tras 5 fallos, hasta 15 min; por cuenta tras 20 fallos, como máximo 60 s; por dirección tras 30 fallos). Ninguna cuenta queda bloqueada.
+- `POST /api/v1/auth/logout` (204) revoca esa sesión.
+- `PUT /api/v1/auth/me` `{display_name}`.
+- `PUT /api/v1/auth/password` `{current_password, new_password}` → `{closed_sessions}` (cierra las demás). 403 si la actual no coincide.
+- `GET /api/v1/auth/sessions` → `{open}`; `POST /api/v1/auth/sessions/revoke-others` → `{closed_sessions}`.
+- `POST /api/v1/auth/password/reset` (204, `Cache-Control: no-store`) `{token, password}` con el token de un enlace emitido por un superadmin → cambia la contraseña y cierra todas las sesiones. 400 si el token no existe, venció, ya se usó o quien lo emitió dejó de ser superadmin; 422 si la contraseña no sirve (el enlace sigue valiendo); 429 con `Retry-After` tras 10 tokens inválidos desde una dirección. No hay recuperación por correo.
+
+### Vinculación con fichas de jugador
+
+Con sesión de cualquier rol:
+
+- `GET /api/v1/links/players?q=<tag>` (2+ caracteres) → `[{id, tag, linked}]`, hasta 20.
+- `GET /api/v1/links/mine` → `{player, requests: [{id, player, status, code, evidence, created_at, reviewed_at, review_note}]}`.
+- `POST /api/v1/links/requests` (201) `{player_id, evidence}` (10+ caracteres) → como `/mine`. 409 si la cuenta ya está vinculada, la ficha está tomada o ya hay una solicitud pendiente.
+- `DELETE /api/v1/links/requests/{id}` cancela la propia pendiente.
+
+### Administración (sesión con rol; la clave compartida no sirve aquí)
+
+Administrador o superadministrador:
+
+- `GET /api/v1/admin/users?q=&role=` → `[{id, username, display_name, role, email, disabled, can_sign_in, created_at, last_login_at, player}]`; `email` es `null` salvo para superadmins.
+- `GET /api/v1/admin/players?q=` → como `/links/players`.
+- `GET /api/v1/admin/link-requests?status=pending` → solicitudes con `user` y `reviewed_by`.
+- `POST /api/v1/admin/link-requests/{id}/approve` `{verification}` (10+ caracteres) y `POST .../reject` `{note}` (5+). 403 sobre la propia cuenta, 409 si ya fue revisada o hay conflicto.
+- `GET /api/v1/admin/links?q=` → `[{id, user, player, method, verification, linked_by, linked_at}]` activas.
+- `POST /api/v1/admin/links` (201) `{user_id, player_id, verification, replace?, reason?}`. 409 si la cuenta o la ficha ya tienen vinculación, salvo `replace: true` con `reason` (10+), que cierra las anteriores con ese motivo. 403 sobre la propia cuenta.
+- `POST /api/v1/admin/links/{id}/unlink` `{reason}` (5+).
+
+Solo superadministrador:
+
+- `PUT /api/v1/admin/users/{id}/role` `{role: user | admin | superadmin}`. 403 sobre sí mismo; 409 si dejaría sin superadmins activos. Cierra las sesiones de esa cuenta.
+- `PUT /api/v1/admin/users/{id}/status` `{disabled, reason}` (motivo 5+ para desactivar). Desactivar cierra sus sesiones.
+- `POST /api/v1/admin/users/{id}/sessions/revoke` → `{closed_sessions}`.
+- `POST /api/v1/admin/users/{id}/password-reset` → `{url, expires_at}` con `Cache-Control: no-store`: enlace de un solo uso por 24 h; se muestra una vez y la auditoría no guarda el token. Invalida el enlace anterior de esa cuenta. 409 si la cuenta está desactivada o no puede ingresar con contraseña.
+- `GET /api/v1/admin/status` → cuentas por rol, estado de la clave compartida (`configured`, `active`, `expires_at`, `last_used_at`).
+- `GET /api/v1/admin/audit?limit=&action=` → `[{at, action, actor, target, details}]`.
 
 ### Lectura pública
 
 - `GET /api/v1/prode` → `{contests: [{id, tournament_slug, name, status, locks_at, participants}], leaderboard: [{rank, user_id, name, points, contests, precision}]}`. El ranking suma los concursos `settled`; `precision` es el porcentaje de aciertos sobre lo pronosticado.
 - `GET /api/v1/prode/tournaments/{slug}` → el concurso (404 si no hay) con `{id, tournament_slug, name, event_name, status (open | locked | settled), locks_at, settled_at, rules, participants, candidates: [{startgg_player_id, tag, prefix, seed, id, withdrawn}], mine: {champion, runner_up, top8}, results, ranking}`. Mientras está abierto, cierra solo al llegar `locks_at` y sincroniza los inscriptos con start.gg (la previa, 15 min). `ranking` (`{rank, user_id, name, points, exact_hits, hits, picks}`) aparece recién al cerrar; `picks` son los pronósticos de esa persona.
 - `GET /api/v1/prode/users/{id}` → `{id, name, player_id, points, contests, precision, achievements, history}`.
-- `GET /api/v1/prode/players/{player_id}/achievements` → `{user_id, achievements}` del jugador del hub, por su cuenta de start.gg.
+- `GET /api/v1/prode/users/{id}`: `player_id` es la ficha de su vinculación activa (o `null`). Las cuentas desactivadas responden 404.
+- `GET /api/v1/prode/players/{player_id}/achievements` → `{user_id, achievements}` de la cuenta vinculada a esa ficha (vacío si no hay).
 - Cada logro es `{kind, title, detail, rare, contest, tournament_slug, at}`.
 
 ### Escrituras
 
-- `PUT /api/v1/prode/contests/{id}/picks` (cookie `sh_session` y `X-Requested-With: smashhub`) con `{champion, runner_up, top8: [≤ 8]}` (IDs de jugador de start.gg). Responde 401 sin sesión, 403 sin el encabezado, 409 si cerró y 422 si alguien no está inscripto, si campeón y subcampeón son la misma persona o si hay más de 8. Devuelve el concurso actualizado.
-- Organizadores (clave de ADR-011):
+- `PUT /api/v1/prode/contests/{id}/picks` (cookie `sh_session` de cualquier cuenta y `X-Requested-With: smashhub`) con `{champion, runner_up, top8: [≤ 8]}` (IDs de jugador de start.gg). Responde 401 sin sesión, 403 sin el encabezado, 409 si cerró y 422 si alguien no está inscripto, si campeón y subcampeón son la misma persona o si hay más de 8. Devuelve el concurso actualizado.
+- Organizadores (sesión `admin`/`superadmin`, o la clave compartida mientras dure la transición; ADR-021):
   - `POST /api/v1/prode/tournaments/{slug}` (201) abre el Prode del evento de singles de la previa.
   - `POST /api/v1/prode/contests/{id}/lock` lo cierra.
   - `POST /api/v1/prode/contests/{id}/reopen` lo reabre, con `{locks_at}` opcional.

@@ -1,23 +1,24 @@
-"""Prode (Mission SH-PRODE-01, ADR-020): sign-in, picks, locking, settling, achievements."""
+"""Prode (Missions SH-PRODE-01 and SH-AUTH-01, ADR-020/021): picks with Smash Hub
+accounts, locking, settling, achievements and links to player records."""
 
 from datetime import UTC, datetime, timedelta
-from urllib.parse import parse_qs, urlparse
 
 import pytest
+from accounts import LEGACY_EXPIRES, WEB, make_user
+from accounts import sign_in as account_sign_in
 from fastapi.testclient import TestClient
-from pydantic import SecretStr
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.auth import service as auth
 from app.core.config import Settings
 from app.main import create_app
 from app.prode import engine
 from app.prode import router as prode_router
 
 KEY = "k" * 32
-ADMIN = {"Authorization": f"Bearer {KEY}", "X-Admin-Name": "Org"}
-WEB = {"X-Requested-With": "smashhub"}
+# Organizers act through their session; the legacy key is checked once below.
+ADMIN = WEB
+LEGACY = {"Authorization": f"Bearer {KEY}", "X-Admin-Name": "Org"}
 
 
 def settings(**extra):
@@ -25,9 +26,7 @@ def settings(**extra):
         _env_file=None,
         database_url="postgresql://unused:unused@localhost/test",
         admin_token=KEY,
-        startgg_oauth_client_id="client",
-        startgg_oauth_client_secret="secret-" * 4,
-        startgg_oauth_redirect_uri="http://localhost:8000/api/v1/auth/startgg/callback",
+        admin_token_expires=LEGACY_EXPIRES,
         **extra,
     )
 
@@ -103,31 +102,6 @@ def test_achievements_reward_bold_and_perfect_calls():
     assert {a["kind"] for a in lifetime["u"]} == {"regular", "dynasty"} and "v" not in lifetime
 
 
-def test_sign_in_state_is_signed_and_next_stays_on_site():
-    s = settings()
-    state, cookie = auth.new_state(s, "/previa/cs#prode")
-    assert auth.check_state(s, state, cookie) == "/previa/cs#prode"
-    assert auth.check_state(s, "other", cookie) is None
-    assert auth.check_state(s, state, cookie.replace("/previa", "/x")) is None
-    for unsafe in ["https://evil.example", "//evil.example", "/\\evil", None]:
-        assert auth.safe_next(unsafe) == "/"
-    url = auth.authorize_url(s, state)
-    query = parse_qs(urlparse(url).query)
-    assert url.startswith(auth.AUTHORIZE_URL)
-    assert query["scope"] == ["user.identity"] and query["state"] == [state]
-    assert query["redirect_uri"] == [s.startgg_oauth_redirect_uri]
-
-
-def test_settings_require_https_redirect_in_production():
-    with pytest.raises(ValueError):
-        Settings(
-            _env_file=None,
-            environment="development",
-            database_url="postgresql://u:p@localhost/x",
-            startgg_oauth_redirect_uri="ftp://x",
-        )
-
-
 # With PostgreSQL.
 
 ENTRANTS = [
@@ -177,23 +151,36 @@ def client(db):
         c.__exit__(None, None, None)
 
 
-def sign_in(client, monkeypatch, user_id, player, tag):
-    c = client()
-    identity = {"id": user_id, "slug": f"user/{tag}", "player": {"id": player, "gamerTag": tag}}
-    monkeypatch.setattr(auth, "fetch_identity", lambda s, code: identity)
-    start = c.get(
-        "/api/v1/auth/startgg/login", params={"next": "/previa/cs#prode"}, follow_redirects=False
-    )
-    assert start.status_code == 303
-    state = parse_qs(urlparse(start.headers["location"]).query)["state"][0]
-    back = c.get(
-        "/api/v1/auth/startgg/callback",
-        params={"code": "abc", "state": state},
-        follow_redirects=False,
-    )
-    assert back.headers["location"] == "http://localhost:3000/previa/cs#prode"
-    assert "HttpOnly" in back.headers["set-cookie"]
+def sign_in(client, db, username, display_name=None):
+    """A forecaster with their own account, signed in on a fresh client."""
+    make_user(db, username)
+    c = account_sign_in(client(), username)
+    if display_name:
+        c.put("/api/v1/auth/me", json=dict(display_name=display_name), headers=WEB)
     return c
+
+
+def hub_player(db, tag, startgg_id):
+    from app.integrations.models import DataSource
+    from app.players.models import ExternalIdentity, Player
+
+    with Session(db) as s, s.begin():
+        source = s.scalar(select(DataSource).where(DataSource.slug == "startgg"))
+        if source is None:
+            source = DataSource(slug="startgg", name="start.gg", base_url="https://start.gg")
+            s.add(source)
+        player = Player(tag=tag)
+        s.add(player)
+        s.flush()
+        s.add(
+            ExternalIdentity(
+                player_id=player.id,
+                data_source_id=source.id,
+                external_id=f"player:{startgg_id}",
+                synced_at=datetime.now(UTC),
+            )
+        )
+        return player.id
 
 
 def top8(*ids):
@@ -202,19 +189,32 @@ def top8(*ids):
 
 def test_prode_from_sign_in_to_achievements(db, world, monkeypatch, client):
     from app.auth.models import User
-    from app.prode.models import ProdeAchievement, ProdePredictionHistory, ProdeScore
+    from app.prode.models import (
+        ProdeAchievement,
+        ProdeAuditEntry,
+        ProdePrediction,
+        ProdePredictionHistory,
+        ProdeScore,
+    )
 
     anon = client()
-    assert anon.get("/api/v1/auth/me").json() == {"enabled": True, "user": None}
+    me = anon.get("/api/v1/auth/me").json()
+    assert me["user"] is None and me["legacy_admin_key"] is True
     assert anon.get("/api/v1/prode/tournaments/cs").status_code == 404
-    assert anon.post("/api/v1/prode/tournaments/cs").status_code == 401
-    created = anon.post("/api/v1/prode/tournaments/cs", headers=ADMIN)
+    assert anon.post("/api/v1/prode/tournaments/cs", headers=WEB).status_code == 401
+    # A forecaster's account cannot organize.
+    vbash = sign_in(client, db, "vbash", "vBash")
+    assert vbash.post("/api/v1/prode/tournaments/cs", headers=WEB).status_code == 403
+    # Organizers use their own session; the audit records their username.
+    make_user(db, "org", role="admin")
+    org = account_sign_in(client(), "org")
+    assert org.post("/api/v1/prode/tournaments/cs").status_code == 403  # no web header
+    created = org.post("/api/v1/prode/tournaments/cs", headers=ADMIN)
     assert created.status_code == 201
     contest = created.json()
     assert contest["status"] == "open" and len(contest["candidates"]) == 10
-    assert anon.post("/api/v1/prode/tournaments/cs", headers=ADMIN).status_code == 409
+    assert org.post("/api/v1/prode/tournaments/cs", headers=ADMIN).status_code == 409
     url = f"/api/v1/prode/contests/{contest['id']}/picks"
-    vbash = sign_in(client, monkeypatch, "100", "7", "vBash")
     assert vbash.get("/api/v1/auth/me").json()["user"]["name"] == "vBash"
     picks = dict(champion="7", runner_up="1", top8=top8(1, 2, 3, 4, 5, 6, 7, 8))
     assert vbash.put(url, json=picks).status_code == 403  # no X-Requested-With
@@ -224,7 +224,8 @@ def test_prode_from_sign_in_to_achievements(db, world, monkeypatch, client):
     saved = vbash.put(url, json=dict(picks, runner_up="2"), headers=WEB)
     assert saved.status_code == 200 and saved.json()["mine"]["runner_up"] == "2"
     assert vbash.put(url, json=picks, headers=WEB).json()["mine"]["runner_up"] == "1"
-    chag_fan = sign_in(client, monkeypatch, "200", "1", "Fan")
+    # Someone who is not a player plays too: an account needs no player record.
+    chag_fan = sign_in(client, db, "fan", "Fan")
     chag_fan.put(
         url, json=dict(champion="1", runner_up="2", top8=top8(1, 2, 3, 4, 5, 6, 8, 9)), headers=WEB
     )
@@ -237,20 +238,35 @@ def test_prode_from_sign_in_to_achievements(db, world, monkeypatch, client):
     view = anon.get("/api/v1/prode/tournaments/cs").json()
     assert [c["withdrawn"] for c in view["candidates"] if c["startgg_player_id"] == "10"] == [True]
     assert chag_fan.put(url, json=dict(champion="10"), headers=WEB).status_code == 422
-    # Closed: nothing gets in, and the ranking with everyone's picks shows.
-    assert (
-        anon.post(f"/api/v1/prode/contests/{contest['id']}/lock", headers=ADMIN).status_code == 200
-    )
+    # Closed with the legacy key (still valid during the transition): nothing gets in.
+    lock = f"/api/v1/prode/contests/{contest['id']}/lock"
+    assert anon.post(lock, headers=LEGACY).status_code == 200
     assert vbash.put(url, json=picks, headers=WEB).status_code == 409
     ranking = anon.get("/api/v1/prode/tournaments/cs").json()["ranking"]
     assert {r["name"] for r in ranking} == {"vBash", "Fan"}
+    # vBash's account is linked to the hub player behind start.gg player 7.
+    make_user(db, "boss", role="superadmin")
+    boss = account_sign_in(client(), "boss")
+    player_id = hub_player(db, "vBash", "7")
+    with Session(db) as s:
+        vbash_id = s.scalar(select(User.id).where(User.username == "vbash"))
+    linked = boss.post(
+        "/api/v1/admin/links",
+        json=dict(
+            user_id=str(vbash_id),
+            player_id=str(player_id),
+            verification="Lo confirmó en persona en Center Stage",
+        ),
+        headers=WEB,
+    )
+    assert linked.status_code == 201, linked.text
     # Settling waits for a final top 8.
     world["placements"] = {"7": 1, "1": 2}
     settle = f"/api/v1/prode/contests/{contest['id']}/settle"
-    assert anon.post(settle, headers=ADMIN).status_code == 409
+    assert org.post(settle, headers=ADMIN).status_code == 409
     world["placements"] = {"7": 1, "1": 2, "2": 3, "3": 4, "4": 5, "5": 5, "6": 7, "8": 7, "9": 9}
     for _ in range(2):  # settling again rebuilds the same scores and achievements
-        body = anon.post(settle, headers=ADMIN).json()
+        body = org.post(settle, headers=ADMIN).json()
         assert body["status"] == "settled"
         assert [(r["name"], r["points"], r["rank"]) for r in body["ranking"]] == [
             ("vBash", 10 + 7 + 16, 1),
@@ -262,9 +278,10 @@ def test_prode_from_sign_in_to_achievements(db, world, monkeypatch, client):
             s.scalars(
                 select(ProdeAchievement.kind)
                 .join(User, User.id == ProdeAchievement.user_id)
-                .where(User.display_name == "vBash")
+                .where(User.username == "vbash")
             )
         )
+        # "Profecía autocumplida" needs the link: he picked his own player as champion.
         assert {
             "oracle",
             "upset_prophet",
@@ -277,45 +294,55 @@ def test_prode_from_sign_in_to_achievements(db, world, monkeypatch, client):
         )
         # vBash saved three picks, then changed only the runner-up; Fan saved three.
         assert s.scalar(select(func.count()).select_from(ProdePredictionHistory)) == 3 + 1 + 3
+        actors = set(s.scalars(select(ProdeAuditEntry.actor)))
+        assert {"org", "clave:Org"} <= actors
     overview = anon.get("/api/v1/prode").json()
     assert overview["leaderboard"][0]["name"] == "vBash"
     assert overview["leaderboard"][0]["precision"] == 100
     assert overview["contests"][0]["participants"] == 2
-    profile = anon.get(f"/api/v1/prode/users/{overview['leaderboard'][0]['user_id']}").json()
+    leader = overview["leaderboard"][0]["user_id"]
+    profile = anon.get(f"/api/v1/prode/users/{leader}").json()
     assert profile["points"] == 33 and profile["history"][0]["rank"] == 1
-    # The hub player behind the account shows them on their profile.
-    from app.integrations.models import DataSource
-    from app.players.models import ExternalIdentity, Player
-
-    with Session(db) as s, s.begin():
-        source = DataSource(slug="startgg", name="start.gg", base_url="https://start.gg")
-        player = Player(tag="vBash")
-        s.add_all([source, player])
-        s.flush()
-        s.add(
-            ExternalIdentity(
-                player_id=player.id,
-                data_source_id=source.id,
-                external_id="player:7",
-                synced_at=datetime.now(UTC),
-            )
-        )
-        player_id = player.id
+    assert profile["player_id"] == str(player_id)
+    # The linked player shows the achievements on their record.
     shown = anon.get(f"/api/v1/prode/players/{player_id}/achievements").json()
     assert shown["achievements"][0]["rare"] is True
     assert {a["title"] for a in shown["achievements"]} >= {"Oráculo", "Pleno"}
+    # Unlinking hides them from the player record but keeps everything on the account.
+    with Session(db) as s:
+        before = (
+            s.scalar(select(func.count()).select_from(ProdePrediction)),
+            s.scalar(select(func.count()).select_from(ProdeAchievement)),
+        )
+    link_id = boss.get("/api/v1/admin/links").json()[0]["id"]
+    unlinked = boss.post(
+        f"/api/v1/admin/links/{link_id}/unlink", json=dict(reason="Pidió desvincular"), headers=WEB
+    )
+    assert unlinked.status_code == 200
+    assert anon.get(f"/api/v1/prode/players/{player_id}/achievements").json() == {
+        "user_id": None,
+        "achievements": [],
+    }
+    profile = anon.get(f"/api/v1/prode/users/{leader}").json()
+    assert profile["player_id"] is None and profile["points"] == 33
+    assert {a["title"] for a in profile["achievements"]} >= {"Oráculo", "Pleno"}
+    with Session(db) as s:
+        assert before == (
+            s.scalar(select(func.count()).select_from(ProdePrediction)),
+            s.scalar(select(func.count()).select_from(ProdeAchievement)),
+        )
     # Signing out revokes the session.
     assert vbash.post("/api/v1/auth/logout").status_code == 403
     assert vbash.post("/api/v1/auth/logout", headers=WEB).status_code == 204
     assert vbash.get("/api/v1/auth/me").json()["user"] is None
 
 
-def test_contest_locks_itself_when_the_event_starts(db, world, monkeypatch, client):
+def test_contest_locks_itself_when_the_event_starts(db, world, client):
     world["starts"] = int((datetime.now(UTC) - timedelta(minutes=1)).timestamp())
     anon = client()
-    contest = anon.post("/api/v1/prode/tournaments/cs", headers=ADMIN).json()
+    contest = anon.post("/api/v1/prode/tournaments/cs", headers=LEGACY).json()
     assert contest["status"] == "locked"
-    player = sign_in(client, monkeypatch, "300", "3", "Late")
+    player = sign_in(client, db, "late")
     late = player.put(
         f"/api/v1/prode/contests/{contest['id']}/picks", json=dict(champion="3"), headers=WEB
     )
@@ -323,23 +350,29 @@ def test_contest_locks_itself_when_the_event_starts(db, world, monkeypatch, clie
     assert anon.get("/api/v1/prode/tournaments/cs").json()["status"] == "locked"
 
 
-def test_sign_in_rejects_a_forged_state(monkeypatch, client):
-    c = client()
-    monkeypatch.setattr(auth, "fetch_identity", lambda s, code: pytest.fail("must not call"))
-    back = c.get(
-        "/api/v1/auth/startgg/callback", params={"code": "x", "state": "y"}, follow_redirects=False
+def test_start_gg_sign_in_is_gone(db):
+    with TestClient(create_app(settings(), engine=db)) as c:
+        assert c.get("/api/v1/auth/startgg/login", follow_redirects=False).status_code == 404
+
+
+def test_disabled_accounts_leave_the_leaderboard_but_keep_their_data(db, world, client):
+    from app.prode.models import ProdePrediction
+
+    anon = client()
+    contest = anon.post("/api/v1/prode/tournaments/cs", headers=LEGACY).json()
+    fan = sign_in(client, db, "fan2", "Fan")
+    url = f"/api/v1/prode/contests/{contest['id']}/picks"
+    assert fan.put(url, json=dict(champion="1"), headers=WEB).status_code == 200
+    make_user(db, "boss2", role="superadmin")
+    boss = account_sign_in(client(), "boss2")
+    fan_id = fan.get("/api/v1/auth/me").json()["user"]["id"]
+    off = boss.put(
+        f"/api/v1/admin/users/{fan_id}/status",
+        json=dict(disabled=True, reason="Cuenta duplicada"),
+        headers=WEB,
     )
-    assert back.headers["location"] == "http://localhost:3000/prode?ingreso=estado"
-
-
-def test_sign_in_is_off_without_oauth_settings(db):
-    off = Settings(_env_file=None, database_url="postgresql://unused:unused@localhost/test")
-    with TestClient(create_app(off, engine=db)) as c:
-        assert c.get("/api/v1/auth/startgg/login", follow_redirects=False).status_code == 503
-        assert c.get("/api/v1/auth/me").json() == {"enabled": False, "user": None}
-
-
-def test_secret_never_appears_in_settings_repr():
-    s = settings()
-    assert isinstance(s.startgg_oauth_client_secret, SecretStr)
-    assert "secret-" not in repr(s)
+    assert off.status_code == 200 and off.json()["disabled"] is True
+    assert fan.get("/api/v1/auth/me").json()["user"] is None  # sessions closed
+    assert anon.get(f"/api/v1/prode/users/{fan_id}").status_code == 404
+    with Session(db) as s:
+        assert s.scalar(select(func.count()).select_from(ProdePrediction)) == 1

@@ -16,6 +16,7 @@ from app.auth.service import MaybeUser, SignedUser
 from app.core.admin import Admin
 from app.insights import preview
 from app.integrations.startgg.client import ImportFailure, StartGGClient
+from app.links import service as links
 from app.prode import engine, service
 from app.prode.models import (
     ProdeCandidate,
@@ -195,7 +196,7 @@ def overview(request: Request):
                 func.count(),
             )
             .join(User, User.id == ProdeScore.user_id)
-            .where(ProdeScore.contest_id.in_(settled), User.banned_at.is_(None))
+            .where(ProdeScore.contest_id.in_(settled), User.disabled_at.is_(None))
             .group_by(ProdeScore.user_id, User.display_name)
         ).all()
         rows = [
@@ -278,7 +279,7 @@ def profile(request: Request, user_id: UUID):
     """A forecaster's public profile: achievements, contests and precision."""
     with _session(request) as s:
         user = s.get(User, user_id)
-        if user is None or user.banned_at is not None:
+        if user is None or user.disabled_at is not None:
             raise HTTPException(404, "No existe ese pronosticador.")
         history = s.execute(
             select(ProdeScore, ProdeContest)
@@ -288,15 +289,11 @@ def profile(request: Request, user_id: UUID):
         ).all()
         hits = sum(sc.hits for sc, _ in history)
         picks = sum(sc.picks for sc, _ in history)
-        hub = (
-            preview.hub_players(s, [user.startgg_player_id]).get(user.startgg_player_id)
-            if user.startgg_player_id
-            else None
-        )
+        player = links.active_player(s, user.id)
         return dict(
             id=str(user.id),
             name=user.display_name,
-            player_id=str(hub) if hub else None,
+            player_id=player["id"] if player else None,
             points=sum(sc.points for sc, _ in history),
             contests=len(history),
             precision=round(100 * hits / picks) if picks else None,
@@ -317,27 +314,16 @@ def profile(request: Request, user_id: UUID):
 
 @router.get("/players/{player_id}/achievements")
 def player_achievements(request: Request, player_id: UUID):
-    """Prode achievements of a hub player whose start.gg account plays the Prode."""
+    """Prode achievements of a hub player whose linked account plays the Prode."""
     with _session(request) as s:
-        startgg = service.startgg_id_of(s, player_id)
-        users = (
-            list(
-                s.scalars(
-                    select(User.id).where(
-                        User.startgg_player_id == startgg, User.banned_at.is_(None)
-                    )
-                )
-            )
-            if startgg
-            else []
-        )
+        users = links.users_for_player(s, player_id)
         return dict(
             user_id=str(users[0]) if users else None,
             achievements=service.achievements_of(s, users) if users else [],
         )
 
 
-# Organizers (shared admin key, ADR-011).
+# Organizers (administrator session, ADR-021).
 
 
 @router.post("/tournaments/{slug}", status_code=201)

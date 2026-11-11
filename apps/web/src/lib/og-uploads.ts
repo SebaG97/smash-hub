@@ -1,5 +1,6 @@
 import sharp from "sharp";
 import { apiBase, slotSize, type Art } from "./og";
+import { organizerHeaders } from "./og-admin";
 
 /**
  * Images organizers upload to replace the render of a place in a share image. They
@@ -16,13 +17,10 @@ function problem(status: number, message: string) {
 }
 
 async function isOrganizer(request: Request) {
-  const authorization = request.headers.get("authorization");
-  if (!authorization) return false;
+  const headers = organizerHeaders(request);
+  if (!headers) return false;
   const r = await fetch(`${apiBase(request)}/seeding/session`, {
-    headers: {
-      Authorization: authorization,
-      "X-Admin-Name": request.headers.get("x-admin-name") ?? "",
-    },
+    headers,
   }).catch(() => null);
   return Boolean(r?.ok);
 }

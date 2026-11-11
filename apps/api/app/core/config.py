@@ -1,9 +1,13 @@
+from datetime import UTC, datetime, timedelta
 from functools import lru_cache
 from typing import Literal
 
 from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import make_url
+
+# The legacy admin key cannot be extended further than this at a time (ADR-021).
+LEGACY_ADMIN_MAX_DAYS = 90
 
 
 class Settings(BaseSettings):
@@ -18,13 +22,13 @@ class Settings(BaseSettings):
     startgg_api_token: SecretStr | None = None
     # Uploading a seeding to start.gg (the hub's only write there) stays off unless set.
     startgg_seeding_writes: bool = False
-    # Shared key for seeding writes; unset disables every write route.
+    # Legacy shared admin key (ADR-011), kept only during the move to personal accounts
+    # (ADR-021). It works only while ADMIN_TOKEN_EXPIRES is set and in the future.
     admin_token: SecretStr | None = None
-    # Prode sign-in with start.gg (OAuth app from developer.start.gg); unset disables it.
-    startgg_oauth_client_id: str | None = None
-    startgg_oauth_client_secret: SecretStr | None = None
-    # Must match the redirect registered in start.gg: <site>/api/v1/auth/startgg/callback.
-    startgg_oauth_redirect_uri: str | None = None
+    admin_token_expires: datetime | None = None
+    # Header where the trusted proxy puts the visitor's address (App Platform:
+    # do-connecting-ip). Unset: only the socket peer is used, no header is trusted.
+    client_ip_header: str | None = Field(default=None, pattern=r"^[A-Za-z0-9-]{1,64}$")
 
     @model_validator(mode="after")
     def validate_security(self):
@@ -44,15 +48,30 @@ class Settings(BaseSettings):
             raise ValueError("CORS requires explicit HTTP origins")
         if self.admin_token is not None and len(self.admin_token.get_secret_value()) < 24:
             raise ValueError("ADMIN_TOKEN must have at least 24 characters")
-        uri = self.startgg_oauth_redirect_uri
-        if uri and not uri.startswith(("http://", "https://")):
-            raise ValueError("STARTGG_OAUTH_REDIRECT_URI must be an HTTP URL")
-        if self.environment == "production" and uri and not uri.startswith("https://"):
-            raise ValueError("Production requires an HTTPS STARTGG_OAUTH_REDIRECT_URI")
+        expires = self.admin_token_expires
+        if expires is not None:
+            if expires.tzinfo is None:
+                raise ValueError("ADMIN_TOKEN_EXPIRES needs a time zone, e.g. 2026-12-31T23:59Z")
+            if expires > datetime.now(UTC) + timedelta(days=LEGACY_ADMIN_MAX_DAYS):
+                raise ValueError(
+                    f"ADMIN_TOKEN_EXPIRES can be at most {LEGACY_ADMIN_MAX_DAYS} days ahead"
+                )
         if self.environment == "production":
             if not self.db_ca_cert or not all(o.startswith("https://") for o in self.cors_origins):
                 raise ValueError("Production requires a CA path and HTTPS origins")
         return self
+
+    def legacy_admin_active(self, now=None):
+        """The shared key still opens admin routes: set, dated and not yet expired."""
+        return (
+            self.admin_token is not None
+            and self.admin_token_expires is not None
+            and (now or datetime.now(UTC)) < self.admin_token_expires
+        )
+
+    def web_origin(self):
+        """The web's origin: the first CORS origin (same site in production)."""
+        return self.cors_origins[0].rstrip("/")
 
 
 @lru_cache

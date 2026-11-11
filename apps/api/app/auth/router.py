@@ -1,107 +1,161 @@
-"""Sign-in with start.gg for the Prode (ADR-020)."""
+"""Smash Hub accounts over HTTP: sign-up, sign-in, profile and recovery (ADR-021)."""
 
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Cookie, Header, HTTPException, Query, Request
-from fastapi.responses import RedirectResponse, Response
+from fastapi import APIRouter, Cookie, Header, HTTPException, Request
+from fastapi.responses import JSONResponse, Response
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
 from app.auth import service
-from app.auth.service import MaybeUser
+from app.auth.models import User
+from app.auth.service import AuthError, MaybeUser, Member, SignedUser
+from app.links import service as links
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 log = logging.getLogger(__name__)
 
 
-def _settings(request):
-    settings = request.app.state.settings
-    if not service.enabled(settings):
-        raise HTTPException(503, "El ingreso con start.gg todavía no está configurado.")
-    return settings
+class Body(BaseModel):
+    model_config = ConfigDict(extra="forbid")
 
 
-def _web(settings, path):
-    """Back to the web: its origin is the first CORS origin (same site in production)."""
-    return settings.cors_origins[0].rstrip("/") + path
+class Registration(Body):
+    username: str = Field(min_length=3, max_length=30)
+    email: str = Field(min_length=3, max_length=254)
+    password: str = Field(min_length=1, max_length=200)
+    display_name: str | None = Field(default=None, max_length=60)
 
 
-def _secure(settings):
-    return settings.environment == "production"
+class Credentials(Body):
+    login: str = Field(min_length=1, max_length=254)
+    password: str = Field(min_length=1, max_length=200)
 
 
-@router.get("/startgg/login", include_in_schema=False)
-def login(request: Request, next: Annotated[str | None, Query(max_length=300)] = None):
-    settings = _settings(request)
-    state, cookie = service.new_state(settings, next)
-    response = RedirectResponse(service.authorize_url(settings, state), status_code=303)
-    response.set_cookie(
-        service.STATE_COOKIE,
-        cookie,
-        max_age=service.STATE_MINUTES * 60,
-        httponly=True,
-        secure=_secure(settings),
-        samesite="lax",
-        path="/api/v1/auth",
-    )
-    return response
+class Profile(Body):
+    display_name: str = Field(min_length=1, max_length=60)
 
 
-@router.get("/startgg/callback", include_in_schema=False)
-def callback(
-    request: Request,
-    code: Annotated[str | None, Query(max_length=2000)] = None,
-    state: Annotated[str | None, Query(max_length=200)] = None,
-    sh_oauth: Annotated[str | None, Cookie()] = None,
-):
-    settings = _settings(request)
-    next_path = service.check_state(settings, state, sh_oauth)
-    if next_path is None or not code:
-        return _failed(settings, "estado")
-    try:
-        identity = service.fetch_identity(settings, code)
-    except service.SignInFailure as exc:
-        log.warning("start.gg sign-in failed: %s", exc)
-        return _failed(settings, "startgg")
-    with Session(request.app.state.engine, expire_on_commit=False) as s, s.begin():
-        user = service.upsert_user(s, identity)
-        if user.banned_at is not None:
-            return _failed(settings, "bloqueado")
-        token = service.open_session(s, user)
-    response = RedirectResponse(_web(settings, next_path), status_code=303)
-    response.delete_cookie(service.STATE_COOKIE, path="/api/v1/auth")
+class PasswordChange(Body):
+    current_password: str = Field(min_length=1, max_length=200)
+    new_password: str = Field(min_length=1, max_length=200)
+
+
+class Reset(Body):
+    token: str = Field(min_length=10, max_length=200)
+    password: str = Field(min_length=1, max_length=200)
+
+
+def _session(request):
+    return Session(request.app.state.engine, expire_on_commit=False)
+
+
+def _fail(exc: AuthError):
+    headers = {"Retry-After": str(exc.retry_after)} if exc.retry_after else None
+    raise HTTPException(exc.status, str(exc), headers=headers) from None
+
+
+def _set_cookie(response, request, token, user):
     response.set_cookie(
         service.SESSION_COOKIE,
         token,
-        max_age=service.SESSION_DAYS * 86400,
+        max_age=service.session_days(user) * 86400,
         httponly=True,
-        secure=_secure(settings),
+        secure=request.app.state.settings.environment == "production",
         samesite="lax",
         path="/",
     )
-    return response
 
 
-def _failed(settings, reason):
-    response = RedirectResponse(_web(settings, f"/prode?ingreso={reason}"), status_code=303)
-    response.delete_cookie(service.STATE_COOKIE, path="/api/v1/auth")
-    return response
+def account(s, user: User | None, *, own=True):
+    """What the web knows about the signed-in account."""
+    if user is None:
+        return None
+    return dict(
+        id=str(user.id),
+        username=user.username,
+        display_name=user.display_name,
+        name=user.display_name,
+        role=user.role,
+        email=user.email if own else None,
+        player=links.active_player(s, user.id),
+    )
+
+
+def _me(request, s, user):
+    settings = request.app.state.settings
+    return dict(
+        user=account(s, user),
+        # The organizers' shared key still works (transition, ADR-021).
+        legacy_admin_key=settings.legacy_admin_active(),
+    )
 
 
 @router.get("/me")
 def me(request: Request, user: MaybeUser):
-    """Who is signed in (null when nobody) and whether signing in is available."""
-    return dict(
-        enabled=service.enabled(request.app.state.settings),
-        user=None
-        if user is None
-        else dict(
-            id=str(user.id),
-            name=user.display_name,
-            slug=user.slug,
-            startgg_player_id=user.startgg_player_id,
-        ),
-    )
+    """Who is signed in (null when nobody) and which account features are available."""
+    with _session(request) as s:
+        return _me(request, s, user)
+
+
+@router.post("/register", status_code=201)
+def register(
+    request: Request,
+    body: Registration,
+    x_requested_with: Annotated[str | None, Header()] = None,
+):
+    service.require_web_header(x_requested_with)
+    client = service.client_of(request)
+    if service.REGISTRATIONS.blocked(client):
+        raise HTTPException(429, "Demasiados registros desde esta conexión. Probá más tarde.")
+    # Every attempt counts, so the sign-up cannot be used to probe usernames and e-mails.
+    service.REGISTRATIONS.hit(client)
+    with _session(request) as s:
+        try:
+            with s.begin():
+                user = service.register(
+                    s,
+                    username=body.username,
+                    email=body.email,
+                    password=body.password,
+                    display_name=body.display_name,
+                )
+                user.last_login_at = service.now()
+                token = service.open_session(s, user)
+        except AuthError as exc:
+            _fail(exc)
+        response = JSONResponse(_me(request, s, user), status_code=201)
+    _set_cookie(response, request, token, user)
+    return response
+
+
+@router.post("/login")
+def login(
+    request: Request,
+    body: Credentials,
+    x_requested_with: Annotated[str | None, Header()] = None,
+    sh_session: Annotated[str | None, Cookie()] = None,
+):
+    service.require_web_header(x_requested_with)
+    client = service.client_of(request)
+    with _session(request) as s:
+        failure = None
+        with s.begin():
+            try:
+                user = service.authenticate(s, body.login, body.password, client)
+            except AuthError as exc:
+                failure = exc  # the audit of a failed attempt is committed on purpose
+            else:
+                # A new token on every sign-in (no session fixation).
+                service.revoke(s, sh_session)
+                token = service.open_session(s, user)
+                service.audit(s, "login", user, target=user, ip=client)
+        if failure is not None:
+            _fail(failure)
+        response = JSONResponse(_me(request, s, user))
+    _set_cookie(response, request, token, user)
+    return response
 
 
 @router.post("/logout", status_code=204)
@@ -110,10 +164,80 @@ def logout(
     sh_session: Annotated[str | None, Cookie()] = None,
     x_requested_with: Annotated[str | None, Header()] = None,
 ):
-    if x_requested_with != service.CSRF_HEADER_VALUE:
-        raise HTTPException(403, "Falta el encabezado de la web del hub.")
-    with Session(request.app.state.engine) as s, s.begin():
+    service.require_web_header(x_requested_with)
+    with _session(request) as s, s.begin():
         service.revoke(s, sh_session)
     response = Response(status_code=204)
+    response.delete_cookie(service.SESSION_COOKIE, path="/")
+    return response
+
+
+@router.put("/me")
+def update_profile(request: Request, body: Profile, user: SignedUser):
+    with _session(request) as s:
+        with s.begin():
+            row = s.get(User, user.id)
+            row.display_name = service.clean_display_name(body.display_name, row.username)
+        return _me(request, s, row)
+
+
+@router.put("/password")
+def change_password(
+    request: Request,
+    body: PasswordChange,
+    user: SignedUser,
+    sh_session: Annotated[str | None, Cookie()] = None,
+):
+    """New password; every other session of the account is closed."""
+    with _session(request) as s:
+        try:
+            with s.begin():
+                row = s.get(User, user.id, with_for_update=True)
+                if not service.passwords.verify(row.password_hash, body.current_password):
+                    raise AuthError("La contraseña actual no es correcta.", 403)
+                service.set_password(s, row, body.new_password)
+                closed = service.revoke_all(s, row.id, keep=sh_session)
+                service.audit(s, "password_change", row, target=row, closed_sessions=closed)
+        except AuthError as exc:
+            _fail(exc)
+        return dict(closed_sessions=closed)
+
+
+@router.get("/sessions")
+def sessions(request: Request, user: Member):
+    with _session(request) as s:
+        return dict(open=service.open_sessions(s, user.id))
+
+
+@router.post("/sessions/revoke-others")
+def revoke_others(
+    request: Request, user: SignedUser, sh_session: Annotated[str | None, Cookie()] = None
+):
+    with _session(request) as s, s.begin():
+        closed = service.revoke_all(s, user.id, keep=sh_session)
+        service.audit(s, "sessions_revoked", user, target=user, closed_sessions=closed)
+    return dict(closed_sessions=closed)
+
+
+@router.post("/password/reset", status_code=204)
+def reset(
+    request: Request,
+    body: Reset,
+    x_requested_with: Annotated[str | None, Header()] = None,
+):
+    service.require_web_header(x_requested_with)
+    client = service.client_of(request)
+    wait = service.RESET_FAILURES.wait(client)
+    if wait > 0:
+        _fail(service._throttled(wait))
+    with _session(request) as s:
+        try:
+            with s.begin():
+                service.consume_reset(s, body.token, body.password)
+        except AuthError as exc:
+            if exc.status == 400:  # unknown or used token: slow down guessing
+                service.RESET_FAILURES.fail(client)
+            _fail(exc)
+    response = Response(status_code=204, headers={"Cache-Control": "no-store"})
     response.delete_cookie(service.SESSION_COOKIE, path="/")
     return response

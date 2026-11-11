@@ -447,3 +447,20 @@ Tablas nuevas, sin cambios en las existentes:
 | `prode_audit_entries` | Acciones de organizadores; la aplicación solo inserta. |
 
 Todas las FKs borran en cascada desde el concurso o el usuario.
+
+### Migración 0019 (ADR-021)
+
+Cuentas propias, roles y vinculación con fichas. Detalle en [arquitectura de cuentas](../architecture/accounts.md).
+
+`users` cambia: agrega `username` (único, `[a-z0-9_.-]{3,30}` por check), `email` (único, nulo solo en cuentas heredadas), `password_hash` (Argon2id), `role` (`user`, `admin` o `superadmin`, por check; por defecto `user`), `password_changed_at` y `last_login_at`; `banned_at` pasa a llamarse `disabled_at`; se quitan `provider`, `provider_user_id`, `slug` y `startgg_player_id` (con su índice y su único).
+
+| Tabla | Contenido |
+| --- | --- |
+| `player_links` | Vinculación cuenta ↔ `players`: `method` (request, admin, startgg_legacy), `request_id`, `verification` (cómo se comprobó), `linked_by`/`linked_by_name`, `unlinked_at`, `unlinked_by`/`unlinked_by_name`, `unlink_reason`. Índices únicos parciales `uq_player_links_active_user` y `uq_player_links_active_player` (`WHERE unlinked_at IS NULL`). |
+| `player_link_requests` | Pedido de la persona: `player_id`, `status` (pending, approved, rejected, cancelled), `code`, `evidence`, `reviewed_by`/`reviewed_by_name`, `reviewed_at`, `review_note`. Único parcial `uq_player_link_requests_pending_user` (`WHERE status = 'pending'`). |
+| `password_reset_tokens` | `user_id`, `token_hash` (SHA-256, único), `expires_at`, `used_at`, `issued_by` (superadmin que lo emitió; nulo solo si esa cuenta se borró). |
+| `auth_audit_entries` | Registro de solo inserción: `action` (indexada), `actor_id`, `actor` (usuario, `clave:<nombre>`, `cli` o `sistema`), `target_user_id`, `details` (JSON). |
+
+Borrar una cuenta borra en cascada sesiones, tokens, solicitudes y vinculaciones; las referencias a quien actuó (`linked_by`, `reviewed_by`, `issued_by`, `actor_id`) quedan en nulo y el nombre se conserva como texto. `player_links.player_id` y `player_link_requests.player_id` no borran en cascada: una ficha vinculada no se puede borrar sin desvincularla antes.
+
+Datos: cada cuenta existente (start.gg) recibe el usuario `sgg-<provider_user_id>`, sin correo ni contraseña, y su `startgg_player_id` se convierte en una vinculación `startgg_legacy` si la ficha existe (la pareja más antigua, si hubiera dos).

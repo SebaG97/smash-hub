@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { problem } from "./seeding-board";
-import { useAdmin, type Admin } from "../lib/admin";
+import { adminHeaders, useAdmin, type Admin } from "../lib/admin";
 
 const api = (process.env.NEXT_PUBLIC_API_URL || "/api/v1").replace(/\/$/, "");
 
@@ -36,9 +36,9 @@ async function call(
 ) {
   return fetch(`${api}/imports/${path}`, {
     method,
+    credentials: "include",
     headers: {
-      Authorization: `Bearer ${admin.key}`,
-      "X-Admin-Name": admin.name,
+      ...adminHeaders(admin),
       "Content-Type": "application/json",
     },
     body: body === undefined ? undefined : JSON.stringify(body),

@@ -92,9 +92,9 @@ async function send(
 ): Promise<Response> {
   return fetch(`${api}/seeding${path ? `/${path}` : ""}`, {
     method,
+    credentials: "include",
     headers: {
-      Authorization: `Bearer ${admin.key}`,
-      "X-Admin-Name": admin.name,
+      ...adminHeaders(admin),
       "Content-Type": "application/json",
     },
     body: body === undefined ? undefined : JSON.stringify(body),
@@ -121,11 +121,12 @@ export function AdminLogin({ onLogin }: { onLogin?: (admin: Admin) => void }) {
       onSubmit={async (e) => {
         e.preventDefault();
         setError("");
-        const admin = { key: key.trim(), name: name.trim() || "admin" };
+        const legacy = { key: key.trim(), name: name.trim() || "admin" };
+        const admin: Admin = { ...legacy, role: "legacy" };
         try {
           const r = await send(admin, "GET", "session");
           if (!r.ok) return setError(await problem(r));
-          saveAdmin(admin);
+          saveAdmin(legacy);
           onLogin?.(admin);
         } catch {
           setError("No se pudo contactar a la API.");
@@ -1035,6 +1036,7 @@ export function SeedingBoard({
   useEffect(() => {
     let active = true;
     fetch(`${api}/seeding/${encodeURIComponent(slug)}`, {
+      credentials: "include",
       headers: adminHeaders(admin),
     })
       .then(async (r) => {
@@ -1115,7 +1117,7 @@ export function SeedingBoard({
   async function exportCsv() {
     const r = await fetch(
       `${api}/seeding/${encodeURIComponent(slug)}/export.csv`,
-      { headers: adminHeaders(admin) },
+      { credentials: "include", headers: adminHeaders(admin) },
     ).catch(() => null);
     if (!r || !r.ok) return setMessage("No se pudo exportar.");
     const url = URL.createObjectURL(await r.blob());
@@ -1711,7 +1713,10 @@ export function SeedingList({
   const admin = useAdmin();
   const ranking = kind === "ranking";
   useEffect(() => {
-    fetch(`${api}/seeding?kind=${kind}`, { headers: adminHeaders(admin) })
+    fetch(`${api}/seeding?kind=${kind}`, {
+      credentials: "include",
+      headers: adminHeaders(admin),
+    })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error())))
       .then(setItems)
       .catch(() => setError(true));

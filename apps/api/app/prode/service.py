@@ -4,8 +4,7 @@ from datetime import UTC, datetime
 
 from sqlalchemy import delete, func, select
 
-from app.auth.models import User
-from app.players.models import ExternalIdentity
+from app.links import service as links
 from app.prode import engine
 from app.prode.models import (
     ProdeAchievement,
@@ -214,13 +213,13 @@ def settle(s, contest, placements, *, actor, source):
     candidates = list(
         s.scalars(select(ProdeCandidate).where(ProdeCandidate.contest_id == contest.id))
     )
-    users = {u.id: u for u in s.scalars(select(User).where(User.id.in_(list(played))))}
     earned = engine.achievements(
         contest.name,
         results,
         {user: picks for user, (picks, _) in played.items()},
         ranked,
-        players={u.id: u.startgg_player_id for u in users.values()},
+        # The player behind each account comes from its link (ADR-021), if any.
+        players=links.startgg_ids_for_users(s, list(played)),
         seeds={c.startgg_player_id: c.seed for c in candidates},
         tags={c.startgg_player_id: c.tag for c in candidates},
     )
@@ -267,16 +266,6 @@ def _lifetime(s, user_ids):
     for user_id, items in engine.lifetime(played, won).items():
         for item in items:
             s.add(ProdeAchievement(user_id=user_id, contest_id=None, **item))
-
-
-def startgg_id_of(s, hub_player_id):
-    external = s.scalar(
-        select(ExternalIdentity.external_id).where(
-            ExternalIdentity.player_id == hub_player_id,
-            ExternalIdentity.external_id.like("player:%"),
-        )
-    )
-    return external.removeprefix("player:") if external else None
 
 
 def achievements_of(s, user_ids):

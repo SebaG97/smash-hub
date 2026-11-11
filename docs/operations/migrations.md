@@ -39,3 +39,9 @@ No se cambian 0001 ni 0002. Downgrade de 0003 elimina metadatos de clasificació
 ## Misión 03
 
 No introduce revisión 0004: el esquema y las migraciones 0001–0003 permanecen intactos. Estadísticas usa consultas sobre resultados clasificados por 0003 y no requiere reimportar ni modificar datos para consultar. La excepción de lectura sin score está documentada en ADR-010; no cambia los flags persistidos. Los planes locales no justificaron índices nuevos al volumen actual.
+
+## Revisión 0019 — Cuentas propias
+
+`0019_accounts.py` (Misión SH-AUTH-01, ADR-021), sobre 0018 intacta. Agrega columnas nullable a `users`, completa `username` para las cuentas existentes y recién después aplica `NOT NULL`, únicos y checks; renombra `banned_at` a `disabled_at` en lugar de borrarla; convierte el `startgg_player_id` de cada cuenta en una vinculación `startgg_legacy` y luego quita las columnas de OAuth. Crea `player_links`, `player_link_requests`, `password_reset_tokens` y `auth_audit_entries`, con índices únicos parciales que Alembic compara por nombre.
+
+Verificado en PostgreSQL efímero: upgrade con cuentas heredadas, downgrade a 0018, re-upgrade, `alembic check` sin operaciones y roundtrip base ↔ head de la suite. El downgrade conserva cuentas, pronósticos y logros, pero borra contraseñas, roles, vinculaciones, solicitudes, tokens y la auditoría de cuentas: con datos reales, backup y corrección hacia adelante. Aplicar en producción con `APPROVED_MIGRATION=0019` tras revisión humana. Procedimiento completo en [accounts.md](accounts.md).

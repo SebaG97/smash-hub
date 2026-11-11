@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import ValidationError
 
+from app.auth.admin_router import router as accounts_admin_router
 from app.auth.router import router as auth_router
 from app.brackets.router import router as brackets_router
 from app.competitions.router import router as competitions_router
@@ -14,6 +15,7 @@ from app.database.session import build_engine
 from app.health.router import router
 from app.insights.router import router as insights_router
 from app.integrations.router import router as imports_router
+from app.links.router import router as links_router
 from app.live.router import router as live_router
 from app.prode.router import router as prode_router
 from app.seeding.router import router as seeding_router
@@ -51,8 +53,8 @@ def create_app(settings: Settings | None = None, engine=None) -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
-        # Organizer writes need the admin key (ADR-011); Prode writes need the session
-        # cookie plus X-Requested-With, which only these origins may send (ADR-020).
+        # Writes with the session cookie need X-Requested-With, which only these origins
+        # may send (ADR-021). Authorization/X-Admin-Name: legacy shared key, transition only.
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "DELETE"],
         allow_headers=[
@@ -74,5 +76,7 @@ def create_app(settings: Settings | None = None, engine=None) -> FastAPI:
     app.include_router(live_router)
     app.include_router(auth_router)
     app.include_router(prode_router)
+    app.include_router(links_router)
+    app.include_router(accounts_admin_router)
 
     return app

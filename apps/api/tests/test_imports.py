@@ -1,5 +1,6 @@
 """Mission 06: character selections, mains and web imports. Never calls start.gg."""
 
+from accounts import LEGACY_EXPIRES
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -38,6 +39,7 @@ def client_for(db):
         _env_file=None,
         database_url="postgresql://unused:unused@localhost/test",
         admin_token=KEY,
+        admin_token_expires=LEGACY_EXPIRES,
     )
     return TestClient(create_app(settings, engine=db))
 
@@ -191,6 +193,7 @@ def test_web_import_requires_admin_and_reports_progress(db, monkeypatch):
         _env_file=None,
         database_url="postgresql://unused:unused@localhost/test",
         admin_token=KEY,
+        admin_token_expires=LEGACY_EXPIRES,
         startgg_api_token="t",
     )
     with TestClient(create_app(settings, engine=db)) as client:
@@ -509,6 +512,7 @@ def test_tournament_images_come_with_the_import_and_can_be_backfilled(db, snapsh
         _env_file=None,
         database_url="postgresql://unused:unused@localhost/test",
         admin_token=KEY,
+        admin_token_expires=LEGACY_EXPIRES,
         startgg_api_token="token",
     )
     with TestClient(create_app(settings, engine=db)) as client:
@@ -603,6 +607,7 @@ def test_prefixes_need_approval_and_make_teams(db, snapshot, monkeypatch):
         _env_file=None,
         database_url="postgresql://unused:unused@localhost/test",
         admin_token=KEY,
+        admin_token_expires=LEGACY_EXPIRES,
         startgg_api_token="token",
     )
     with TestClient(create_app(settings, engine=db)) as client:

@@ -5,6 +5,7 @@ import io
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from accounts import LEGACY_EXPIRES
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 from sqlalchemy import select
@@ -218,6 +219,7 @@ def client_for(db, admin_token=KEY, token=None):
         _env_file=None,
         database_url="postgresql://unused:unused@localhost/test",
         admin_token=admin_token,
+        admin_token_expires=LEGACY_EXPIRES,
         startgg_api_token=token,
     )
     return TestClient(create_app(settings, engine=db))
@@ -249,16 +251,18 @@ def test_writes_require_admin_key(project):
             ).status_code
             == 401
         )
+    # Without the key (or once it expired) only an administrator's session works.
     with client_for(project, admin_token=None) as client:
         assert (
-            client.post("/api/v1/seeding/cs/recalculate", json={}, headers=AUTH).status_code == 503
+            client.post("/api/v1/seeding/cs/recalculate", json={}, headers=AUTH).status_code == 401
         )
 
 
 def test_move_reset_recalculate_export_and_audit(project):
     with client_for(project) as client:
         assert (
-            client.get("/api/v1/seeding/cs/session", headers=AUTH).json()["actor"] == "Org script"
+            client.get("/api/v1/seeding/cs/session", headers=AUTH).json()["actor"]
+            == "clave:Org script"
         )
         r = client.put(
             "/api/v1/seeding/cs/overrides/3",
@@ -267,7 +271,9 @@ def test_move_reset_recalculate_export_and_audit(project):
         )
         assert r.status_code == 200
         seeds = client.get("/api/v1/seeding/cs", headers=AUTH).json()["seeds"]
-        assert seeds[0]["gamer_tag"] == "Cid" and seeds[0]["override"]["actor"] == "Org script"
+        assert (
+            seeds[0]["gamer_tag"] == "Cid" and seeds[0]["override"]["actor"] == "clave:Org script"
+        )
         assert (
             client.put(
                 "/api/v1/seeding/cs/overrides/3", json={"seed": 50, "reason": "xxx"}, headers=AUTH
@@ -504,7 +510,9 @@ def test_create_projects_from_the_web(db, monkeypatch):
     monkeypatch.setattr(startgg, "fetch_event", fake_event)
     period = {"window_start": "2025-11-14T00:00:00-03:00", "end": "2026-11-14T00:00:00-03:00"}
     with client_for(db) as client:
-        assert client.get("/api/v1/seeding/session", headers=AUTH).json() == {"actor": "Org script"}
+        assert client.get("/api/v1/seeding/session", headers=AUTH).json() == {
+            "actor": "clave:Org script"
+        }
         assert (
             client.post(
                 "/api/v1/seeding", json={"kind": "ranking", "name": "Ranking PY", **period}

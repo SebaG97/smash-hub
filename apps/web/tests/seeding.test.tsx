@@ -8,6 +8,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { AdminPanel } from "../src/components/admin-panel";
+import { setMe } from "../src/lib/session";
 import { SeedingBoard } from "../src/components/seeding-board";
 import type {
   PublicSeedingView,
@@ -340,14 +341,21 @@ describe("seeding board", () => {
     ).toBeUndefined();
   });
 
-  it("signs in from /admin and shows the tools", async () => {
+  it("keeps the legacy key in /admin during the transition", async () => {
+    setMe({
+      user: null,
+      legacy_admin_key: true,
+    });
     vi.stubGlobal(
       "fetch",
       vi.fn(() =>
-        Promise.resolve(new Response(JSON.stringify({ actor: "Org" }))),
+        Promise.resolve(new Response(JSON.stringify({ actor: "clave:Org" }))),
       ),
     );
     render(<AdminPanel />);
+    expect(
+      screen.getByRole("link", { name: "Ingresar con tu cuenta" }),
+    ).toHaveAttribute("href", "/ingresar?next=%2Fadmin");
     fireEvent.change(screen.getByLabelText("Tu nombre"), {
       target: { value: "Org" },
     });
@@ -355,14 +363,63 @@ describe("seeding board", () => {
       target: { value: "secret-key" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
-    expect(await screen.findByText(/Sesión iniciada como/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Entraste con la clave compartida/),
+    ).toBeInTheDocument();
     expect(JSON.parse(sessionStorage.getItem("seeding-admin")!)).toEqual({
       key: "secret-key",
       name: "Org",
     });
-    fireEvent.click(screen.getByRole("button", { name: "Salir" }));
+    fireEvent.click(screen.getByRole("button", { name: "Olvidar la clave" }));
     expect(
       await screen.findByLabelText("Clave de administración"),
     ).toBeInTheDocument();
+  });
+
+  it("hides the legacy key once the API stops accepting it", () => {
+    render(<AdminPanel />);
+    expect(screen.queryByLabelText("Clave de administración")).toBeNull();
+    expect(
+      screen.getByRole("link", { name: "Ingresar con tu cuenta" }),
+    ).toBeInTheDocument();
+  });
+
+  it("opens the tools with an administrator's own session", () => {
+    setMe({
+      user: {
+        id: "u1",
+        username: "org",
+        display_name: "Org",
+        name: "Org",
+        role: "admin",
+        email: "org@example.com",
+        player: null,
+      },
+      legacy_admin_key: false,
+    });
+    render(<AdminPanel />);
+    expect(screen.getByText(/Sesión de/)).toHaveTextContent("@org");
+    expect(screen.getByRole("link", { name: "Vinculaciones" })).toBeVisible();
+    // Superadmin tools stay hidden for an administrator.
+    expect(screen.queryByRole("link", { name: "Usuarios y roles" })).toBeNull();
+  });
+
+  it("tells a signed-in user without a role that they cannot enter", () => {
+    setMe({
+      user: {
+        id: "u2",
+        username: "ana",
+        display_name: "Ana",
+        name: "Ana",
+        role: "user",
+        email: "ana@example.com",
+        player: null,
+      },
+      legacy_admin_key: false,
+    });
+    render(<AdminPanel />);
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "no tiene permisos de administración",
+    );
   });
 });

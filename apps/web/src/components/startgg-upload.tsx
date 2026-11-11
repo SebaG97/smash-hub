@@ -57,6 +57,7 @@ export function StartggUpload({
     setReviewed(false);
     setTyped("");
     const r = await fetch(`${api}/seeding/${slug}/startgg`, {
+      credentials: "include",
       headers: adminHeaders(admin),
     }).catch(() => null);
     setBusy(false);
@@ -71,6 +72,7 @@ export function StartggUpload({
     setError("");
     const r = await fetch(`${api}/seeding/${slug}/startgg`, {
       method: "POST",
+      credentials: "include",
       headers: { ...adminHeaders(admin), "Content-Type": "application/json" },
       body: JSON.stringify({ digest: plan.digest, confirm: typed }),
     }).catch(() => null);

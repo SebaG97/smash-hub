@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { Main } from "../lib/api";
-import { useAdmin, type Admin } from "../lib/admin";
+import { adminHeaders, useAdmin, type Admin } from "../lib/admin";
 import { Resource } from "./competition-browser";
 import { MainIcons, mainColor } from "./mains";
 import { problem } from "./seeding-board";
@@ -194,9 +194,9 @@ async function call(
 ) {
   return fetch(`${api}/${path}`, {
     method,
+    credentials: "include",
     headers: {
-      Authorization: `Bearer ${admin.key}`,
-      "X-Admin-Name": admin.name,
+      ...adminHeaders(admin),
       ...(body ? { "Content-Type": "application/json" } : {}),
     },
     body: body ? JSON.stringify(body) : undefined,

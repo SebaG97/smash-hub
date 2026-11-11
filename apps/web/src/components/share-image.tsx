@@ -136,6 +136,7 @@ function Editor({
       form.append(`image-${index}`, file);
     const r = await fetch(endpoint, {
       method: "POST",
+      credentials: "include",
       headers: adminHeaders(admin),
       body: form,
     }).catch(() => null);

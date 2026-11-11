@@ -25,6 +25,7 @@ export function AdminDownload({
     setError("");
     const r = await fetch(endpoint, {
       method: "POST",
+      credentials: "include",
       headers: adminHeaders(admin),
     }).catch(() => null);
     setBusy(false);

@@ -42,11 +42,15 @@ def main():
             if approved not in revisions:
                 raise RuntimeError("Explicit APPROVED_MIGRATION=<revision> is required")
             command.upgrade(config, approved)
-        elif sys.argv[1:2] in (["seeding"], ["bootstrap"]):
+        elif sys.argv[1:2] in (["seeding"], ["bootstrap"], ["superadmin"]):
             # Operator commands from the App Platform console, with the same TLS setup.
             import runpy
 
-            module = {"seeding": "app.cli.seeding", "bootstrap": "app.bootstrap"}[sys.argv[1]]
+            module = {
+                "seeding": "app.cli.seeding",
+                "bootstrap": "app.bootstrap",
+                "superadmin": "app.cli.superadmin",
+            }[sys.argv[1]]
             sys.argv = [module, *sys.argv[2:]]
             runpy.run_module(module, run_name="__main__", alter_sys=True)
         else:

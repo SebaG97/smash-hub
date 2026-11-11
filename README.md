@@ -8,6 +8,8 @@ Misión 05: página de seeding por evento (`/seeding`) con propuesta explicada (
 
 Misión 05.1: seis métodos de cálculo comparables en la misma página (combinado, Glicko-2, Elo, Bradley-Terry, puntos por posición y % de victorias Wilson), con vista previa y método oficial; ranking del circuito paraguayo en `/rankings` con los torneos presenciales de start.gg (ADR-012).
 
+Misión SH-AUTH-01: cuentas propias (registro, ingreso, recuperación de contraseña asistida por un superadministrador), roles usuario/administrador/superadministrador, acceso administrativo con la propia cuenta y vinculación verificada de cuentas con fichas de jugador (ADR-021). Primer superadministrador y transición desde la clave compartida: [docs/operations/accounts.md](docs/operations/accounts.md).
+
 ## Inicio local
 
 Requisitos: Git, Docker Desktop con motor Linux y Docker Compose v2. Puertos predeterminados: web 3000 y API 8000. PostgreSQL no publica puertos.

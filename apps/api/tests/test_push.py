@@ -81,10 +81,13 @@ def test_verify_reports_seeds_that_did_not_land():
 
 
 def client_with_writes(db, enabled):
+    from accounts import LEGACY_EXPIRES
+
     settings = Settings(
         _env_file=None,
         database_url="postgresql://unused:unused@localhost/test",
         admin_token=KEY,
+        admin_token_expires=LEGACY_EXPIRES,
         startgg_api_token=SecretStr("t"),
         startgg_seeding_writes=enabled,
     )

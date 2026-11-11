@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { adminHeaders, useAdmin } from "../lib/admin";
-import { apiFetch, loginUrl, logout, useMe, type Me } from "../lib/session";
+import { apiFetch, signInHref, useMe, type Me } from "../lib/session";
 
 /** Prode: predictions on upcoming tournaments (Mission SH-PRODE-01, ADR-020). */
 
@@ -301,16 +301,13 @@ function PicksForm({
   if (me && !me.user) {
     return (
       <div className="prode-login">
-        <p>Para jugar el Prode ingresá con tu cuenta de start.gg.</p>
-        {me.enabled ? (
-          <a className="primary-button" href={loginUrl()}>
-            Ingresar con start.gg
-          </a>
-        ) : (
-          <p className="seeding-lead">
-            El ingreso todavía no está habilitado en el hub.
-          </p>
-        )}
+        <p>Para jugar el Prode ingresá con tu cuenta de Smash Hub.</p>
+        <p>
+          <Link className="primary-button" href={signInHref()}>
+            Ingresar
+          </Link>{" "}
+          <Link href="/registro">o creá una cuenta gratis</Link>
+        </p>
       </div>
     );
   }
@@ -575,14 +572,8 @@ const STATUS = {
   void: "Anulado",
 };
 
-const SIGN_IN_PROBLEMS: Record<string, string> = {
-  estado: "El ingreso venció o vino de otro lado. Probá de nuevo.",
-  startgg: "start.gg no confirmó el ingreso. Probá de nuevo en un rato.",
-  bloqueado: "Esta cuenta no puede jugar el Prode.",
-};
-
 /** /prode: open contests, the community leaderboard and the achievements. */
-export function ProdePage({ problem }: { problem?: string | null }) {
+export function ProdePage() {
   const me = useMe();
   const { data, status, loading, reload } = useLoad<Overview>("prode");
   return (
@@ -593,16 +584,12 @@ export function ProdePage({ problem }: { problem?: string | null }) {
         empiecen. Es gratis: el premio son logros para tu perfil y, si sos
         jugador, también para tu ficha del hub.
       </p>
-      {problem && (
-        <p role="alert">
-          {SIGN_IN_PROBLEMS[problem] ?? "No se pudo ingresar."}
-        </p>
-      )}
-      {me && !me.user && me.enabled && (
+      {me && !me.user && (
         <p>
-          <a className="primary-button" href={loginUrl("/prode")}>
-            Ingresar con start.gg
-          </a>
+          <Link className="primary-button" href={signInHref("/prode")}>
+            Ingresar
+          </Link>{" "}
+          <Link href="/registro">o creá una cuenta gratis</Link>
         </p>
       )}
       {me?.user && (
@@ -818,25 +805,5 @@ export function PlayerProdeAchievements({ id }: { id: string }) {
         </p>
       )}
     </section>
-  );
-}
-
-/** Header: sign in / who is signed in. Hidden while the Prode sign-in is off. */
-export function UserBadge() {
-  const me = useMe();
-  if (!me?.enabled) return null;
-  if (!me.user)
-    return (
-      <span className="user-badge">
-        <a href={loginUrl()}>Ingresar</a>
-      </span>
-    );
-  return (
-    <span className="user-badge">
-      <Link href={`/prode/u/${me.user.id}`}>{me.user.name}</Link> ·{" "}
-      <button className="link-button" onClick={() => void logout()}>
-        Salir
-      </button>
-    </span>
   );
 }

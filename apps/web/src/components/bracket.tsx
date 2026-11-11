@@ -91,7 +91,10 @@ export function BracketPreview({ slug }: { slug: string }) {
   }>({});
   const load = () => {
     setState((s) => ({ ...s, loading: true, error: undefined }));
-    fetch(`${api}/seeding/${slug}/bracket`, { headers: adminHeaders(admin) })
+    fetch(`${api}/seeding/${slug}/bracket`, {
+      credentials: "include",
+      headers: adminHeaders(admin),
+    })
       .then(async (r) => {
         const body = await r.json().catch(() => ({}));
         if (!r.ok)

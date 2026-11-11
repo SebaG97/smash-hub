@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useAdmin } from "../lib/admin";
+import { adminHeaders, useAdmin } from "../lib/admin";
 import { problem } from "./seeding-board";
 
 const api = (process.env.NEXT_PUBLIC_API_URL || "/api/v1").replace(/\/$/, "");
@@ -68,9 +68,9 @@ export function TournamentImagesButton() {
           setMessage("");
           const r = await fetch(`${api}/tournaments/images`, {
             method: "POST",
+            credentials: "include",
             headers: {
-              Authorization: `Bearer ${admin.key}`,
-              "X-Admin-Name": admin.name,
+              ...adminHeaders(admin),
             },
           }).catch(() => null);
           setBusy(false);
