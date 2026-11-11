@@ -1,6 +1,6 @@
 # Publicación del Prode y las cuentas propias (SH-PRODE-RELEASE-01)
 
-Estado al 11/11/2026. Nada de esto se ejecutó contra producción: no se tocaron variables, base, migraciones ni `main`.
+Estado al 11/11/2026: **publicado** (`3abb5a5`, migraciones 0018 y 0019). Resultado del despliegue y pendientes en [prode-deploy-report.md](prode-deploy-report.md). La previa del torneo local es `/previa/center-stage-2026-1`.
 
 Qué se publica: el Prode (Misión SH-PRODE-01, [prode.md](../architecture/prode.md)) y las cuentas propias con roles y vinculación de jugadores (SH-AUTH-01, [ADR-021](../adr/ADR-021.md), [accounts.md](accounts.md)). El reglamento de Center Stage 2026 (SH-RULES-01) ya está en producción y no cambia.
 
