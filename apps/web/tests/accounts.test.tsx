@@ -189,19 +189,66 @@ describe("header and account page", () => {
   it("offers to sign in, and the admin tools only to organizers", () => {
     const { rerender } = render(<AccountBadge />);
     expect(screen.getByRole("link", { name: "Ingresar" })).toBeInTheDocument();
+    for (const [role, staff] of [
+      ["user", false],
+      ["admin", true],
+      ["superadmin", true],
+    ] as const) {
+      setMe(me(user({ role })));
+      rerender(<AccountBadge />);
+      const button = screen.getByRole("button", { name: "Mi perfil: Ana" });
+      expect(button).toHaveAttribute("aria-expanded", "false");
+      expect(screen.queryByRole("link", { name: "Mi cuenta" })).toBeNull();
+      fireEvent.click(button);
+      expect(button).toHaveAttribute("aria-expanded", "true");
+      expect(screen.getByRole("link", { name: "Mi cuenta" })).toHaveAttribute(
+        "href",
+        "/cuenta",
+      );
+      expect(screen.getByText("@ana")).toBeInTheDocument();
+      const admin = screen.queryByRole("link", { name: "Administración" });
+      if (staff) expect(admin).toHaveAttribute("href", "/admin");
+      else expect(admin).toBeNull();
+      fireEvent.click(button);
+      expect(button).toHaveAttribute("aria-expanded", "false");
+    }
+  });
+
+  it("closes the user menu with Escape, a click outside or a link", () => {
     setMe(me(user()));
-    rerender(<AccountBadge />);
-    expect(screen.getByRole("link", { name: "Ana" })).toHaveAttribute(
-      "href",
-      "/cuenta",
+    render(
+      <>
+        <AccountBadge />
+        <p>afuera</p>
+      </>,
     );
-    expect(screen.queryByRole("link", { name: "Admin" })).toBeNull();
-    setMe(me(user({ role: "admin" })));
-    rerender(<AccountBadge />);
-    expect(screen.getByRole("link", { name: "Admin" })).toHaveAttribute(
-      "href",
-      "/admin",
-    );
+    const button = screen.getByRole("button", { name: "Mi perfil: Ana" });
+    fireEvent.click(button);
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    expect(button).toHaveFocus();
+    fireEvent.click(button);
+    fireEvent.pointerDown(screen.getByText("afuera"));
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(button);
+    // jsdom cannot navigate; the menu only has to close.
+    document.addEventListener("click", (e) => e.preventDefault(), {
+      once: true,
+    });
+    fireEvent.click(screen.getByRole("link", { name: "Mi cuenta" }));
+    expect(button).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("signs out from the user menu", async () => {
+    setMe(me(user()));
+    const calls = serve(() => ({ status: 204, body: null }));
+    render(<AccountBadge />);
+    fireEvent.click(screen.getByRole("button", { name: "Mi perfil: Ana" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cerrar sesión" }));
+    expect(
+      await screen.findByRole("link", { name: "Ingresar" }),
+    ).toBeInTheDocument();
+    expect(calls.some((c) => c.url.endsWith("auth/logout"))).toBe(true);
   });
 
   it("shows the verification code of a pending link request", async () => {

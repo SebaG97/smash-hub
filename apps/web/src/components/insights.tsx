@@ -108,7 +108,7 @@ type TournamentSummary = {
   upsets: Upset[];
   overperformers: (Ref & { seed: number; placement: number })[];
 };
-type CalendarItem = {
+export type CalendarItem = {
   name: string;
   slug?: string;
   images?: TournamentImages;

@@ -4,11 +4,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   useEffect,
+  useId,
+  useRef,
   useState,
   useSyncExternalStore,
   type FormEvent,
 } from "react";
 import {
+  type SessionUser,
   apiFetch,
   errorText,
   isStaff,
@@ -26,7 +29,7 @@ import {
 
 const MIN_PASSWORD = 10;
 
-/** Header: sign in, or the account with a way to the admin tools for organizers. */
+/** Header: sign in, or the user menu (Mission SH-UI-01). */
 export function AccountBadge() {
   const me = useMe();
   if (!me) return null;
@@ -36,22 +39,132 @@ export function AccountBadge() {
         <Link href={signInHref()}>Ingresar</Link>
       </span>
     );
+  return <UserMenu user={me.user} />;
+}
+
+function UserIcon() {
   return (
-    <span className="user-badge">
-      <Link href="/cuenta">{me.user.display_name}</Link>
-      {isStaff(me.user) && (
-        <>
-          {" · "}
-          <Link href="/admin" className="user-badge-admin">
-            Admin
-          </Link>
-        </>
-      )}
-      {" · "}
-      <button className="link-button" onClick={() => void logout()}>
-        Salir
+    <svg
+      className="user-menu-icon"
+      viewBox="0 0 24 24"
+      width="20"
+      height="20"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <circle
+        cx="12"
+        cy="8"
+        r="4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
+      <path
+        d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+/**
+ * The signed-in user's menu: a disclosure button with the account, the admin tools for
+ * organizers and sign-out. Opens with click, tap, Enter or Space; Escape, a click outside
+ * or following a link closes it.
+ */
+function UserMenu({ user }: { user: SessionUser }) {
+  const [open, setOpen] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
+  const menuId = useId();
+  useEffect(() => {
+    if (!open) return;
+    function outside(e: PointerEvent | FocusEvent) {
+      if (root.current && !root.current.contains(e.target as Node))
+        setOpen(false);
+    }
+    function key(e: KeyboardEvent) {
+      if (e.key !== "Escape") return;
+      setOpen(false);
+      button.current?.focus();
+    }
+    document.addEventListener("pointerdown", outside);
+    document.addEventListener("focusin", outside);
+    document.addEventListener("keydown", key);
+    return () => {
+      document.removeEventListener("pointerdown", outside);
+      document.removeEventListener("focusin", outside);
+      document.removeEventListener("keydown", key);
+    };
+  }, [open]);
+  const close = () => setOpen(false);
+  return (
+    <div className="user-menu" ref={root}>
+      <button
+        ref={button}
+        type="button"
+        className="user-menu-button"
+        aria-expanded={open}
+        aria-controls={menuId}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <UserIcon />
+        <span className="visually-hidden">Mi perfil: </span>
+        <span className="user-menu-name">{user.display_name}</span>
+        <svg
+          className="user-menu-caret"
+          viewBox="0 0 12 12"
+          width="12"
+          height="12"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <path
+            d="M2 4.5 6 8.5 10 4.5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
       </button>
-    </span>
+      <div className="user-menu-panel" id={menuId} hidden={!open}>
+        <p className="user-menu-who">
+          <strong>{user.display_name}</strong>
+          <small>@{user.username}</small>
+        </p>
+        <ul>
+          <li>
+            <Link href="/cuenta" onClick={close}>
+              Mi cuenta
+            </Link>
+          </li>
+          {isStaff(user) && (
+            <li>
+              <Link href="/admin" className="user-badge-admin" onClick={close}>
+                Administración
+              </Link>
+            </li>
+          )}
+          <li>
+            <button
+              type="button"
+              onClick={() => {
+                close();
+                void logout();
+              }}
+            >
+              Cerrar sesión
+            </button>
+          </li>
+        </ul>
+      </div>
+    </div>
   );
 }
 

@@ -7,6 +7,7 @@ import { modules } from "../lib/modules";
 const aliases: Record<string, string[]> = {
   players: ["/players", "/jugadores"],
   tournaments: ["/tournaments", "/torneos", "/events"],
+  previas: ["/previas", "/previa"],
 };
 
 /** Main menu; the section being viewed is marked for sight and screen readers. */

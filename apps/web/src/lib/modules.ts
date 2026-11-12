@@ -42,9 +42,16 @@ export const modules = [
     description: "Propuestas de seeds explicadas para cada evento.",
   },
   {
+    slug: "previas",
+    title: "Previas",
+    number: "08",
+    description:
+      "Lo que viene: inscritos, favoritos y reglamento de cada torneo.",
+  },
+  {
     slug: "prode",
     title: "Prode",
-    number: "08",
+    number: "09",
     description: "Pronósticos de cada torneo, con logros como premio.",
   },
 ] as const;

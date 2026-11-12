@@ -784,6 +784,26 @@ footer {
 }
 
 /* ---------------------------------------------------------------- responsive */
+/* Header (SH-UI-01): the menu takes its own full-width row once the single row no longer
+   fits, and wraps instead of scrolling so every section stays visible on phones. */
+@media (max-width: 1180px) {
+  .site-header {
+    flex-wrap: wrap;
+    gap: 12px 20px;
+  }
+  .site-header > nav {
+    order: 3;
+    width: 100%;
+    margin-left: 0;
+    flex-wrap: wrap;
+    gap: 4px 18px;
+    overflow-x: visible;
+  }
+  .site-header > .user-menu,
+  .site-header > .user-badge {
+    margin-left: auto;
+  }
+}
 @media (max-width: 900px) {
   .site-header {
     flex-wrap: wrap;
@@ -2557,5 +2577,175 @@ nav.rulebook-nav a {
     font-family: var(--display);
     font-weight: 800;
     font-size: 1.05rem;
+  }
+}
+
+/* ---------------------------------------------------------------- user menu (SH-UI-01) */
+.user-menu {
+  position: relative;
+  flex: none;
+}
+.user-menu-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  max-width: 220px;
+  padding: 6px 12px;
+  background: var(--slab);
+  color: var(--bone);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-family: var(--text);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.user-menu-button:hover,
+.user-menu-button[aria-expanded="true"] {
+  border-color: var(--fire);
+}
+.user-menu-button:focus-visible,
+.user-menu-panel a:focus-visible,
+.user-menu-panel button:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+.user-menu-icon {
+  flex: none;
+  color: var(--fire);
+}
+.user-menu-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.user-menu-caret {
+  flex: none;
+  color: var(--ash);
+  transition: transform 0.15s;
+}
+.user-menu-button[aria-expanded="true"] .user-menu-caret {
+  transform: rotate(180deg);
+}
+.user-menu-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 50;
+  width: max-content;
+  min-width: 220px;
+  max-width: calc(100vw - 32px);
+  padding: 6px 0;
+  background: var(--slab);
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--fire);
+  border-radius: 3px;
+  box-shadow: 0 12px 28px rgb(0 0 0 / 0.45);
+}
+.user-menu-panel[hidden] {
+  display: none;
+}
+.user-menu-who {
+  margin: 0;
+  padding: 8px 16px 10px;
+  border-bottom: 1px solid var(--line);
+}
+.user-menu-who strong {
+  display: block;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 1.2rem;
+  overflow-wrap: anywhere;
+}
+.user-menu-who small {
+  color: var(--ash);
+  overflow-wrap: anywhere;
+}
+.user-menu-panel ul {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0 0;
+}
+.user-menu-panel a,
+.user-menu-panel button {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  background: none;
+  border: 0;
+  color: var(--bone);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.user-menu-panel a:hover,
+.user-menu-panel button:hover {
+  background: var(--concrete);
+  color: var(--fire);
+}
+.user-menu-panel .user-badge-admin {
+  color: var(--gold);
+}
+@media (max-width: 420px) {
+  /* Icon and caret only; the name stays for screen readers and inside the menu. */
+  .user-menu-name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+}
+
+/* ---------------------------------------------------------------- previas (SH-UI-01) */
+.previews-list {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 0;
+}
+.previews-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+.previews-card > div {
+  flex: 1;
+  min-width: 0;
+}
+.previews-card h2 {
+  margin: 0 0 2px;
+  font-size: 1.35rem;
+  overflow-wrap: anywhere;
+}
+.previews-card h2 a {
+  text-decoration: none;
+}
+.previews-card h2 a:hover {
+  text-decoration: underline;
+  text-decoration-color: var(--fire);
+}
+.previews-card p {
+  margin: 0;
+  color: var(--ash);
+  font-size: 0.92rem;
+}
+.previews-card time {
+  color: var(--bone);
+}
+.previews-card .secondary-button {
+  flex: none;
+  text-decoration: none;
+}
+@media (max-width: 580px) {
+  .previews-card {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  .previews-card .secondary-button {
+    margin-left: auto;
   }
 }
