@@ -10,6 +10,7 @@ import { MainIcons, mainColor } from "./mains";
 import { Prefix } from "./prefix";
 import { ShareImage } from "./share-image";
 import { TournamentLogo, type TournamentImages } from "./tournament-art";
+import { PlayerAchievementsBlock } from "./achievements";
 
 type Ref = {
   id: string;
@@ -119,22 +120,6 @@ export type CalendarItem = {
   attendees: number | null;
 };
 
-const BADGE_TONE: Record<string, string> = {
-  lider: "gold",
-  trofeos: "gold",
-  campeon: "gold",
-  mes: "gold",
-  amateur: "bone",
-  david: "fire",
-  remontadas: "fire",
-  racha: "fire",
-  top8: "bone",
-  incansable: "bone",
-  especialista: "bone",
-  camaleon: "bone",
-  nuevo: "bone",
-};
-
 function tint(mains?: Main[]) {
   const color = mainColor(mains);
   return color ? ({ "--main": color } as React.CSSProperties) : undefined;
@@ -156,24 +141,29 @@ export function PlayerAchievements({ id }: { id: string }) {
     <Resource<PlayerInsights> path={`insights/players/${id}`} optional>
       {(d) => (
         <>
-          <section aria-labelledby="badges-title">
-            <h2 id="badges-title">Emblemas</h2>
-            {d.badges.length ? (
-              <ul className="badges">
-                {d.badges.map((b) => (
-                  <li key={b.id} data-tone={BADGE_TONE[b.id] ?? "bone"}>
-                    <strong>{b.name}</strong>
-                    <span>{b.why}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="seeding-lead">
-                Todavía no ganó emblemas. Se consiguen ganando torneos, dando
-                sorpresas, remontando sets o encadenando victorias.
-              </p>
-            )}
-          </section>
+          <PlayerAchievementsBlock
+            id={id}
+            fallback={
+              <section aria-labelledby="badges-title">
+                <h2 id="badges-title">Emblemas</h2>
+                {d.badges.length ? (
+                  <ul className="badges">
+                    {d.badges.map((b) => (
+                      <li key={b.id} data-tone="bone">
+                        <strong>{b.name}</strong>
+                        <span>{b.why}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="seeding-lead">
+                    Todavía no ganó emblemas. Se consiguen ganando torneos,
+                    dando sorpresas, remontando sets o encadenando victorias.
+                  </p>
+                )}
+              </section>
+            }
+          />
           <section aria-labelledby="records-title">
             <h2 id="records-title">Récords</h2>
             <dl className="facts">

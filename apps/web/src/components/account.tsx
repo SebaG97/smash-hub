@@ -23,6 +23,7 @@ import {
   signInHref,
   useMe,
 } from "../lib/session";
+import { MyAchievements } from "./achievements";
 
 /* Smash Hub accounts (Mission SH-AUTH-01, ADR-021): header badge, sign-in, sign-up,
    password recovery and the account page with the player-link request. */
@@ -816,6 +817,10 @@ export function AccountPage() {
       <section className="account-section" aria-labelledby="jugador">
         <h2 id="jugador">Ficha de jugador</h2>
         <LinkSection />
+      </section>
+      <section className="account-section" aria-labelledby="logros">
+        <h2 id="logros">Logros y vitrina</h2>
+        <MyAchievements />
       </section>
       <section className="account-section" aria-labelledby="seguridad">
         <h2 id="seguridad">Seguridad</h2>

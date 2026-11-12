@@ -2749,3 +2749,239 @@ nav.rulebook-nav a {
     margin-left: auto;
   }
 }
+
+/* Achievements (SH-ACH-01). Rarity is a left border and a word, never only a colour:
+   common bone, rare fire, epic gold, legendary gold with a heavier border. */
+.ach-page h3 {
+  margin: 22px 0 6px;
+}
+.ach-grid,
+.ach-vitrina,
+.ach-holders,
+.ach-mine,
+.ach-progress {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0;
+}
+.ach-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
+  gap: 10px;
+}
+.ach-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 64px;
+  padding: 12px 14px;
+  border-left: 5px solid var(--ash);
+  background: var(--slab);
+}
+.ach-card a {
+  text-decoration: none;
+}
+.ach-card a:hover strong,
+.ach-card a:focus-visible strong {
+  text-decoration: underline;
+  text-decoration-color: var(--fire);
+}
+.ach-card strong {
+  font-family: var(--display);
+  font-size: 1.25rem;
+  line-height: 1.15;
+}
+.ach-desc {
+  color: var(--ash);
+  font-size: 0.9rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+[data-rarity="raro"] {
+  border-color: var(--fire);
+}
+[data-rarity="epico"],
+[data-rarity="legendario"] {
+  border-color: var(--gold);
+}
+.ach-card[data-rarity="legendario"],
+.ach-vitrina li[data-rarity="legendario"] {
+  border-left-width: 9px;
+}
+.ach-card[data-rarity="legendario"] strong,
+.ach-vitrina li[data-rarity="legendario"] strong {
+  color: var(--gold);
+}
+.ach-card[data-mine="true"] {
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.ach-card[data-off="true"] {
+  opacity: 0.6;
+}
+.ach-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: baseline;
+  margin-top: auto;
+  font-size: 0.82rem;
+  color: var(--ash);
+}
+.ach-rarity {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.74rem;
+  color: var(--bone);
+}
+.ach-rarity[data-rarity="raro"] {
+  color: var(--fire);
+}
+.ach-rarity[data-rarity="epico"],
+.ach-rarity[data-rarity="legendario"] {
+  color: var(--gold);
+}
+.ach-owned {
+  color: var(--bone);
+  font-weight: 700;
+}
+.ach-flag {
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 0 6px;
+}
+.ach-chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 4px 0 8px;
+  margin: 4px 0;
+  scrollbar-width: thin;
+}
+.ach-chips button {
+  flex: none;
+  min-height: 40px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--slab);
+  color: var(--bone);
+  white-space: nowrap;
+}
+.ach-chips button[aria-pressed="true"] {
+  background: var(--fire);
+  border-color: var(--fire);
+  color: var(--on-fire);
+  font-weight: 700;
+}
+.ach-count {
+  color: var(--ash);
+  margin: 4px 0;
+}
+.ach-progress li {
+  display: grid;
+  grid-template-columns: minmax(0, 14rem) minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+.ach-progress small {
+  color: var(--ash);
+}
+.ach-bar {
+  width: 100%;
+  height: 10px;
+  appearance: none;
+  border: 0;
+  background: var(--slab);
+}
+.ach-bar::-webkit-progress-bar {
+  background: var(--slab);
+}
+.ach-bar::-webkit-progress-value {
+  background: var(--fire);
+}
+.ach-bar::-moz-progress-bar {
+  background: var(--fire);
+}
+.ach-vitrina {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.ach-vitrina li {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 96px;
+  padding: 12px;
+  border-left: 5px solid var(--ash);
+  background: var(--slab);
+}
+.ach-vitrina a {
+  text-decoration: none;
+}
+.ach-vitrina strong {
+  font-family: var(--display);
+  font-size: 1.35rem;
+  line-height: 1.1;
+}
+.ach-note {
+  color: var(--ash);
+  font-size: 0.85rem;
+}
+.ach-hero {
+  border-left: 8px solid var(--ash);
+  padding: 4px 0 4px 16px;
+  margin: 8px 0 18px;
+}
+.ach-hero h1 {
+  margin: 0;
+}
+.ach-kicker {
+  color: var(--ash);
+  margin: 0;
+  font-size: 0.9rem;
+}
+.ach-holders li,
+.ach-mine li {
+  display: grid;
+  gap: 2px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.ach-holders span,
+.ach-holders small,
+.ach-mine span {
+  color: var(--ash);
+  font-size: 0.9rem;
+}
+.ach-mine li {
+  border-left: 4px solid var(--ash);
+  padding-left: 10px;
+}
+.ach-mine .link-button {
+  justify-self: start;
+}
+@media (max-width: 580px) {
+  .ach-progress li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .ach-progress .ach-bar {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .ach-vitrina {
+    gap: 6px;
+  }
+  .ach-vitrina li {
+    padding: 8px;
+  }
+  .ach-vitrina strong {
+    font-size: 1.05rem;
+  }
+}

@@ -54,4 +54,10 @@ export const modules = [
     number: "09",
     description: "Pronósticos de cada torneo, con logros como premio.",
   },
+  {
+    slug: "logros",
+    title: "Logros",
+    number: "10",
+    description: "Los logros de la escena: por jugar, ganar y pronosticar.",
+  },
 ] as const;

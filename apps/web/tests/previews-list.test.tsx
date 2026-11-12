@@ -102,6 +102,6 @@ describe("/previas", () => {
     path.current = "/seeding";
     render(<NavLinks />);
     const order = screen.getAllByRole("link").map((a) => a.textContent);
-    expect(order.slice(-3)).toEqual(["Seeding", "Previas", "Prode"]);
+    expect(order.slice(-4)).toEqual(["Seeding", "Previas", "Prode", "Logros"]);
   });
 });

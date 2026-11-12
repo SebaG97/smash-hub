@@ -5,6 +5,7 @@ import { clearAdmin, useAdmin } from "../lib/admin";
 import { isStaff, signInHref, useMe } from "../lib/session";
 import { AdminLogin } from "./seeding-board";
 import { SyncPanel } from "./sync-panel";
+import { AchievementsAdmin } from "./achievements";
 
 /** /admin: organizers sign in with their own account and reach every tool. */
 export function AdminPanel() {
@@ -117,6 +118,7 @@ export function AdminPanel() {
             )}
           </div>
           <SyncPanel />
+          <AchievementsAdmin />
           {admin.role === "legacy" && (
             <button className="primary-button" onClick={clearAdmin}>
               Olvidar la clave

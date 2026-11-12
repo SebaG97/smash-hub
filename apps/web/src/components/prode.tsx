@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { adminHeaders, useAdmin } from "../lib/admin";
 import { apiFetch, signInHref, useMe, type Me } from "../lib/session";
+import { ProdeAchievementsCatalog, UserShowcase } from "./achievements";
 
 /** Prode: predictions on upcoming tournaments (Mission SH-PRODE-01, ADR-020). */
 
@@ -52,22 +53,6 @@ export type Achievement = {
   contest: string | null;
   tournament_slug: string | null;
 };
-
-/** What each achievement asks for; the backend (app/prode/engine.py) awards them. */
-export const ACHIEVEMENTS: [title: string, how: string, rare?: boolean][] = [
-  ["Oráculo", "Acertar al campeón."],
-  ["Ojo clínico", "Acertar al subcampeón."],
-  ["Contra la corriente", "Acertar un campeón que no era el seed 1."],
-  ["Profeta del batacazo", "Acertar un campeón de seed 5 o peor.", true],
-  ["Vidente del Top 8", "Acertar los 8 del Top 8.", true],
-  ["Pleno", "Campeón, subcampeón y Top 8 exactos.", true],
-  ["Fe en sí mismo", "Elegirte campeón a vos mismo."],
-  ["Profecía autocumplida", "Elegirte campeón… y ganar el torneo.", true],
-  ["Campeón del Prode", "Ganar el Prode de un torneo."],
-  ["Podio del Prode", "Terminar 2.º o 3.º en el Prode de un torneo."],
-  ["Habitué del Prode", "Jugar 3 Prodes."],
-  ["Dinastía", "Ganar 2 Prodes.", true],
-];
 
 const WHEN = new Intl.DateTimeFormat("es-PY", {
   weekday: "short",
@@ -712,21 +697,7 @@ export function ProdePage() {
           </section>
         </>
       )}
-      <section aria-labelledby="catalog-title">
-        <h2 id="catalog-title">Logros</h2>
-        <ul className="badges">
-          {ACHIEVEMENTS.map(([title, how, rare]) => (
-            <li key={title} data-tone={rare ? "gold" : "fire"}>
-              <strong>
-                {title}
-                {rare ? " ★" : ""}
-              </strong>
-              <span>{how}</span>
-            </li>
-          ))}
-        </ul>
-        <p className="seeding-lead">★ Logro raro.</p>
-      </section>
+      <ProdeAchievementsCatalog />
     </div>
   );
 }
@@ -792,6 +763,7 @@ export function ProdeProfile({ id }: { id: string }) {
           <dd>{data.precision === null ? "—" : `${data.precision}%`}</dd>
         </div>
       </dl>
+      <UserShowcase id={data.id} />
       <h2>Logros</h2>
       {data.achievements.length ? (
         <AchievementList items={data.achievements} />
