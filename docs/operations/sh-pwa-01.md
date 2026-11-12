@@ -1,6 +1,6 @@
 # SH-PWA-01 — Smash Hub como aplicación instalable
 
-Fecha: 12/11/2026. Estado: **implementado y probado en local, sin publicar.** Falta autorización para hacer push a `main` y desplegar ([sección 7](#7-publicación-requiere-autorización)).
+Fecha: 12/11/2026. Estado: **integrado en `main` y con push (`600315f`), pero sin desplegar.** DigitalOcean respondió 403 y el despliegue del servicio `web` queda pendiente de hacerse a mano. Producción todavía no tiene `/install` ni el manifest: **no anunciar la instalación** hasta completar y verificar la [sección 8](#8-publicación-resultados-reales).
 
 Smash Hub se puede instalar como Progressive Web App (PWA) en Android, iPhone, iPad y computadoras. Es la misma aplicación Next.js: no hay APK, app nativa ni un frontend aparte.
 
@@ -114,3 +114,46 @@ No hay migraciones ni cambios en la API. Solo cambia el servicio `web`.
    - **Android (Chrome):** instalar desde `/install`. El ícono aparece en el inicio, abre `/` a pantalla completa, el login funciona y el bloque del inicio ya no aparece.
    - **iPhone (Safari):** agregar a inicio. Abre a pantalla completa, sin contenido tapado por la muesca, y se puede iniciar sesión (probablemente pida ingresar de nuevo).
 6. **Volver atrás:** redesplegar el commit anterior del servicio `web`. No hay datos ni migraciones que revertir. Quien ya la instaló conserva el ícono, que abre el sitio normal.
+
+## 8. Publicación: resultados reales
+
+Publicación autorizada el 12/11/2026. App `smash-hub-app`, servicio `web`. No se tocaron la base, el job `migrate` ni el servicio `api`.
+
+### 8.1 Verificaciones previas (12/11/2026, ~20:50 UTC)
+
+| Verificación | Resultado |
+| --- | --- |
+| Rama vs `main` | `origin/main` = `db77c71` (último commit de SH-ACH-01) es ancestro de `sh-pwa-01`. La integración es un avance rápido y conserva todos los cambios de SH-ACH-01. |
+| `https://smashclubpy.com` | **200 con certificado válido.** `http://` redirige con 301 a `https://`. Resuelve a la misma IP que `smash-hub-app-d4eh4.ondigitalocean.app`, y `GET /api/openapi.json` es idéntico byte a byte en los dos hosts: es la misma app. El dominio del QR funciona. |
+| `https://www.smashclubpy.com` | Falla el TLS (curl 35). No afecta al QR, que usa el dominio sin `www`. Pendiente aparte si se quiere usar `www`. |
+| Estado de producción | **SH-ACH-01 ya está desplegado:** `GET /api/v1/achievements/catalog` responde 200 con 109 logros, `/logros` y `/logros/oracle` responden 200, y el contrato de producción tiene las 114 rutas de `main`. |
+| Línea base del Prode | Center Stage: `open`, **8 participantes**, `locks_at = 2026-11-14T19:00:00+00:00`, sin liquidar. |
+| Línea base de páginas | `/`, `/prode`, `/logros`, `/rankings`, `/previa/center-stage-2026-1`, `/players/{id}` y `/api/v1/achievements/players/{id}` responden 200. `/jugadores` redirige con 307 a `/players`, igual que antes. |
+
+### 8.2 Integración y push
+
+- `sh-pwa-01` se integró en `main` por avance rápido y se hizo push: `origin/main` pasó de `db77c71` a **`600315f`**.
+- Commits: `908c99f` (código) y `600315f` (documentación). A esto se suma el commit que agrega esta sección, que solo cambia la documentación.
+- Pruebas previas al push (sección 3): web 159 aprobadas, `tsc`, `eslint` y `next build` sin errores.
+
+### 8.3 Despliegue: detenido por falta de permisos
+
+- El contexto `default` de `doctl` no tiene token. El contexto `smashhub` responde **403 Forbidden** en Apps (`doctl apps list`), igual que en SH-ACH-01. Siguiendo la instrucción, no se insistió ni se cambiaron credenciales.
+- El push **no desplegó**, porque no hay `deploy_on_push`. A las 21:00 UTC, en producción, `/install`, `/manifest.webmanifest` y los cuatro íconos responden 404, y el HTML del inicio no tiene `<link rel="manifest">`.
+- Ninguna de las verificaciones posteriores al despliegue se pudo hacer.
+
+### 8.4 Para completar a mano
+
+El propietario, desde el panel de DigitalOcean:
+
+1. Abrir la app `smash-hub-app` y desplegar **solo el servicio `web`** desde `main` (`600315f` o posterior; los commits siguientes solo cambian documentación). No editar el spec: no hacen falta variables nuevas, porque `smashclubpy.com` ya funciona y es el dominio por defecto del QR. No tocar `api` ni `migrate`.
+2. Avisar para verificar desde aquí:
+   - `GET /manifest.webmanifest`: 200, `application/manifest+json`, `"name":"Smash Hub"`.
+   - `GET /install`: 200.
+   - `GET /icons/icon-192.png`, `/icons/icon-512.png`, `/icons/icon-maskable-512.png` y `/icons/apple-touch-icon.png`: 200, `image/png`.
+   - Instalabilidad en Chrome real, sin errores (por DevTools Protocol, como en la sección 3).
+   - Inicio con sesión: aparece el bloque con el QR hacia `https://smashclubpy.com/install`. Sin sesión: no aparece.
+   - Modo standalone: el bloque desaparece y `/install` muestra «Ya estás usando Smash Hub instalada».
+   - Sin regresiones: Prode de Center Stage contra la línea base de 8.1 (`open`, mismos participantes o más, mismo `locks_at`), catálogo de 109, `/logros`, `/logros/oracle`, perfiles de jugador y `/previa/center-stage-2026-1`.
+3. Probar en un Android con Chrome y en un iPhone con Safari (sección 7, paso 5).
+4. Recién entonces anunciar la instalación.
