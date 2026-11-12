@@ -36,11 +36,27 @@ export function validPublicOrigin(value: string | null | undefined) {
   return url.origin;
 }
 
+/** The public origin: the configured one when valid, the club's domain otherwise. */
+export function publicOrigin(
+  configured: string | undefined = process.env.NEXT_PUBLIC_SITE_URL,
+) {
+  return validPublicOrigin(configured) ?? DEFAULT_PUBLIC_ORIGIN;
+}
+
 /** Public install page for the QR: never carries user data. */
 export function installUrl(
   configured: string | undefined = process.env.NEXT_PUBLIC_SITE_URL,
 ) {
-  return `${validPublicOrigin(configured) ?? DEFAULT_PUBLIC_ORIGIN}/install`;
+  return `${publicOrigin(configured)}/install`;
+}
+
+/**
+ * Android link that asks the system to open `url` in Chrome, for browsers embedded in
+ * other apps. If Chrome is missing, Android falls back to the same https address.
+ */
+export function openInChromeUrl(url: string) {
+  const { host, pathname } = new URL(url);
+  return `intent://${host}${pathname}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(url)};end`;
 }
 
 export type Platform = "ios" | "android" | "desktop";
@@ -56,11 +72,40 @@ export function detectPlatform(
   return "desktop";
 }
 
-/** Browsers inside other apps (Instagram, Facebook, TikTok…) cannot install sites. */
+/**
+ * Browsers inside other apps cannot install sites: WhatsApp, Instagram, Facebook,
+ * TikTok, the Google app (what some QR readers open) and any Android WebView (`; wv)`).
+ */
 export function isInAppBrowser(userAgent: string) {
-  return /FBAN|FBAV|Instagram|Line\/|TikTok|musical_ly|Twitter/i.test(
+  return /FBAN|FBAV|FB_IAB|Instagram|WhatsApp|Line\/|TikTok|musical_ly|Twitter|Snapchat|GSA\/|; wv\)/i.test(
     userAgent,
   );
+}
+
+export type Browser =
+  "chrome" | "edge" | "samsung" | "firefox" | "safari" | "inapp" | "other";
+
+export function detectBrowser(userAgent: string, maxTouchPoints = 0): Browser {
+  if (isInAppBrowser(userAgent)) return "inapp";
+  if (/SamsungBrowser/i.test(userAgent)) return "samsung";
+  if (/Edg(A|iOS)?\//i.test(userAgent)) return "edge";
+  if (/Firefox|FxiOS/i.test(userAgent)) return "firefox";
+  if (/OPR\/|Opera|YaBrowser|UCBrowser|DuckDuckGo/i.test(userAgent))
+    return "other";
+  if (/Chrome\/|CriOS/i.test(userAgent)) return "chrome";
+  if (isIosSafari(userAgent, maxTouchPoints) || /Safari/i.test(userAgent))
+    return "safari";
+  return "other";
+}
+
+/**
+ * Browsers that can show their own install dialog (`beforeinstallprompt`): Chromium on
+ * Android and computers. Never on iPhone, where every browser is Safari underneath.
+ */
+export function offersInstallDialog(userAgent: string, maxTouchPoints = 0) {
+  if (detectPlatform(userAgent, maxTouchPoints) === "ios") return false;
+  const browser = detectBrowser(userAgent, maxTouchPoints);
+  return browser === "chrome" || browser === "edge" || browser === "samsung";
 }
 
 /** On iPhone only Safari is sure to offer «Agregar a pantalla de inicio». */

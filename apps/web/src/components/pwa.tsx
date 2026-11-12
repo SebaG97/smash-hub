@@ -5,10 +5,12 @@ import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useState } from "react";
 import {
   type Platform,
+  detectBrowser,
   detectPlatform,
   installUrl,
-  isInAppBrowser,
   isIosSafari,
+  offersInstallDialog,
+  openInChromeUrl,
 } from "../lib/install";
 import {
   promptInstall,
@@ -31,8 +33,8 @@ function PhoneIcon() {
     <svg
       className="install-phone"
       viewBox="0 0 24 24"
-      width="36"
-      height="36"
+      width="22"
+      height="22"
       aria-hidden="true"
       focusable="false"
     >
@@ -57,65 +59,33 @@ function PhoneIcon() {
 }
 
 const LINK_LABEL: Record<Platform, string> = {
-  ios: "Cómo instalar en iPhone",
+  ios: "Instalar en iPhone",
   android: "Instalar en Android",
-  desktop: "Instalar en esta computadora",
+  desktop: "Instalar en la PC",
 };
 
-type Outcome = "accepted" | "dismissed" | "unavailable" | null;
-
-/** The browser's own install dialog, when it offers one. */
-function useInstall() {
-  const { prompt, installed } = useInstallState();
-  const [outcome, setOutcome] = useState<Outcome>(null);
-  return {
-    canPrompt: prompt !== null,
-    installed,
-    outcome,
-    install: async () => setOutcome(await promptInstall()),
-  };
-}
-
 /**
- * Home block for signed-in visitors: a QR for the phone and a link that fits this
- * device. Hidden inside the installed app and once the browser confirms installation.
+ * Home: a compact card beside the intro for signed-in visitors, with a QR for the phone
+ * and a link to /install, the only place that runs the installation. Hidden inside the
+ * installed app and when the browser says it is already installed.
  */
 export function HomeInstallCard() {
   const me = useMe();
   const standalone = useStandalone();
   const platform = useDevice(detectPlatform);
-  const { canPrompt, installed, outcome, install } = useInstall();
+  const { installed } = useInstallState();
   if (!me?.user || standalone || installed) return null;
   const url = installUrl();
   return (
     <section className="install-card" aria-labelledby="install-card-title">
-      <PhoneIcon />
-      <div className="install-card-text">
-        <h2 id="install-card-title">Smash Hub en tu celular</h2>
-        <p>
-          Se instala desde el navegador y queda en tu pantalla de inicio, sin
-          descargar un APK.
-        </p>
-        <p className="install-card-actions">
-          {canPrompt ? (
-            <button type="button" className="primary-button" onClick={install}>
-              Instalar ahora
-            </button>
-          ) : (
-            <Link className="primary-button" href="/install">
-              {platform ? LINK_LABEL[platform] : "Instalar la app"}
-            </Link>
-          )}
-          {canPrompt && <Link href="/install">Otras formas de instalar</Link>}
-        </p>
-        {outcome === "accepted" && (
-          <p role="status">Instalando… el navegador avisa cuando termina.</p>
-        )}
-      </div>
-      <figure className="install-qr">
+      <h2 id="install-card-title">
+        <PhoneIcon />
+        Smash Hub en tu celular
+      </h2>
+      <div className="install-card-body">
         <QRCodeSVG
           value={url}
-          size={76}
+          size={68}
           marginSize={2}
           bgColor="#efe9df"
           fgColor="#1c1210"
@@ -123,10 +93,54 @@ export function HomeInstallCard() {
           role="img"
           aria-label={`Código QR para abrir ${url}`}
         />
-        <figcaption>Escaneá con el celular</figcaption>
-      </figure>
+        <div>
+          <p>Instalá Smash Hub gratis.</p>
+          <Link className="install-card-link" href="/install">
+            {platform ? LINK_LABEL[platform] : "Instalar"}
+          </Link>
+        </div>
+      </div>
     </section>
   );
+}
+
+/** How long a Chromium browser gets to offer its install dialog before we say it did not. */
+export const OFFER_WAIT_MS = 6000;
+
+export type InstallPhase =
+  | "standalone"
+  | "installed"
+  | "installing"
+  | "available"
+  | "waiting"
+  | "unavailable";
+
+/** One answer for the whole page: what the person can do right now. */
+function useInstallPhase() {
+  const standalone = useStandalone();
+  const { prompt, installed } = useInstallState();
+  const capable = useDevice(offersInstallDialog);
+  const [outcome, setOutcome] = useState<
+    "accepted" | "dismissed" | "unavailable" | null
+  >(null);
+  const [waited, setWaited] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setWaited(true), OFFER_WAIT_MS);
+    return () => clearTimeout(timer);
+  }, []);
+  let phase: InstallPhase;
+  if (standalone) phase = "standalone";
+  else if (installed) phase = "installed";
+  else if (outcome === "accepted") phase = "installing";
+  else if (prompt) phase = "available";
+  else if (capable && !waited && outcome === null) phase = "waiting";
+  else phase = "unavailable";
+  return {
+    phase,
+    installed,
+    dismissed: outcome === "dismissed",
+    install: async () => setOutcome(await promptInstall()),
+  };
 }
 
 const BENEFITS = [
@@ -168,19 +182,26 @@ function IosSteps({ safari }: { safari: boolean | null }) {
 
 function AndroidSteps() {
   return (
-    <ol>
-      <li>
-        En Chrome, tocá el menú <strong>⋮</strong>.
-      </li>
-      <li>
-        Elegí <strong>Instalar aplicación</strong> o{" "}
-        <strong>Agregar a la pantalla principal</strong>.
-      </li>
-      <li>
-        Confirmá. En Samsung Internet: menú → Agregar página a → Pantalla de
-        inicio.
-      </li>
-    </ol>
+    <>
+      <ol>
+        <li>
+          En Chrome, tocá el menú <strong>⋮</strong>.
+        </li>
+        <li>
+          Elegí <strong>Instalar aplicación</strong> o{" "}
+          <strong>Agregar a la pantalla principal</strong>.
+        </li>
+        <li>
+          Tocá <strong>Instalar</strong>.
+        </li>
+      </ol>
+      <p className="install-note">
+        Si la abriste desde la cámara o el lector de QR y el menú muestra{" "}
+        <strong>Abrir en Chrome</strong>, tocalo primero. En Samsung Internet:
+        menú → Agregar página a → Pantalla de inicio. En Firefox: menú ⋮ →
+        Instalar.
+      </p>
+    </>
   );
 }
 
@@ -205,13 +226,34 @@ const GUIDES: { platform: Platform; title: string }[] = [
   { platform: "desktop", title: "Computadora" },
 ];
 
+/** Copy the install address, for browsers that cannot open Chrome on their own. */
+function CopyLink({ url }: { url: string }) {
+  const [copied, setCopied] = useState(false);
+  if (typeof navigator === "undefined" || !navigator.clipboard) return null;
+  return (
+    <button
+      type="button"
+      className="secondary-button"
+      onClick={() =>
+        navigator.clipboard.writeText(url).then(
+          () => setCopied(true),
+          () => setCopied(false),
+        )
+      }
+    >
+      {copied ? "Enlace copiado" : "Copiar enlace"}
+    </button>
+  );
+}
+
 /** Public /install page body. */
 export function InstallGuide() {
-  const standalone = useStandalone();
   const platform = useDevice(detectPlatform);
+  const browser = useDevice(detectBrowser);
   const safari = useDevice(isIosSafari);
-  const inApp = useDevice(isInAppBrowser);
-  const { canPrompt, installed, outcome, install } = useInstall();
+  const { phase, installed, dismissed, install } = useInstallPhase();
+  const url = installUrl();
+  const inApp = browser === "inapp";
   // The detected device goes first and open; the others stay one tap away.
   const guides = platform
     ? [...GUIDES].sort(
@@ -220,16 +262,44 @@ export function InstallGuide() {
       )
     : GUIDES;
 
-  let status: string | null = null;
-  if (standalone) status = "Ya estás usando Smash Hub instalada.";
-  else if (installed)
-    status =
-      "Listo: el navegador confirmó la instalación. Buscá Smash Hub entre tus aplicaciones.";
-  else if (outcome === "accepted")
-    status = "Instalando… el navegador avisa cuando termina.";
-  else if (outcome === "dismissed")
-    status =
-      "Se canceló la instalación. Podés hacerlo cuando quieras con los pasos de abajo.";
+  let status: string;
+  switch (phase) {
+    case "standalone":
+      status = "Ya estás usando Smash Hub instalada.";
+      break;
+    case "installed":
+      status =
+        installed === "event"
+          ? "Listo: el navegador confirmó la instalación. Buscá Smash Hub entre tus aplicaciones."
+          : "Smash Hub ya está instalada en este dispositivo. Abrila desde tu pantalla de inicio o tus aplicaciones.";
+      break;
+    case "installing":
+      status = "Instalando… el navegador avisa cuando termina.";
+      break;
+    case "available":
+      status = "Tu navegador permite instalar Smash Hub con un toque.";
+      break;
+    case "waiting":
+      status = "Comprobando si tu navegador permite instalar…";
+      break;
+    default:
+      if (dismissed)
+        status =
+          "Se canceló la instalación. Podés hacerlo cuando quieras con los pasos de abajo.";
+      else if (inApp)
+        status =
+          "Este navegador está dentro de otra app (WhatsApp, Instagram, Facebook…) y no permite instalar.";
+      else if (platform === "ios")
+        status = safari
+          ? "En iPhone se instala desde Safari, en tres pasos."
+          : "En iPhone se instala desde Safari: abrí esta página ahí.";
+      else if (browser === "chrome" || browser === "edge")
+        status =
+          "El navegador todavía no ofrece la instalación directa. Podés instalarla desde su menú, con los pasos de abajo.";
+      else
+        status =
+          "Este navegador no ofrece instalación directa: seguí los pasos de abajo.";
+  }
 
   return (
     <div className="install-page">
@@ -244,42 +314,72 @@ export function InstallGuide() {
         </div>
       </header>
 
+      <section
+        className="install-panel"
+        data-phase={phase}
+        aria-label="Instalación"
+        aria-busy={phase === "waiting"}
+      >
+        <p role="status" className="install-status">
+          {status}
+        </p>
+        <div className="install-actions">
+          {phase === "available" && (
+            <button
+              type="button"
+              className="primary-button install-main"
+              onClick={install}
+            >
+              Instalar Smash Hub
+            </button>
+          )}
+          {phase === "unavailable" && inApp && platform === "android" && (
+            <a
+              className="primary-button install-main"
+              href={openInChromeUrl(url)}
+            >
+              Abrir en Chrome
+            </a>
+          )}
+          {phase === "unavailable" && inApp && <CopyLink url={url} />}
+          <Link
+            href="/"
+            className={
+              phase === "standalone" || phase === "installed"
+                ? "primary-button"
+                : "secondary-button"
+            }
+          >
+            {phase === "standalone"
+              ? "Ir al inicio"
+              : phase === "installed"
+                ? "Seguir en el navegador"
+                : "Entrar sin instalar"}
+          </Link>
+        </div>
+        {inApp && phase === "unavailable" && (
+          <p className="install-note">
+            También podés tocar el menú de la app (⋮ o …) y elegir{" "}
+            <strong>Abrir en el navegador</strong>, o copiar{" "}
+            <strong>{url.replace(/^https?:\/\//, "")}</strong> en Chrome o
+            Safari.
+          </p>
+        )}
+      </section>
+
       <ul className="install-benefits">
         {BENEFITS.map((b) => (
           <li key={b}>{b}</li>
         ))}
       </ul>
 
-      <div className="install-actions">
-        {!standalone && !installed && canPrompt && (
-          <button type="button" className="primary-button" onClick={install}>
-            Instalar Smash Hub
-          </button>
-        )}
-        <Link
-          href="/"
-          className={standalone ? "primary-button" : "secondary-button"}
-        >
-          {standalone ? "Ir al inicio" : "Entrar sin instalar"}
-        </Link>
-      </div>
-      <p role="status" className="install-status">
-        {status}
-      </p>
-
-      {!standalone && (
+      {phase !== "standalone" && phase !== "installed" && (
         <section aria-labelledby="install-steps-title">
           <h2 id="install-steps-title">
-            {canPrompt ? "Otras formas de instalar" : "Cómo instalar"}
+            {phase === "available"
+              ? "Otras formas de instalar"
+              : "Cómo instalar"}
           </h2>
-          {inApp && (
-            <p className="install-note">
-              Estás en el navegador de otra app (Instagram, Facebook…), que no
-              permite instalar. Abrí{" "}
-              <strong>{installUrl().replace(/^https?:\/\//, "")}</strong> en
-              Chrome o Safari.
-            </p>
-          )}
           {guides.map((g) => (
             <details
               key={g.platform}

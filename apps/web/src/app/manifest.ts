@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { publicOrigin } from "../lib/install";
 
 /** Concrete grey of the club logo (--concrete in globals.css). */
 export const APP_BACKGROUND = "#26221f";
@@ -22,6 +23,12 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: "es",
     dir: "ltr",
     categories: ["games", "sports"],
+    // Lets Chromium tell an already installed app (getInstalledRelatedApps) without
+    // offering a native store app instead.
+    prefer_related_applications: false,
+    related_applications: [
+      { platform: "webapp", url: `${publicOrigin()}/manifest.webmanifest` },
+    ],
     icons: [
       {
         src: "/icons/icon-192.png",

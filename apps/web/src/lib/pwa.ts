@@ -17,11 +17,14 @@ export type BeforeInstallPromptEvent = Event & {
 export type InstallState = {
   /** The browser offered installation and the offer has not been used. */
   prompt: BeforeInstallPromptEvent | null;
-  /** The browser fired `appinstalled`: the only proof the app was installed. */
-  installed: boolean;
+  /**
+   * What the browser said about installation: "event" when it fired `appinstalled`,
+   * "detected" when `getInstalledRelatedApps` lists this app (Chromium only).
+   */
+  installed: "event" | "detected" | null;
 };
 
-const INITIAL: InstallState = { prompt: null, installed: false };
+const INITIAL: InstallState = { prompt: null, installed: null };
 let state: InstallState = INITIAL;
 const listeners = new Set<() => void>();
 
@@ -48,13 +51,31 @@ export function startInstallListener(win: Window = window) {
     event.preventDefault();
     update({ prompt: event as BeforeInstallPromptEvent });
   };
-  const onInstalled = () => update({ prompt: null, installed: true });
+  const onInstalled = () => update({ prompt: null, installed: "event" });
   win.addEventListener("beforeinstallprompt", onPrompt);
   win.addEventListener("appinstalled", onInstalled);
+  void detectInstalled(win);
   return () => {
     win.removeEventListener("beforeinstallprompt", onPrompt);
     win.removeEventListener("appinstalled", onInstalled);
   };
+}
+
+type RelatedApps = { getInstalledRelatedApps?: () => Promise<unknown[]> };
+
+/**
+ * Chromium does not offer installation again once the app is installed. With
+ * `related_applications` in the manifest it can say so, and the page stops asking.
+ */
+async function detectInstalled(win: Window) {
+  const nav = win.navigator as Navigator & RelatedApps;
+  if (typeof nav.getInstalledRelatedApps !== "function") return;
+  try {
+    const apps = await nav.getInstalledRelatedApps();
+    if (apps.length > 0 && !state.installed) update({ installed: "detected" });
+  } catch {
+    /* not allowed here (iframe, insecure origin): no signal */
+  }
 }
 
 /**

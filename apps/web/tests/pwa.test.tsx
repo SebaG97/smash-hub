@@ -8,17 +8,26 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
   within,
 } from "@testing-library/react";
 import manifest, { APP_BACKGROUND } from "../src/app/manifest";
-import { HomeInstallCard, InstallGuide } from "../src/components/pwa";
+import Home from "../src/app/page";
+import {
+  HomeInstallCard,
+  InstallGuide,
+  OFFER_WAIT_MS,
+} from "../src/components/pwa";
 import {
   DEFAULT_PUBLIC_ORIGIN,
   EARLY_PROMPT_KEY,
   EARLY_PROMPT_SCRIPT,
+  detectBrowser,
   detectPlatform,
   installUrl,
   isInAppBrowser,
+  offersInstallDialog,
+  openInChromeUrl,
   isIosSafari,
   isStandalone,
   validPublicOrigin,
@@ -40,6 +49,18 @@ const UA = {
     "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
   iphoneChrome:
     "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/131.0 Mobile/15E148 Safari/604.1",
+  androidInstagram:
+    "Mozilla/5.0 (Linux; Android 14; Pixel 8 Build/AP1A; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/131.0 Mobile Safari/537.36 Instagram 350.0",
+  androidWebView:
+    "Mozilla/5.0 (Linux; Android 14; Pixel 8 Build/AP1A; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/131.0 Mobile Safari/537.36",
+  androidWhatsApp:
+    "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Mobile Safari/537.36 WhatsApp/2.24",
+  androidGoogleApp:
+    "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Mobile Safari/537.36 GSA/15.0",
+  androidSamsung:
+    "Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/25.0 Chrome/121.0 Mobile Safari/537.36",
+  androidFirefox:
+    "Mozilla/5.0 (Android 14; Mobile; rv:131.0) Gecko/131.0 Firefox/131.0",
   iphoneInstagram:
     "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 350.0",
   ipad: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15",
@@ -122,6 +143,14 @@ describe("manifest and metadata", () => {
       theme_color: APP_BACKGROUND,
     });
     expect(APP_BACKGROUND).toBe("#26221f");
+    // Lets Chromium report an installed app; never points to a store app.
+    expect(m.prefer_related_applications).toBe(false);
+    expect(m.related_applications).toEqual([
+      {
+        platform: "webapp",
+        url: "https://smashclubpy.com/manifest.webmanifest",
+      },
+    ]);
     // Nothing personal or dynamic: no query strings anywhere.
     expect(JSON.stringify(m)).not.toMatch(/\?|token|session/i);
     const icons = m.icons ?? [];
@@ -224,43 +253,93 @@ describe("device and standalone detection", () => {
   });
 });
 
-describe("home install block", () => {
+describe("Android browsers", () => {
+  it("tells Chrome, Samsung Internet, Firefox and in-app browsers apart", () => {
+    expect(detectBrowser(UA.android)).toBe("chrome");
+    expect(detectBrowser(UA.androidSamsung)).toBe("samsung");
+    expect(detectBrowser(UA.androidFirefox)).toBe("firefox");
+    expect(detectBrowser(UA.windows)).toBe("edge");
+    expect(detectBrowser(UA.iphone)).toBe("safari");
+    for (const ua of [
+      UA.androidInstagram,
+      UA.androidWebView,
+      UA.androidWhatsApp,
+      UA.androidGoogleApp,
+      UA.iphoneInstagram,
+    ]) {
+      expect(isInAppBrowser(ua)).toBe(true);
+      expect(detectBrowser(ua)).toBe("inapp");
+    }
+  });
+
+  it("expects the native dialog only from Chromium outside iPhone", () => {
+    expect(offersInstallDialog(UA.android)).toBe(true);
+    expect(offersInstallDialog(UA.androidSamsung)).toBe(true);
+    expect(offersInstallDialog(UA.windows)).toBe(true);
+    expect(offersInstallDialog(UA.androidFirefox)).toBe(false);
+    expect(offersInstallDialog(UA.androidWebView)).toBe(false);
+    expect(offersInstallDialog(UA.iphone)).toBe(false);
+    expect(offersInstallDialog(UA.iphoneChrome)).toBe(false);
+  });
+
+  it("builds a Chrome intent for the public install page only", () => {
+    expect(openInChromeUrl("https://smashclubpy.com/install")).toBe(
+      "intent://smashclubpy.com/install#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=https%3A%2F%2Fsmashclubpy.com%2Finstall;end",
+    );
+  });
+});
+
+describe("home install card", () => {
   it("is only for signed-in visitors", () => {
     render(<HomeInstallCard />);
     expect(screen.queryByText("Smash Hub en tu celular")).toBeNull();
   });
 
-  it("shows the QR of the public install page and a link for this device", () => {
+  it("is compact: QR of the public install page and a link for this device", () => {
     device(UA.iphone);
     setMe({ user, legacy_admin_key: false });
     render(<HomeInstallCard />);
-    const block = screen.getByRole("region", {
+    const card = screen.getByRole("region", {
       name: "Smash Hub en tu celular",
     });
-    expect(within(block).getByText(/sin descargar un APK/)).toBeInTheDocument();
-    const qr = within(block).getByRole("img", {
+    expect(within(card).getByText("Instalá Smash Hub gratis.")).toBeVisible();
+    const qr = within(card).getByRole("img", {
       name: "Código QR para abrir https://smashclubpy.com/install",
     });
-    expect(qr.getAttribute("height")).toBe("76");
+    expect(Number(qr.getAttribute("height"))).toBeGreaterThanOrEqual(64);
+    expect(Number(qr.getAttribute("height"))).toBeLessThanOrEqual(76);
     expect(
-      within(block).getByRole("link", { name: "Cómo instalar en iPhone" }),
+      within(card).getByRole("link", { name: "Instalar en iPhone" }),
     ).toHaveAttribute("href", "/install");
-    // No session data travels in the block's links.
-    expect(block.innerHTML).not.toMatch(/token|session|ana/i);
+    // No session data travels in the card.
+    expect(card.innerHTML).not.toMatch(/token|session|ana/i);
   });
 
-  it("adapts the link to Android and computers", () => {
+  it("adapts the link to Android and computers, always towards /install", () => {
     setMe({ user, legacy_admin_key: false });
     device(UA.android);
     const { unmount } = render(<HomeInstallCard />);
     expect(
       screen.getByRole("link", { name: "Instalar en Android" }),
-    ).toBeInTheDocument();
+    ).toHaveAttribute("href", "/install");
     unmount();
     device(UA.windows);
     render(<HomeInstallCard />);
     expect(
-      screen.getByRole("link", { name: "Instalar en esta computadora" }),
+      screen.getByRole("link", { name: "Instalar en la PC" }),
+    ).toHaveAttribute("href", "/install");
+  });
+
+  it("does not run the installation itself: that lives only in /install", () => {
+    device(UA.android);
+    setMe({ user, legacy_admin_key: false });
+    render(<HomeInstallCard />);
+    act(() => {
+      window.dispatchEvent(offer("accepted").event);
+    });
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(
+      screen.getByRole("link", { name: "Instalar en Android" }),
     ).toBeInTheDocument();
   });
 
@@ -271,22 +350,69 @@ describe("home install block", () => {
     expect(screen.queryByText("Smash Hub en tu celular")).toBeNull();
   });
 
-  it("offers the browser's dialog and disappears once installed", async () => {
-    device(UA.android);
+  it("is hidden once the browser confirms installation", () => {
     setMe({ user, legacy_admin_key: false });
     render(<HomeInstallCard />);
-    const { event, prompt } = offer("accepted");
-    act(() => {
-      window.dispatchEvent(event);
-    });
-    expect(event.defaultPrevented).toBe(true);
-    fireEvent.click(screen.getByRole("button", { name: "Instalar ahora" }));
-    expect(prompt).toHaveBeenCalledOnce();
-    expect(await screen.findByRole("status")).toHaveTextContent("Instalando");
+    expect(screen.getByText("Smash Hub en tu celular")).toBeInTheDocument();
     act(() => {
       window.dispatchEvent(new Event("appinstalled"));
     });
     expect(screen.queryByText("Smash Hub en tu celular")).toBeNull();
+  });
+
+  it("is hidden when Chromium reports the app already installed", async () => {
+    stop();
+    Object.defineProperty(navigator, "getInstalledRelatedApps", {
+      value: () => Promise.resolve([{ platform: "webapp" }]),
+      configurable: true,
+    });
+    try {
+      stop = startInstallListener();
+      setMe({ user, legacy_admin_key: false });
+      render(<HomeInstallCard />);
+      await waitFor(() =>
+        expect(screen.queryByText("Smash Hub en tu celular")).toBeNull(),
+      );
+    } finally {
+      delete (navigator as unknown as Record<string, unknown>)
+        .getInstalledRelatedApps;
+    }
+  });
+
+  it("sits inside the home intro, after the title and description", () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(new Response("{}", { status: 404 }))),
+    );
+    setMe({ user, legacy_admin_key: false });
+    const { container } = render(<Home />);
+    const intro = container.querySelector(".home-intro") as HTMLElement;
+    const card = within(intro).getByRole("region", {
+      name: "Smash Hub en tu celular",
+    });
+    expect(intro.lastElementChild).toBe(card);
+    expect(
+      within(intro).getByRole("heading", {
+        level: 1,
+        name: "Smash Club Paraguay",
+      }),
+    ).toBeInTheDocument();
+    // Only one install card on the home page.
+    expect(container.querySelectorAll(".install-card")).toHaveLength(1);
+  });
+
+  it("keeps the intro's layout on phones and makes room for the card", () => {
+    const css = readFileSync(join(__dirname, "../src/app/globals.css"), "utf8");
+    const section = css.slice(css.indexOf("SH-PWA-02"));
+    expect(section).toMatch(
+      /\.home-intro \{\s*grid-template-columns: auto minmax\(0, 1fr\) auto;/,
+    );
+    expect(section).toMatch(/width: clamp\(240px, 24vw, 280px\)/);
+    // Phones: one column again, the card under the title, never wider than 360px.
+    expect(section).toMatch(
+      /@media \(max-width: 580px\) \{[^}]*\.home-intro \{\s*grid-template-columns: 1fr;/,
+    );
+    expect(section).toMatch(/max-width: 360px/);
   });
 });
 
@@ -306,42 +432,126 @@ describe("/install page", () => {
     ).toHaveAttribute("href", "/");
   });
 
-  it("falls back to manual steps without beforeinstallprompt", () => {
+  it("puts the install button first, before the benefits", () => {
     device(UA.android);
     render(<InstallGuide />);
-    expect(screen.queryByRole("button", { name: /Instalar/ })).toBeNull();
+    act(() => {
+      window.dispatchEvent(offer("accepted").event);
+    });
+    const button = screen.getByRole("button", { name: "Instalar Smash Hub" });
+    const benefits = screen.getByText(/Sin APK/);
     expect(
-      screen.getByRole("heading", { name: "Cómo instalar" }),
-    ).toBeInTheDocument();
-    // The detected device comes first and open; the rest stay available.
-    const guides = Array.from(document.querySelectorAll("details"));
-    expect(guides.map((d) => d.querySelector("summary")?.textContent)).toEqual([
-      "Android",
-      "iPhone y iPad",
-      "Computadora",
-    ]);
-    expect(guides.map((d) => d.open)).toEqual([true, false, false]);
-    expect(guides[0]).toHaveTextContent("Instalar aplicación");
+      button.compareDocumentPosition(benefits) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "permite instalar Smash Hub con un toque",
+    );
+  });
+
+  it("waits for Chrome's offer, then falls back to the menu steps", () => {
+    vi.useFakeTimers();
+    try {
+      device(UA.android);
+      render(<InstallGuide />);
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "Comprobando si tu navegador permite instalar",
+      );
+      expect(screen.queryByRole("button", { name: /Instalar/ })).toBeNull();
+      act(() => {
+        vi.advanceTimersByTime(OFFER_WAIT_MS);
+      });
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "todavía no ofrece la instalación directa",
+      );
+      expect(
+        screen.getByRole("heading", { name: "Cómo instalar" }),
+      ).toBeInTheDocument();
+      // The detected device comes first and open; the rest stay available.
+      const guides = Array.from(document.querySelectorAll("details"));
+      expect(
+        guides.map((d) => d.querySelector("summary")?.textContent),
+      ).toEqual(["Android", "iPhone y iPad", "Computadora"]);
+      expect(guides.map((d) => d.open)).toEqual([true, false, false]);
+      expect(guides[0]).toHaveTextContent("Instalar aplicación");
+      expect(guides[0]).toHaveTextContent("Abrir en Chrome");
+      // A late offer still brings the button back.
+      act(() => {
+        window.dispatchEvent(offer("accepted").event);
+      });
+      expect(
+        screen.getByRole("button", { name: "Instalar Smash Hub" }),
+      ).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not wait for a dialog that Firefox never offers", () => {
+    device(UA.androidFirefox);
+    render(<InstallGuide />);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "no ofrece instalación directa",
+    );
   });
 
   it("gives Safari's Share → Add to Home Screen steps on iPhone", () => {
     device(UA.iphone);
     render(<InstallGuide />);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "En iPhone se instala desde Safari, en tres pasos",
+    );
     const first = document.querySelector("details")!;
     expect(first.querySelector("summary")).toHaveTextContent("iPhone");
     expect(first).toHaveTextContent("Compartir");
     expect(first).toHaveTextContent("Agregar a pantalla de inicio");
     expect(first).not.toHaveTextContent("Abrí esta página en Safari");
+    expect(screen.queryByRole("button", { name: /Instalar/ })).toBeNull();
   });
 
-  it("asks for Safari in other iPhone browsers and warns inside other apps", () => {
+  it("asks for Safari in other iPhone browsers", () => {
     device(UA.iphoneChrome);
-    const { unmount } = render(<InstallGuide />);
+    render(<InstallGuide />);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "abrí esta página ahí",
+    );
     expect(screen.getByText(/Abrí esta página en/)).toBeInTheDocument();
-    unmount();
+  });
+
+  it("offers to open Chrome from WhatsApp, Instagram or Facebook on Android", () => {
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: vi.fn(() => Promise.resolve()) },
+      configurable: true,
+    });
+    try {
+      for (const ua of [UA.androidWhatsApp, UA.androidInstagram]) {
+        device(ua);
+        const { unmount } = render(<InstallGuide />);
+        expect(screen.getByRole("status")).toHaveTextContent(
+          "dentro de otra app",
+        );
+        expect(
+          screen.getByRole("link", { name: "Abrir en Chrome" }),
+        ).toHaveAttribute(
+          "href",
+          openInChromeUrl("https://smashclubpy.com/install"),
+        );
+        expect(
+          screen.getByRole("button", { name: "Copiar enlace" }),
+        ).toBeInTheDocument();
+        unmount();
+      }
+    } finally {
+      delete (navigator as unknown as Record<string, unknown>).clipboard;
+    }
+  });
+
+  it("on iPhone in-app browsers asks for Safari, without a Chrome intent", () => {
     device(UA.iphoneInstagram);
     render(<InstallGuide />);
-    expect(screen.getByText(/navegador de otra app/)).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("dentro de otra app");
+    expect(screen.queryByRole("link", { name: "Abrir en Chrome" })).toBeNull();
+    expect(screen.getByText(/Abrir en el navegador/)).toBeInTheDocument();
   });
 
   it("does not claim success until the browser confirms", async () => {
@@ -367,6 +577,7 @@ describe("/install page", () => {
       window.dispatchEvent(new Event("appinstalled"));
     });
     expect(status).toHaveTextContent("el navegador confirmó la instalación");
+    expect(document.querySelector("details")).toBeNull();
   });
 
   it("says when the person cancels the dialog", async () => {
@@ -381,6 +592,28 @@ describe("/install page", () => {
     expect(
       screen.getByRole("heading", { name: "Cómo instalar" }),
     ).toBeVisible();
+  });
+
+  it("says when the app is already installed instead of asking again", async () => {
+    stop();
+    Object.defineProperty(navigator, "getInstalledRelatedApps", {
+      value: () => Promise.resolve([{ platform: "webapp" }]),
+      configurable: true,
+    });
+    try {
+      stop = startInstallListener();
+      device(UA.android);
+      render(<InstallGuide />);
+      await waitFor(() =>
+        expect(screen.getByRole("status")).toHaveTextContent(
+          "ya está instalada en este dispositivo",
+        ),
+      );
+      expect(document.querySelector("details")).toBeNull();
+    } finally {
+      delete (navigator as unknown as Record<string, unknown>)
+        .getInstalledRelatedApps;
+    }
   });
 
   it("inside the installed app only offers to go home", () => {

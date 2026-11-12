@@ -16,10 +16,11 @@ export default function Home() {
             Los resultados salen de start.gg después de cada torneo.
           </p>
         </div>
+        {/* Secondary: beside the title on wide screens, below it on phones. */}
+        <HomeInstallCard />
       </section>
       <LiveNotice />
       <LiveMatches />
-      <HomeInstallCard />
       <HomeSpotlight />
       <HomeBoard />
     </div>
