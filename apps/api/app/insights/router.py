@@ -270,10 +270,15 @@ def upcoming_pools(request: Request, slug: str = Path(pattern=r"^[a-z0-9-]{1,120
         project = preview.published_seeding(s, event and event.get("slug"))
         if project is None:
             raise HTTPException(404, "No published seeding")
-        try:
-            found = pools.read_public(token_of(request), project.startgg_event_slug)
-        except ImportFailure:
-            raise HTTPException(502, "start.gg did not answer") from None
+        # The local copy first (ADR-022); start.gg only for pools never synced.
+        local = pools.read_local(request.app.state.engine, project.startgg_event_slug)
+        if local is not None:
+            found = local["found"]
+        else:
+            try:
+                found = pools.read_public(token_of(request), project.startgg_event_slug)
+            except ImportFailure:
+                raise HTTPException(502, "start.gg did not answer") from None
         if not found or not found["seeds"]:
             raise HTTPException(404, "start.gg has no pools yet")
         _, rows = seeding.final_seeding(s, project)

@@ -478,3 +478,15 @@ Copia local de start.gg, etapa 1. Tablas nuevas, sin cambios en las existentes n
 | `startgg_sync_runs` | Una ejecución (UUID): `tournament_id` (FK, nulo en descubrimientos o si start.gg no encontró el torneo), `slug`, `kind` (`tournament`/`discovery`), `trigger` (`auto`/`manual`), `actor`, `status` (`running`/`completed`/`failed`), `started_at`, `finished_at`, `counts` y `warnings` (JSON), `error_code`. Índice (`status`, `started_at`). |
 
 Ninguna fila se borra por una respuesta de start.gg: lo que deja de aparecer queda `active = false`. La única excepción es el roster de una inscripción que start.gg sigue listando, que se reemplaza por el que lista.
+
+### Migración 0021 (ADR-022)
+
+Copia local de start.gg, etapa 2: fases, pools y seeds. Aditiva: tres tablas nuevas y `startgg_events.pools_synced_at` (nullable).
+
+| Tabla | Contenido |
+| --- | --- |
+| `startgg_phases` | Fase de un evento: `event_id` (FK), `name`, `phase_order`, `bracket_type`, `num_seeds`, `seed_total` (seeds que start.gg listó), `active`, `last_seen_at`. |
+| `startgg_phase_groups` | Pool (o bracket único) de una fase: `phase_id` (FK), `display_identifier`, `active`, `last_seen_at`. |
+| `startgg_seeds` | Seed de una fase: `phase_id` (FK), `phase_group_id` (FK al pool, nullable), `entrant_id` (FK a la inscripción si está en la copia), `seed_num`, `group_seed_num`, `player_id` y `tag` tal como vinieron con el seed, `origin_group_id` y `origin_placement` (de qué pool y posición se llena en fases posteriores), `active`, `last_seen_at`. |
+
+Un cambio de seeding o de pool actualiza la misma fila (start.gg conserva el ID del seed); un pool rehecho deja los anteriores `active = false`.

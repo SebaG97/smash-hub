@@ -31,6 +31,7 @@ FINISHED_DAYS = 3
 RETRY_UNKNOWN = timedelta(hours=1)
 MAX_PER_TICK = 10
 ENTRANTS_PER_PAGE = 40
+SEEDS_PER_PAGE = 50
 
 
 class SyncBusy(Exception):
@@ -182,6 +183,17 @@ async def _sync(engine, client, slug, run_id, counts, warnings, reason):
         )
         with Session(engine) as s:
             store.entrants(s, s.get(StartggEvent, event_id), nodes, now_utc(), counts, warnings)
+            s.commit()
+        # Pools: every phase with its pools and complete seeds (later phases carry where
+        # each seed comes from).
+        data = await client.query("event_phases", {"id": event_id})
+        seeds = {}
+        for phase in ((data or {}).get("event") or {}).get("phases") or []:
+            seeds[str(phase["id"])] = await client.pages(
+                "sync_phase_seeds", "phase", "seeds", str(phase["id"]), per_page=SEEDS_PER_PAGE
+            )
+        with Session(engine) as s:
+            store.phases(s, s.get(StartggEvent, event_id), data, seeds, now_utc(), counts, warnings)
             s.commit()
 
 

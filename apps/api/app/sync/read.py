@@ -16,6 +16,9 @@ from app.sync.models import (
     StartggEntrant,
     StartggEntrantMember,
     StartggEvent,
+    StartggPhase,
+    StartggPhaseGroup,
+    StartggSeed,
     StartggSyncRun,
     StartggTournament,
 )
@@ -150,3 +153,104 @@ def calendar(session):
         tournaments=[provider_tournament(r, _events(session, r.id)) for r in rows],
         synced_at=last,
     )
+
+
+def event_by_slug(session, event_slug):
+    if not event_slug:
+        return None
+    return session.scalar(
+        select(StartggEvent)
+        .where(StartggEvent.slug == event_slug, StartggEvent.active.is_(True))
+        .order_by(StartggEvent.last_seen_at.desc())
+        .limit(1)
+    )
+
+
+def phases_data(session, event_id):
+    """event_phases.graphql's answer, rebuilt from the active phases and pools."""
+    phases = session.scalars(
+        select(StartggPhase)
+        .where(StartggPhase.event_id == event_id, StartggPhase.active.is_(True))
+        .order_by(StartggPhase.phase_order, StartggPhase.id)
+    ).all()
+    groups = {}
+    if phases:
+        for group in session.scalars(
+            select(StartggPhaseGroup)
+            .where(
+                StartggPhaseGroup.phase_id.in_([p.id for p in phases]),
+                StartggPhaseGroup.active.is_(True),
+            )
+            .order_by(StartggPhaseGroup.id)
+        ):
+            groups.setdefault(group.phase_id, []).append(
+                dict(id=group.id, displayIdentifier=group.display_identifier)
+            )
+    return {
+        "event": {
+            "id": event_id,
+            "phases": [
+                dict(
+                    id=p.id,
+                    name=p.name,
+                    phaseOrder=p.phase_order,
+                    bracketType=p.bracket_type,
+                    numSeeds=p.num_seeds,
+                    seeds={"pageInfo": {"total": p.seed_total}},
+                    phaseGroups={"nodes": groups.get(p.id, [])},
+                )
+                for p in phases
+            ],
+        }
+    }
+
+
+def seed_nodes(session, phase_id):
+    """A phase's active seeds, shaped like pool_seeds / phase_progressions nodes."""
+    return [
+        dict(
+            id=s.id,
+            seedNum=s.seed_num,
+            groupSeedNum=s.group_seed_num,
+            phaseGroup={"id": s.phase_group_id} if s.phase_group_id else None,
+            entrant=dict(
+                id=s.entrant_id,
+                name=s.tag,
+                participants=[{"gamerTag": s.tag, "player": {"id": s.player_id}}]
+                if s.player_id
+                else [],
+            ),
+            progressionSource=dict(
+                originPlacement=s.origin_placement,
+                originPhaseGroup={"id": s.origin_group_id},
+            )
+            if s.origin_group_id
+            else None,
+        )
+        for s in session.scalars(
+            select(StartggSeed)
+            .where(StartggSeed.phase_id == phase_id, StartggSeed.active.is_(True))
+            .order_by(StartggSeed.seed_num, StartggSeed.id)
+        )
+    ]
+
+
+def pools(session, event_slug):
+    """{"found": the pools map (seeding.pools.assemble) or None if start.gg has no phase
+    yet, "synced_at"}; None when this event's pools were never synced."""
+    from app.brackets.service import first_phase
+    from app.seeding.pools import assemble
+
+    event = event_by_slug(session, event_slug)
+    if event is None or event.pools_synced_at is None:
+        return None
+    first = first_phase(phases_data(session, event.id))
+    if first is None:
+        return dict(found=None, synced_at=event.pools_synced_at)
+    found = assemble(first, seed_nodes(session, first["id"]), structure_of(session, event))
+    return dict(found=found, synced_at=event.pools_synced_at)
+
+
+def structure_of(session, event):
+    """The bracket structure from the copy, or None (filled in by stage 3)."""
+    return None

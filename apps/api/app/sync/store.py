@@ -15,8 +15,14 @@ from app.sync.models import (
     StartggEntrant,
     StartggEntrantMember,
     StartggEvent,
+    StartggPhase,
+    StartggPhaseGroup,
+    StartggSeed,
     StartggTournament,
 )
+
+# event_phases.graphql asks for at most this many pools per phase.
+GROUPS_LIMIT = 64
 
 
 def stamp(value):
@@ -213,3 +219,117 @@ def _rosters(session, rosters, counts):
     for member in existing.values():
         session.delete(member)
         counts["participants_replaced"] += 1
+
+
+def _id(value):
+    return str(value) if value is not None else None
+
+
+def phases(session, event, data, seeds, now, counts, warnings):
+    """Store an event's phases, their pools and every phase's complete list of seeds.
+
+    data is event_phases.graphql's answer; seeds is {phase id: seed nodes}. A seed that
+    changes number or pool updates its row: start.gg keeps the seed's ID.
+    """
+    listed = ((data or {}).get("event") or {}).get("phases")
+    if not isinstance(listed, list):
+        warnings.append(f"no_phases_answer:{event.id}")
+        return
+    known = set(
+        session.scalars(
+            select(StartggPhase.id).where(
+                StartggPhase.event_id == event.id, StartggPhase.active.is_(True)
+            )
+        )
+    )
+    if not listed and known:
+        warnings.append(f"empty_phases_kept:{event.id}")
+        return
+    rows = {
+        str(p["id"]): dict(
+            event_id=event.id,
+            name=_text(p.get("name"), 200),
+            phase_order=p.get("phaseOrder"),
+            bracket_type=_text(p.get("bracketType"), 40),
+            num_seeds=p.get("numSeeds"),
+            seed_total=(((p.get("seeds") or {}).get("pageInfo") or {}).get("total")),
+        )
+        for p in listed
+    }
+    upsert(session, StartggPhase, rows, counts, "phases", now)
+    session.flush()
+    retire(
+        session, StartggPhase, StartggPhase.event_id == event.id, set(rows), counts, "phases", now
+    )
+    for phase in listed:
+        phase_id = str(phase["id"])
+        nodes = (phase.get("phaseGroups") or {}).get("nodes") or []
+        groups = {
+            str(n["id"]): dict(
+                phase_id=phase_id, display_identifier=_text(_id(n.get("displayIdentifier")), 40)
+            )
+            for n in nodes
+        }
+        upsert(session, StartggPhaseGroup, groups, counts, "pools", now)
+        session.flush()
+        if len(nodes) < GROUPS_LIMIT:
+            retire(
+                session,
+                StartggPhaseGroup,
+                StartggPhaseGroup.phase_id == phase_id,
+                set(groups),
+                counts,
+                "pools",
+                now,
+            )
+        if phase_id in seeds:
+            _seeds(session, phase_id, seeds[phase_id], now, counts, warnings)
+    event.pools_synced_at = now
+    session.flush()
+
+
+def _seeds(session, phase_id, nodes, now, counts, warnings):
+    active = session.scalar(
+        select(func.count())
+        .select_from(StartggSeed)
+        .where(StartggSeed.phase_id == phase_id, StartggSeed.active.is_(True))
+    )
+    if not nodes and active:
+        warnings.append(f"empty_seeds_kept:{phase_id}")
+        return
+    entrant_ids = {_id((n.get("entrant") or {}).get("id")) for n in nodes} - {None}
+    known_entrants = set(
+        session.scalars(select(StartggEntrant.id).where(StartggEntrant.id.in_(entrant_ids)))
+        if entrant_ids
+        else []
+    )
+    known_groups = set(
+        session.scalars(
+            select(StartggPhaseGroup.id).where(
+                StartggPhaseGroup.id.in_(
+                    {_id((n.get("phaseGroup") or {}).get("id")) for n in nodes} - {None}
+                )
+            )
+        )
+    )
+    rows = {}
+    for node in nodes:
+        entrant = node.get("entrant") or {}
+        people = entrant.get("participants") or []
+        group = _id((node.get("phaseGroup") or {}).get("id"))
+        origin = node.get("progressionSource") or {}
+        rows[str(node["id"])] = dict(
+            phase_id=phase_id,
+            phase_group_id=group if group in known_groups else None,
+            entrant_id=_id(entrant.get("id")) if _id(entrant.get("id")) in known_entrants else None,
+            seed_num=node.get("seedNum"),
+            group_seed_num=node.get("groupSeedNum"),
+            # One player only for singles; teams keep their name and no player.
+            player_id=_id((people[0].get("player") or {}).get("id")) if len(people) == 1 else None,
+            tag=_text(entrant.get("name"), 300),
+            origin_group_id=_id((origin.get("originPhaseGroup") or {}).get("id")),
+            origin_placement=origin.get("originPlacement"),
+        )
+    upsert(session, StartggSeed, rows, counts, "seeds", now)
+    session.flush()
+    retire(session, StartggSeed, StartggSeed.phase_id == phase_id, set(rows), counts, "seeds", now)

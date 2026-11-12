@@ -30,6 +30,12 @@ async def fetch(client, event_slug):
         return None
     seeds = await client.pages("pool_seeds", "phase", "seeds", str(first["id"]))
     structure = await fetch_structure(client, event["id"])
+    return assemble(first, seeds, structure)
+
+
+def assemble(first, seeds, structure):
+    """start.gg's first phase (event_phases), its seed nodes (pool_seeds) and the bracket
+    structure (or None) -> the pools map. Shared by the live read and the local copy."""
     pairs = []
     for group in (structure or {}).get("groups") or []:
         for result in group["sets"]:
@@ -77,6 +83,14 @@ def read(token, event_slug, fresh=False):
     found = asyncio.run(run())
     _cache[event_slug] = (time.monotonic(), found)
     return found
+
+
+def read_local(engine, event_slug):
+    """{"found": the pools map or None, "synced_at"} from the local copy of start.gg
+    (ADR-022); None when this event's pools were never synced."""
+    from app.sync import read as synced
+
+    return synced.local(engine, synced.pools, event_slug)
 
 
 def read_public(token, event_slug):

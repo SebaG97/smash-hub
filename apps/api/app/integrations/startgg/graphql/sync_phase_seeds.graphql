@@ -1,0 +1,13 @@
+query SyncPhaseSeeds($id: ID!, $page: Int!, $perPage: Int!) {
+  phase(id: $id) {
+    seeds(query: {page: $page, perPage: $perPage}) {
+      pageInfo { total totalPages }
+      nodes {
+        id seedNum groupSeedNum
+        phaseGroup { id }
+        entrant { id name participants { player { id } } }
+        progressionSource { originPlacement originPhaseGroup { id } }
+      }
+    }
+  }
+}

@@ -87,6 +87,7 @@ class StartggEvent(Stamped, Base):
     team_max_players = Column(Integer)
     # When each part of the event was last copied completely (None: never).
     entrants_synced_at = Column(DateTime(timezone=True))
+    pools_synced_at = Column(DateTime(timezone=True))
     active = Column(Boolean, nullable=False, server_default=text("true"))
     last_seen_at = Column(DateTime(timezone=True), nullable=False)
 
@@ -145,3 +146,55 @@ class StartggSyncRun(Record, Base):
         CheckConstraint("status IN ('running','completed','failed')", name="status"),
         Index("ix_startgg_sync_runs_status_started_at", "status", "started_at"),
     )
+
+
+class StartggPhase(Stamped, Base):
+    """A phase of an event (pools, top 8...), as start.gg built it."""
+
+    __tablename__ = "startgg_phases"
+    id = Column(String(40), primary_key=True)
+    event_id = Column(String(40), ForeignKey("startgg_events.id"), nullable=False, index=True)
+    name = Column(String(200))
+    phase_order = Column(Integer)
+    bracket_type = Column(String(40))
+    num_seeds = Column(Integer)
+    # How many seeds start.gg listed for the phase (seeds.pageInfo.total).
+    seed_total = Column(Integer)
+    active = Column(Boolean, nullable=False, server_default=text("true"))
+    last_seen_at = Column(DateTime(timezone=True), nullable=False)
+
+
+class StartggPhaseGroup(Stamped, Base):
+    """A pool (or the single bracket) of a phase."""
+
+    __tablename__ = "startgg_phase_groups"
+    id = Column(String(40), primary_key=True)
+    phase_id = Column(String(40), ForeignKey("startgg_phases.id"), nullable=False, index=True)
+    display_identifier = Column(String(40))
+    active = Column(Boolean, nullable=False, server_default=text("true"))
+    last_seen_at = Column(DateTime(timezone=True), nullable=False)
+
+
+class StartggSeed(Stamped, Base):
+    """A seed of a phase: its number, its pool and who holds it.
+
+    A new seeding, a pool reassignment or a withdrawal updates the same row (start.gg keeps
+    the seed's ID); a seed start.gg stops listing is marked inactive.
+    """
+
+    __tablename__ = "startgg_seeds"
+    id = Column(String(40), primary_key=True)
+    phase_id = Column(String(40), ForeignKey("startgg_phases.id"), nullable=False, index=True)
+    phase_group_id = Column(String(40), ForeignKey("startgg_phase_groups.id"), index=True)
+    # The registration, when it is in the local copy; player_id and tag as start.gg sent
+    # them with the seed, so pools never depend on registrations being synced first.
+    entrant_id = Column(String(40), ForeignKey("startgg_entrants.id"), index=True)
+    seed_num = Column(Integer)
+    group_seed_num = Column(Integer)
+    player_id = Column(String(40))
+    tag = Column(String(300))
+    # Later phases: the pool and placement this seed is filled from.
+    origin_group_id = Column(String(40))
+    origin_placement = Column(Integer)
+    active = Column(Boolean, nullable=False, server_default=text("true"))
+    last_seen_at = Column(DateTime(timezone=True), nullable=False)

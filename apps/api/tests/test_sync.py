@@ -45,6 +45,33 @@ def entrant(eid, player, tag, *, seed=None, prefix=None):
     )
 
 
+def phase(pid, name, order, groups, *, seeds):
+    return dict(
+        id=pid,
+        name=name,
+        phaseOrder=order,
+        bracketType="DOUBLE_ELIMINATION",
+        numSeeds=seeds,
+        seeds={"pageInfo": {"total": seeds}},
+        phaseGroups={"nodes": [dict(id=g, displayIdentifier=d) for g, d in groups.items()]},
+    )
+
+
+def seed(sid, num, group, pool_seed, *, entrant_id=None, player=None, tag=None, origin=None):
+    return dict(
+        id=sid,
+        seedNum=num,
+        groupSeedNum=pool_seed,
+        phaseGroup={"id": group},
+        entrant=dict(id=entrant_id, name=tag, participants=[{"player": {"id": player}}])
+        if entrant_id
+        else None,
+        progressionSource=dict(originPlacement=origin[1], originPhaseGroup={"id": origin[0]})
+        if origin
+        else None,
+    )
+
+
 def tournament_node():
     return dict(
         id=900,
@@ -93,11 +120,29 @@ class FakeStartGG:
         self.tournament = tournament_node()
         self.entrants = {
             "500": [
-                entrant(1, 10, "Ace", seed=1),
-                entrant(2, 20, "Bee", seed=2, prefix="KZN"),
-                entrant(3, 30, "Cid"),
+                entrant(1, 1, "Ace", seed=1),
+                entrant(2, 2, "Bee", seed=2, prefix="KZN"),
+                entrant(3, 3, "Cid"),
                 entrant(4, None, "Invitado"),  # no start.gg account: never matched by tag
             ]
+        }
+        # Pools A1 and A2, then a top 2 with each pool's winner.
+        self.phases = {
+            "500": [
+                phase(700, "Pools", 1, {801: "A1", 802: "A2"}, seeds=3),
+                phase(701, "Top 2", 2, {803: "1"}, seeds=2),
+            ]
+        }
+        self.seeds = {
+            "700": [
+                seed(7001, 1, 801, 1, entrant_id=1, player=1, tag="Ace"),
+                seed(7002, 2, 802, 1, entrant_id=2, player=2, tag="KZN | Bee"),
+                seed(7003, 3, 802, 2, entrant_id=3, player=3, tag="Cid"),
+            ],
+            "701": [
+                seed(7101, 1, 803, 1, origin=(801, 1)),
+                seed(7102, 2, 803, 2, origin=(802, 1)),
+            ],
         }
         self.fail = set()
         self.calls = []
@@ -123,6 +168,10 @@ class FakeStartGG:
             }
         if document == "upcoming_tournaments":
             return {"tournaments": {"nodes": deepcopy(self.calendar)}}
+        if document == "event_phases":
+            return {
+                "event": {"id": variables["id"], "phases": deepcopy(self.phases[variables["id"]])}
+            }
         raise AssertionError(document)
 
     async def pages(self, document, root, connection, external_id, *, variables=None, per_page=10):
@@ -131,6 +180,8 @@ class FakeStartGG:
             raise ImportFailure("startgg_incomplete_pagination")
         if document == "sync_entrants":
             return deepcopy(self.entrants.get(str(external_id), []))
+        if document == "sync_phase_seeds":
+            return deepcopy(self.seeds.get(str(external_id), []))
         raise AssertionError(document)
 
 
@@ -212,7 +263,7 @@ def test_sync_copies_tournament_events_and_registrations(db):
         assert t.last_status == "completed" and t.failures == 0
         assert t.next_sync_at > NOW  # three days ahead: the "week" frequency
         ace = s.scalar(select(StartggEntrantMember).where(StartggEntrantMember.gamer_tag == "Ace"))
-        assert (ace.participant_id, ace.player_id, ace.entrant_id) == ("p1", "10", "1")
+        assert (ace.participant_id, ace.player_id, ace.entrant_id) == ("p1", "1", "1")
         local = read.upcoming(s, "center-stage-2026")
     # Doubles are listed but only the singles event's registrations are copied.
     assert "sync_entrants" in fake.calls and fake.calls.count("sync_entrants") == 1
@@ -220,7 +271,7 @@ def test_sync_copies_tournament_events_and_registrations(db):
     bee = next(e for e in local["entrants"] if e["gamer_tag"] == "Bee")
     assert bee == dict(
         startgg_entrant_id="2",
-        startgg_player_id="20",
+        startgg_player_id="2",
         gamer_tag="Bee",
         prefix="KZN",
         profile_country="Paraguay",
@@ -454,3 +505,135 @@ def test_manual_sync_is_for_administrators_and_reports_status(db, monkeypatch):
         assert off.json() == {"slug": "center-stage-2026", "tracked": False}
     with Session(db) as s:
         assert s.get(StartggTournament, "900").next_sync_at is None
+
+
+# ------------------------------------------------------------------ seeds and pools
+
+
+def local_pools(db, slug="tournament/center-stage-2026/event/singles"):
+    with Session(db) as s:
+        return read.pools(s, slug)
+
+
+def pool_of(found):
+    names = {g["id"]: g["name"] for g in found["groups"]}
+    return {s["tag"]: (s["seed"], names.get(s["group"]), s["pool_seed"]) for s in found["seeds"]}
+
+
+def test_sync_copies_phases_pools_and_seeds(db):
+    run, _ = sync(db, FakeStartGG())
+    assert (run.counts["phases_created"], run.counts["pools_created"]) == (2, 3)
+    assert run.counts["seeds_created"] == 5
+    local = local_pools(db)
+    found = local["found"]
+    assert found["phase"] == "Pools" and local["synced_at"]
+    assert [g["name"] for g in found["groups"]] == ["A1", "A2"]
+    assert pool_of(found) == {"Ace": (1, "A1", 1), "KZN | Bee": (2, "A2", 1), "Cid": (3, "A2", 2)}
+    assert {s["player_id"] for s in found["seeds"]} == {"1", "2", "3"}
+    with Session(db) as s:
+        from app.sync.models import StartggSeed
+
+        assert s.get(StartggSeed, "7001").entrant_id == "1"  # linked to the registration
+        assert s.get(StartggSeed, "7101").origin_group_id == "801"
+    # Never synced: the caller asks start.gg.
+    assert local_pools(db, "tournament/other/event/singles") is None
+
+
+def test_new_seeding_and_pool_moves_update_the_same_seeds(db):
+    fake = FakeStartGG()
+    sync(db, fake)
+    # Organizers reseed: Cid becomes seed 2 in A1's place... and Bee leaves the event.
+    fake.seeds["700"] = [
+        seed(7001, 1, 801, 1, entrant_id=1, player=1, tag="Ace"),
+        seed(7003, 2, 801, 2, entrant_id=3, player=3, tag="Cid"),
+    ]
+    run, _ = sync(db, fake)
+    assert run.counts["seeds_updated"] == 1 and run.counts["seeds_retired"] == 1
+    assert pool_of(local_pools(db)["found"]) == {"Ace": (1, "A1", 1), "Cid": (2, "A1", 2)}
+
+
+def test_rebuilt_pools_retire_the_old_ones(db):
+    fake = FakeStartGG()
+    sync(db, fake)
+    fake.phases["500"][0] = phase(700, "Pools", 1, {811: "B1"}, seeds=3)
+    fake.seeds["700"] = [
+        seed(7001, 1, 811, 1, entrant_id=1, player=1, tag="Ace"),
+        seed(7002, 2, 811, 2, entrant_id=2, player=2, tag="KZN | Bee"),
+        seed(7003, 3, 811, 3, entrant_id=3, player=3, tag="Cid"),
+    ]
+    run, _ = sync(db, fake)
+    assert run.counts["pools_retired"] == 2
+    found = local_pools(db)["found"]
+    assert [g["name"] for g in found["groups"]] == ["B1"]
+    assert {v[1] for v in pool_of(found).values()} == {"B1"}
+
+
+def test_an_empty_seed_answer_keeps_the_pools(db):
+    fake = FakeStartGG()
+    sync(db, fake)
+    fake.seeds["700"] = []
+    run, _ = sync(db, fake)
+    assert "empty_seeds_kept:700" in run.warnings
+    assert len(local_pools(db)["found"]["seeds"]) == 3
+
+
+def test_no_phases_yet_is_a_synced_answer(db):
+    fake = FakeStartGG()
+    fake.phases["500"] = []
+    fake.seeds = {}
+    sync(db, fake)
+    assert local_pools(db) == {"found": None, "synced_at": local_pools(db)["synced_at"]}
+
+
+def published_seeding(db):
+    """A published hub seeding of the synced event (players 1 to 5)."""
+    from test_seeding import ENTRANTS, EVENT, START, dataset
+
+    from app.seeding import service as seeding
+    from app.seeding.models import SeedingProject
+
+    with Session(db) as s:
+        p = SeedingProject(
+            slug="cs",
+            name="Center Stage",
+            startgg_event_id="500",
+            startgg_event_slug="tournament/center-stage-2026/event/singles",
+            startgg_videogame_id="1386",
+            event_date=EVENT,
+            window_start=START,
+            merges={},
+            duplicates={},
+            published=True,
+        )
+        s.add(p)
+        s.flush()
+        rows = [
+            dict(
+                startgg_entrant_id=f"x{e['player_id']}",
+                startgg_player_id=e["player_id"],
+                gamer_tag=e["gamer_tag"],
+            )
+            for e in ENTRANTS
+        ]
+        seeding.replace_dataset(s, p, rows, dataset(), cutoff=EVENT - timedelta(days=5))
+        s.flush()
+        seeding.recalculate(s, p, "test")
+        s.commit()
+
+
+def test_public_pools_read_the_local_copy_when_startgg_is_down(db, monkeypatch):
+    from app.seeding import pools
+
+    sync(db, FakeStartGG())
+    published_seeding(db)
+
+    def down(*args, **kwargs):
+        raise AssertionError("synced pools must not ask start.gg")
+
+    monkeypatch.setattr(pools, "read_public", down)
+    with client_for(db) as client:
+        body = client.get("/api/v1/insights/upcoming/center-stage-2026/pools").json()
+    assert body["phase"] == "Pools"
+    assert [p["name"] for p in body["pools"]] == ["Pool A1", "Pool A2"]
+    # The hub's seeds 1, 2 and 3 go where start.gg puts those seed numbers.
+    assert [[p["seed"] for p in pool["players"]] for pool in body["pools"]] == [[1], [2, 3]]
