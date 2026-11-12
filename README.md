@@ -12,6 +12,8 @@ Misión SH-AUTH-01: cuentas propias (registro, ingreso, recuperación de contras
 
 Misión SH-RULES-01: reglamento oficial por torneo, público, en una pestaña de la previa y en un lector web (`/reglamentos/<id>`) con índice, más el PDF oficial para abrir o descargar. Primer documento: Center Stage 2026 v1.0. Cómo agregar o actualizar reglamentos: [docs/architecture/reglamentos.md](docs/architecture/reglamentos.md).
 
+Misión SH-SYNC-01: copia local de start.gg en PostgreSQL (torneos, eventos, inscripciones, participantes, fases, pools, seeds y sets, con sus IDs y relaciones originales) y sincronización automática en segundo plano, con frecuencia según qué tan cerca está cada torneo. Previas, calendario, pools y brackets leen la copia local y solo consultan start.gg si nunca se sincronizó; una caída de start.gg ya no las deja vacías. Sincronización manual y registro de cada ejecución en `/admin`. Apagada por defecto (`STARTGG_SYNC_ENABLED`). Decisión: [ADR-022](docs/adr/ADR-022.md); operación y DigitalOcean: [docs/operations/startgg-sync.md](docs/operations/startgg-sync.md).
+
 ## Inicio local
 
 Requisitos: Git, Docker Desktop con motor Linux y Docker Compose v2. Puertos predeterminados: web 3000 y API 8000. PostgreSQL no publica puertos.

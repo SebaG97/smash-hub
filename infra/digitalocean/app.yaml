@@ -70,6 +70,12 @@ services:
       - key: STARTGG_API_TOKEN
         scope: RUN_TIME
         type: SECRET
+      # Background copy of start.gg into PostgreSQL (ADR-022): runs inside this service,
+      # no extra component. Set to "true" once migration 0022 is applied. Frequencies and
+      # limits: docs/operations/startgg-sync.md (STARTGG_SYNC_*; defaults fit one instance).
+      - key: STARTGG_SYNC_ENABLED
+        scope: RUN_TIME
+        value: "false"
       # App Platform's ingress puts the visitor's IP here (X-Forwarded-For carries the
       # ingress's own address). Used for sign-in throttling and the audit (ADR-021).
       - key: CLIENT_IP_HEADER

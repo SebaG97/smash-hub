@@ -45,3 +45,9 @@ No introduce revisión 0004: el esquema y las migraciones 0001–0003 permanecen
 `0019_accounts.py` (Misión SH-AUTH-01, ADR-021), sobre 0018 intacta. Agrega columnas nullable a `users`, completa `username` para las cuentas existentes y recién después aplica `NOT NULL`, únicos y checks; renombra `banned_at` a `disabled_at` en lugar de borrarla; convierte el `startgg_player_id` de cada cuenta en una vinculación `startgg_legacy` y luego quita las columnas de OAuth. Crea `player_links`, `player_link_requests`, `password_reset_tokens` y `auth_audit_entries`, con índices únicos parciales que Alembic compara por nombre.
 
 Verificado en PostgreSQL efímero: upgrade con cuentas heredadas, downgrade a 0018, re-upgrade, `alembic check` sin operaciones y roundtrip base ↔ head de la suite. El downgrade conserva cuentas, pronósticos y logros, pero borra contraseñas, roles, vinculaciones, solicitudes, tokens y la auditoría de cuentas: con datos reales, backup y corrección hacia adelante. Aplicar en producción con `APPROVED_MIGRATION=0019` tras revisión humana. Procedimiento completo en [accounts.md](accounts.md).
+
+## Revisiones 0020, 0021 y 0022 — Copia local de start.gg
+
+`0020_startgg_sync.py`, `0021_startgg_pools.py` y `0022_startgg_sets.py` (Misión SH-SYNC-01, ADR-022), sobre 0019 intacta. Solo agregan tablas `startgg_*` y dos columnas nullable en `startgg_events`, creada por 0020: no modifican ni leen tablas existentes, no migran datos y no tocan cuentas, vinculaciones, Prode, seeding ni resultados.
+
+Verificado en PostgreSQL efímero: upgrade a 0022, downgrade a 0019, re-upgrade, `alembic check` sin operaciones, roundtrip base ↔ head y comparación de metadatos de la suite. El downgrade borra solo la copia local de start.gg, que se rehace sincronizando. Aplicar en producción con `APPROVED_MIGRATION=0022` (aplica las tres) tras backup y revisión humana. Pasos: [startgg-sync.md](startgg-sync.md#digitalocean-app-platform).

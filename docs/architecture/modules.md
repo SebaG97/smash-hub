@@ -13,6 +13,7 @@
 | rankings | Contrato de ámbito comunidad/juego/temporada/equipo; sin cálculos ni tablas de ranking |
 | auth | Cuentas propias, sesiones en cookie, roles (user, admin, superadmin), recuperación de contraseña, auditoría de cuentas y administración de usuarios (ADR-021) |
 | links | Vinculación verificada entre cuentas y fichas de jugador: solicitudes, asignación directa e historial (ADR-021) |
+| sync | Copia local de start.gg (torneos, eventos, inscripciones, fases, pools, seeds y sets), sincronización automática y manual, registro de ejecuciones y lectores para previas, pools y brackets (ADR-022) |
 | statistics | Elegibilidad compartida, universo SQL, agregados por ámbito, historial, placements, rivales y Head-to-Head |
 
 `app.database.models` registra todas las tablas para herramientas; los modelos pertenecen a su módulo. La revisión Alembic no importa modelos actuales. Los módulos de dominio no exponen escrituras HTTP. Cada futura operación administrativa necesitará autorización, servicio transaccional y auditoría.

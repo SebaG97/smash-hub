@@ -37,3 +37,7 @@ La CLI bloquea producción en esta misión. Antes de habilitar jobs futuros, rev
 ## Misión 05
 
 El spec declara `ADMIN_TOKEN` (con `ADMIN_TOKEN_EXPIRES`, solo durante la transición de ADR-021) y `STARTGG_API_TOKEN` como secretos del servicio API, sin valor en Git, y `CLIENT_IP_HEADER=do-connecting-ip` para la IP real del visitante. `python -m app.runtime superadmin promote --username <usuario>` nombra el primer superadministrador desde la consola ([accounts.md](accounts.md)). `python -m app.runtime migrate` ya no está fijo en 0001: aplica exactamente la revisión de `APPROVED_MIGRATION` si existe, nunca `head` implícito. `python -m app.runtime seeding|bootstrap` permite correr comandos de operador desde la consola de App Platform con la misma configuración TLS. Pasos completos del primer despliegue: [digitalocean-first-deploy.md](digitalocean-first-deploy.md).
+
+## Misión SH-SYNC-01
+
+La sincronización con start.gg (ADR-022) corre dentro del servicio `api`: no agrega componentes, jobs, workers ni bases, y no cambia el presupuesto de conexiones. El spec declara `STARTGG_SYNC_ENABLED` en `"false"`; después de aplicar `APPROVED_MIGRATION=0022` y desplegar, cambiarla a `"true"` en el panel. Requiere el `STARTGG_API_TOKEN` existente. Frecuencias, límites y verificación: [startgg-sync.md](startgg-sync.md). Mantener `instance_count: 1` del servicio `api` es lo recomendado; con más instancias el advisory lock evita sincronizaciones simultáneas.
