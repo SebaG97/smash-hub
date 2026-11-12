@@ -72,6 +72,29 @@ def seed(sid, num, group, pool_seed, *, entrant_id=None, player=None, tag=None, 
     )
 
 
+def a_set(sid, round_, *sides, state=1, winner=None, scores=None):
+    return dict(
+        id=sid,
+        round=round_,
+        fullRoundText=f"Round {round_}",
+        state=state,
+        winnerId=winner,
+        completedAt=None,
+        displayScore=None,
+        slots=[
+            dict(
+                prereqId=seed_id,
+                prereqType="seed",
+                prereqPlacement=None,
+                seed={"seedNum": num},
+                entrant={"id": num} if winner else None,
+                standing={"stats": {"score": {"value": scores[i]}}} if scores else None,
+            )
+            for i, (seed_id, num) in enumerate(sides)
+        ],
+    )
+
+
 def tournament_node():
     return dict(
         id=900,
@@ -144,6 +167,12 @@ class FakeStartGG:
                 seed(7102, 2, 803, 2, origin=(802, 1)),
             ],
         }
+        # Pool A2's only set (seeds 2 and 3), and the top 2's final.
+        self.sets = {
+            "801": [],
+            "802": [a_set("preview_802_1_0", 1, (7002, 2), (7003, 3))],
+            "803": [a_set("preview_803_1_0", 1, (7101, 1), (7102, 2))],
+        }
         self.fail = set()
         self.calls = []
         self.calendar = [tournament_node()]
@@ -182,6 +211,8 @@ class FakeStartGG:
             return deepcopy(self.entrants.get(str(external_id), []))
         if document == "sync_phase_seeds":
             return deepcopy(self.seeds.get(str(external_id), []))
+        if document == "sync_phase_group_sets":
+            return deepcopy(self.sets.get(str(external_id), []))
         raise AssertionError(document)
 
 
@@ -637,3 +668,72 @@ def test_public_pools_read_the_local_copy_when_startgg_is_down(db, monkeypatch):
     assert [p["name"] for p in body["pools"]] == ["Pool A1", "Pool A2"]
     # The hub's seeds 1, 2 and 3 go where start.gg puts those seed numbers.
     assert [[p["seed"] for p in pool["players"]] for pool in body["pools"]] == [[1], [2, 3]]
+
+
+# ------------------------------------------------------------------ sets and brackets
+
+
+def local_structure(db, event_id="500"):
+    with Session(db) as s:
+        return read.structure(s, event_id)
+
+
+def test_sync_copies_every_pools_sets_and_rebuilds_the_bracket_structure(db):
+    run, _ = sync(db, FakeStartGG())
+    assert run.counts["sets_created"] == 2
+    local = local_structure(db)
+    assert local["synced_at"]
+    found = local["structure"]
+    assert [g["name"] for g in found["groups"]] == ["Pools · A1", "Pools · A2"]
+    a2 = found["groups"][1]["sets"][0]
+    assert [s["seed"]["seedNum"] for s in a2["slots"]] == [2, 3]
+    top = found["phases"][0]
+    assert top["name"] == "Top 2" and [g["name"] for g in top["groups"]] == ["Top 2"]
+    assert top["sources"] == {
+        "7101": {"group": "801", "placement": 1, "num": 1},
+        "7102": {"group": "802", "placement": 1, "num": 2},
+    }
+    # The pools map now knows the first-round pairs (organizers' rematch warnings).
+    assert local_pools(db)["found"]["pairs"] == [[2, 3]]
+    assert local_structure(db, "501") is None  # doubles: not copied, start.gg would answer
+
+
+def test_results_update_sets_and_rebuilt_brackets_retire_old_ones(db):
+    fake = FakeStartGG()
+    sync(db, fake)
+    fake.sets["802"] = [
+        a_set("preview_802_1_0", 1, (7002, 2), (7003, 3), state=3, winner=2, scores=[2, 1])
+    ]
+    fake.sets["803"] = [a_set("9001", 1, (7101, 1), (7102, 2))]  # bracket started: real IDs
+    run, _ = sync(db, fake)
+    assert (run.counts["sets_updated"], run.counts["sets_created"]) == (1, 1)
+    assert run.counts["sets_retired"] == 1
+    with Session(db) as s:
+        from app.sync.models import StartggSet
+
+        played = s.get(StartggSet, "preview_802_1_0")
+        assert (played.state, played.winner_entrant_id) == (3, "2")
+        assert [slot["score"] for slot in played.slots] == [2, 1]
+        assert s.get(StartggSet, "preview_803_1_0").active is False
+    final = local_structure(db)["structure"]["phases"][0]["groups"][0]["sets"]
+    assert [x["id"] for x in final] == ["9001"]
+
+
+def test_projected_bracket_reads_the_local_copy_when_startgg_is_down(db, monkeypatch):
+    from app.brackets import service as brackets
+
+    sync(db, FakeStartGG())
+    published_seeding(db)
+
+    def down(*args, **kwargs):
+        raise AssertionError("a synced bracket must not ask start.gg")
+
+    monkeypatch.setattr(brackets, "structure", down)
+    with client_for(db) as client:
+        body = client.get("/api/v1/insights/upcoming/center-stage-2026").json()
+    bracket = body["bracket"]
+    assert bracket["source"] == "startgg" and bracket["projected"] is True
+    assert [g["name"] for g in bracket["groups"]] == ["Pools · A2"]
+    # The hub's seeds 2 and 3 meet where start.gg put seed numbers 2 and 3.
+    match = bracket["groups"][0]["winners"][0]["sets"][0]
+    assert [side["seed"] for side in match["sides"]] == [2, 3]

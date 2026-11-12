@@ -18,6 +18,7 @@ from app.sync.models import (
     StartggPhase,
     StartggPhaseGroup,
     StartggSeed,
+    StartggSet,
     StartggTournament,
 )
 
@@ -333,3 +334,56 @@ def _seeds(session, phase_id, nodes, now, counts, warnings):
     upsert(session, StartggSeed, rows, counts, "seeds", now)
     session.flush()
     retire(session, StartggSeed, StartggSeed.phase_id == phase_id, set(rows), counts, "seeds", now)
+
+
+def _slot(slot):
+    score = (((slot.get("standing") or {}).get("stats") or {}).get("score") or {}).get("value")
+    return dict(
+        prereqId=_id(slot.get("prereqId")),
+        prereqType=slot.get("prereqType"),
+        prereqPlacement=slot.get("prereqPlacement"),
+        seedNum=(slot.get("seed") or {}).get("seedNum"),
+        entrantId=_id((slot.get("entrant") or {}).get("id")),
+        score=score,
+    )
+
+
+def sets(session, event, by_group, now, counts, warnings):
+    """Store the complete list of sets of each pool in by_group ({pool id: set nodes})."""
+    for group_id, nodes in by_group.items():
+        active = session.scalar(
+            select(func.count())
+            .select_from(StartggSet)
+            .where(StartggSet.phase_group_id == group_id, StartggSet.active.is_(True))
+        )
+        if not nodes and active:
+            warnings.append(f"empty_sets_kept:{group_id}")
+            continue
+        rows = {
+            str(node["id"])[:60]: dict(
+                event_id=event.id,
+                phase_group_id=group_id,
+                position=position,
+                round=node.get("round"),
+                full_round_text=_text(node.get("fullRoundText"), 120),
+                state=node.get("state"),
+                winner_entrant_id=_id(node.get("winnerId")),
+                display_score=_text(node.get("displayScore"), 200),
+                completed_at=stamp(node.get("completedAt")),
+                slots=[_slot(s) for s in node.get("slots") or []],
+            )
+            for position, node in enumerate(nodes)
+        }
+        upsert(session, StartggSet, rows, counts, "sets", now)
+        session.flush()
+        retire(
+            session,
+            StartggSet,
+            StartggSet.phase_group_id == group_id,
+            set(rows),
+            counts,
+            "sets",
+            now,
+        )
+    event.sets_synced_at = now
+    session.flush()

@@ -14,6 +14,7 @@ from app.insights import preview
 from app.integrations.startgg.client import ImportFailure, StartGGClient
 from app.seeding import service as seeding
 from app.seeding import startgg as seeding_startgg
+from app.sync import read as synced
 
 router = APIRouter(prefix="/api/v1", tags=["brackets"])
 # start.gg did not answer for these events: try again after a while, not on every visit.
@@ -60,6 +61,11 @@ def bracket(request: Request, id: UUID):
         return result
 
 
+def _event_ref(session, event_slug):
+    event = synced.event_by_slug(session, event_slug)
+    return {"id": event.id} if event is not None else None
+
+
 @router.get("/seeding/{slug}/bracket")
 def seeding_bracket(request: Request, slug: str, actor: Admin):
     """Organizers only: how start.gg's bracket (pools included) looks with this seeding,
@@ -92,11 +98,15 @@ def seeding_bracket(request: Request, slug: str, actor: Admin):
         async with StartGGClient(token) as client:
             return await seeding_startgg.fetch_event(client, slug_of_event)
 
-    try:
-        event = asyncio.run(fetch())
-    except ImportFailure:
-        raise HTTPException(502, "start.gg no respondió") from None
-    result = service.projection(token, event["id"], people)
+    engine = request.app.state.engine
+    # The local copy of start.gg knows the event's ID (ADR-022); start.gg only if not.
+    event = synced.local(engine, _event_ref, slug_of_event)
+    if event is None:
+        try:
+            event = asyncio.run(fetch())
+        except ImportFailure:
+            raise HTTPException(502, "start.gg no respondió") from None
+    result = service.projection(token, event["id"], people, engine)
     if result is None:
         raise HTTPException(422, "Hacen falta al menos 4 jugadores con seed.")
     return result | dict(published=project.published)

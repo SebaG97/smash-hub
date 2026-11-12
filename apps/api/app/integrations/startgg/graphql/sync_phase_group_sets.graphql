@@ -1,0 +1,16 @@
+query SyncPhaseGroupSets($id: ID!, $page: Int!, $perPage: Int!) {
+  phaseGroup(id: $id) {
+    sets(page: $page, perPage: $perPage, sortType: STANDARD, filters: {showByes: true}) {
+      pageInfo { total totalPages }
+      nodes {
+        id round fullRoundText state winnerId completedAt displayScore
+        slots {
+          prereqId prereqType prereqPlacement
+          seed { seedNum }
+          entrant { id }
+          standing { stats { score { value } } }
+        }
+      }
+    }
+  }
+}

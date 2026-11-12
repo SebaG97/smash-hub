@@ -490,3 +490,13 @@ Copia local de start.gg, etapa 2: fases, pools y seeds. Aditiva: tres tablas nue
 | `startgg_seeds` | Seed de una fase: `phase_id` (FK), `phase_group_id` (FK al pool, nullable), `entrant_id` (FK a la inscripción si está en la copia), `seed_num`, `group_seed_num`, `player_id` y `tag` tal como vinieron con el seed, `origin_group_id` y `origin_placement` (de qué pool y posición se llena en fases posteriores), `active`, `last_seen_at`. |
 
 Un cambio de seeding o de pool actualiza la misma fila (start.gg conserva el ID del seed); un pool rehecho deja los anteriores `active = false`.
+
+### Migración 0022 (ADR-022)
+
+Copia local de start.gg, etapa 3: sets. Aditiva: una tabla nueva y `startgg_events.sets_synced_at` (nullable).
+
+| Tabla | Contenido |
+| --- | --- |
+| `startgg_sets` | Set de un pool, incluidos los de vista previa de un bracket sin empezar (`preview_…`): `id` (hasta 60 caracteres), `event_id` y `phase_group_id` (FKs), `position` (orden de start.gg), `round` (negativo en losers), `full_round_text`, `state`, `winner_entrant_id`, `display_score`, `completed_at`, `slots` (JSON: por lado `prereqId`, `prereqType`, `prereqPlacement`, `seedNum`, `entrantId`, `score`), `active`, `last_seen_at`. |
+
+Estos sets no reemplazan a `sets`/`set_sides` (resultados canónicos importados): solo sirven para dibujar y proyectar brackets de torneos en curso o próximos.

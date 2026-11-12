@@ -88,6 +88,7 @@ class StartggEvent(Stamped, Base):
     # When each part of the event was last copied completely (None: never).
     entrants_synced_at = Column(DateTime(timezone=True))
     pools_synced_at = Column(DateTime(timezone=True))
+    sets_synced_at = Column(DateTime(timezone=True))
     active = Column(Boolean, nullable=False, server_default=text("true"))
     last_seen_at = Column(DateTime(timezone=True), nullable=False)
 
@@ -196,5 +197,31 @@ class StartggSeed(Stamped, Base):
     # Later phases: the pool and placement this seed is filled from.
     origin_group_id = Column(String(40))
     origin_placement = Column(Integer)
+    active = Column(Boolean, nullable=False, server_default=text("true"))
+    last_seen_at = Column(DateTime(timezone=True), nullable=False)
+
+
+class StartggSet(Stamped, Base):
+    """A set of a pool as start.gg lists it, preview sets of an unstarted bracket included.
+
+    slots keeps each side as start.gg sent it: where it comes from (prereqId, prereqType,
+    prereqPlacement), the seed number, the entrant and the score.
+    """
+
+    __tablename__ = "startgg_sets"
+    id = Column(String(60), primary_key=True)
+    event_id = Column(String(40), ForeignKey("startgg_events.id"), nullable=False, index=True)
+    phase_group_id = Column(
+        String(40), ForeignKey("startgg_phase_groups.id"), nullable=False, index=True
+    )
+    # Order in start.gg's answer (sortType STANDARD).
+    position = Column(Integer, nullable=False)
+    round = Column(Integer)
+    full_round_text = Column(String(120))
+    state = Column(Integer)
+    winner_entrant_id = Column(String(40))
+    display_score = Column(String(200))
+    completed_at = Column(DateTime(timezone=True))
+    slots = Column(JSON, nullable=False)
     active = Column(Boolean, nullable=False, server_default=text("true"))
     last_seen_at = Column(DateTime(timezone=True), nullable=False)

@@ -26,7 +26,7 @@ Decisión y alternativas descartadas: [ADR-022](../adr/ADR-022.md). Operación y
 | `read.py` | Lectores de la copia con la misma forma que devuelven los fetchers de start.gg, para que previas, pools y brackets se armen con el mismo código. Devuelven `None` si esa parte nunca se sincronizó (entonces se consulta start.gg como antes). |
 | `router.py` | `/api/v1/sync` para administradores. |
 
-Los documentos GraphQL nuevos (`sync_tournament`, `sync_entrants`, `sync_phase_seeds`) amplían los existentes con los campos que se guardan (fin, estado y país del torneo; estado del evento; ID de participante, prefijo y país del inscrito; pool, inscripción y origen de cada seed). Las fases se leen con `event_phases`, el mismo documento que ya usaban pools y brackets. Toda paginación de la sincronización usa `StartGGClient.pages`, que exige totales consistentes, IDs únicos y la cantidad exacta: una respuesta incompleta falla en vez de parecer una baja.
+Los documentos GraphQL nuevos (`sync_tournament`, `sync_entrants`, `sync_phase_seeds`, `sync_phase_group_sets`) amplían los existentes con los campos que se guardan (fin, estado y país del torneo; estado del evento; ID de participante, prefijo y país del inscrito; pool, inscripción y origen de cada seed; estado, ganador, marcador e inscripción de cada lado de un set). Las fases se leen con `event_phases`, el mismo documento que ya usaban pools y brackets. Toda paginación de la sincronización usa `StartGGClient.pages`, que exige totales consistentes, IDs únicos y la cantidad exacta: una respuesta incompleta falla en vez de parecer una baja.
 
 ## Flujo de una sincronización de torneo
 
@@ -34,9 +34,16 @@ Los documentos GraphQL nuevos (`sync_tournament`, `sync_entrants`, `sync_phase_s
 2. `sync_tournament`: torneo y eventos; se confirma.
 3. Para el evento principal de singles y los eventos con seeding: inscripciones completas → `store.entrants`; se confirma.
 4. Fases (`event_phases`) y los seeds completos de cada fase → `store.phases` (fases, pools y seeds, con su origen en fases posteriores); se confirma.
-5. Cierre: estado, conteos y advertencias en la ejecución; último intento/éxito, fallas seguidas y próxima sincronización en el torneo.
+5. Sets de cada pool de cada fase, con byes y sets de vista previa → `store.sets`; se confirma.
+6. Cierre: estado, conteos y advertencias en la ejecución; último intento/éxito, fallas seguidas y próxima sincronización en el torneo.
 
 Cada paso confirma su parte por separado: si falla el paso 3 de un evento, lo anterior queda guardado y la ejecución termina `failed` con su código.
+
+## Qué sigue consultando start.gg en vivo
+
+- Torneos o eventos nunca sincronizados (la primera previa de un torneo que nadie sigue).
+- Acciones explícitas de organizadores: actualizar pools (`fresh=true`), adoptar el seeding de start.gg, crear un seeding, descargar sus datos (historial de sets y mains de cada inscrito) y subir seeds.
+- Perfiles de jugadores sin datos en el hub (`/insights/startgg-players/<id>`), `/en-vivo` y los nombres de fases de un evento importado (que ya se guardan una vez).
 
 ## Lectura
 
@@ -44,7 +51,8 @@ Cada paso confirma su parte por separado: si falla el paso 3 de un evento, lo an
 
 - `read.upcoming(slug)`: torneo, evento principal de singles e inscritos activos con un solo participante con Player.id; `synced_at` es el momento de la última copia completa de esas inscripciones. La previa expone `startgg.source` (`local` o `live`) y `startgg.synced_at`.
 - `read.calendar()`: torneos que el último descubrimiento completo listó (`in_calendar`), sin los online.
-- `read.pools(event_slug)`: el mapa de pools de la primera fase (la de más seeds, como `brackets.first_phase`), armado por `seeding.pools.assemble`, la misma función que usa la lectura en vivo. `found` es `None` si start.gg todavía no armó fases (respuesta sincronizada, no se consulta en vivo). Lo usa `/insights/upcoming/<slug>/pools`.
+- `read.pools(event_slug)`: el mapa de pools de la primera fase (la de más seeds, como `brackets.first_phase`), armado por `seeding.pools.assemble`, la misma función que usa la lectura en vivo. `found` es `None` si start.gg todavía no armó fases (respuesta sincronizada, no se consulta en vivo). Lo usan `/insights/upcoming/<slug>/pools` y, salvo con `fresh=true`, `/seeding/<slug>/pools` (organizadores). Las parejas de primera ronda (avisos de revancha y compañeros de equipo) salen de los sets copiados.
+- `read.structure(event_id)`: la estructura del bracket (pools de la primera fase y fases posteriores con el origen de cada seed), armada por `brackets.service.assemble_structure`, la misma función que la lectura en vivo. La usa `brackets.service.projection` (proyección de la previa y `/seeding/<slug>/bracket`); este último también toma de la copia el ID del evento.
 
 ## Bajas, cambios y reasignaciones
 
@@ -53,4 +61,5 @@ Cada paso confirma su parte por separado: si falla el paso 3 de un evento, lo an
 - Pareja de dobles que cambia: el roster de esa inscripción pasa a ser exactamente el que start.gg lista.
 - Cambio de seeding o reasignación de pool: la misma fila del seed cambia `seed_num`, `group_seed_num` o `phase_group_id`. Seed que start.gg deja de listar (baja): `active = false`.
 - Pools rehechos (IDs nuevos): los anteriores quedan `active = false` y los seeds apuntan a los nuevos.
+- Bracket que empieza o se rehace: los sets de vista previa cambian de ID; los que start.gg ya no lista quedan `active = false`. Un resultado cargado actualiza estado, ganador y marcador del mismo set.
 - Torneo que sale del calendario de start.gg: `in_calendar = false`; sus datos se conservan.

@@ -19,6 +19,7 @@ from app.sync.models import (
     StartggPhase,
     StartggPhaseGroup,
     StartggSeed,
+    StartggSet,
     StartggSyncRun,
     StartggTournament,
 )
@@ -251,6 +252,59 @@ def pools(session, event_slug):
     return dict(found=found, synced_at=event.pools_synced_at)
 
 
+def set_nodes(session, group_ids):
+    """{pool id: its active sets}, shaped like phase_group_sets nodes, in start.gg's order."""
+    result = {}
+    if not group_ids:
+        return result
+    for row in session.scalars(
+        select(StartggSet)
+        .where(StartggSet.phase_group_id.in_(group_ids), StartggSet.active.is_(True))
+        .order_by(StartggSet.phase_group_id, StartggSet.position)
+    ):
+        result.setdefault(row.phase_group_id, []).append(
+            dict(
+                id=row.id,
+                round=row.round,
+                fullRoundText=row.full_round_text,
+                state=row.state,
+                winnerId=row.winner_entrant_id,
+                slots=[
+                    dict(
+                        prereqId=slot.get("prereqId"),
+                        prereqType=slot.get("prereqType"),
+                        prereqPlacement=slot.get("prereqPlacement"),
+                        seed={"seedNum": slot["seedNum"]} if slot.get("seedNum") else None,
+                        entrant={"id": slot["entrantId"]} if slot.get("entrantId") else None,
+                    )
+                    for slot in row.slots or []
+                ],
+            )
+        )
+    return result
+
+
 def structure_of(session, event):
-    """The bracket structure from the copy, or None (filled in by stage 3)."""
-    return None
+    """brackets.service.assemble_structure from the copy; None if its sets were never
+    synced or start.gg has no phase yet."""
+    from app.brackets.service import assemble_structure, first_phase
+
+    if event.sets_synced_at is None:
+        return None
+    data = phases_data(session, event.id)
+    first = first_phase(data)
+    if first is None:
+        return None
+    phases = data["event"]["phases"]
+    groups = [g["id"] for p in phases for g in p["phaseGroups"]["nodes"]]
+    seeds = {p["id"]: seed_nodes(session, p["id"]) for p in phases if p["id"] != first["id"]}
+    return assemble_structure(data, set_nodes(session, groups), seeds)
+
+
+def structure(session, event_id):
+    """{"structure": the bracket structure or None if start.gg has no phase yet,
+    "synced_at"}; None when this event's sets were never synced."""
+    event = session.get(StartggEvent, event_id)
+    if event is None or not event.active or event.sets_synced_at is None:
+        return None
+    return dict(structure=structure_of(session, event), synced_at=event.sets_synced_at)

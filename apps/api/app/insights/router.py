@@ -214,7 +214,9 @@ def upcoming(request: Request, slug: str = Path(pattern=r"^[a-z0-9-]{1,120}$")):
     # Mission 25: start.gg's first phase (pools or the bracket) with the hub's published
     # seeds in it; never with start.gg's own seeds.
     result["bracket"] = (
-        brackets.projection(token_of(request), event["id"], result["entrants"])
+        brackets.projection(
+            token_of(request), event["id"], result["entrants"], request.app.state.engine
+        )
         if source["source"] == "seeding" and event
         else None
     )

@@ -32,6 +32,7 @@ RETRY_UNKNOWN = timedelta(hours=1)
 MAX_PER_TICK = 10
 ENTRANTS_PER_PAGE = 40
 SEEDS_PER_PAGE = 50
+SETS_PER_PAGE = 30  # ~16 objects per set: well under start.gg's 1000 per query
 
 
 class SyncBusy(Exception):
@@ -194,6 +195,20 @@ async def _sync(engine, client, slug, run_id, counts, warnings, reason):
             )
         with Session(engine) as s:
             store.phases(s, s.get(StartggEvent, event_id), data, seeds, now_utc(), counts, warnings)
+            s.commit()
+        # Brackets: the sets of every pool of every phase, preview sets included.
+        by_group = {}
+        for phase in ((data or {}).get("event") or {}).get("phases") or []:
+            for node in (phase.get("phaseGroups") or {}).get("nodes") or []:
+                by_group[str(node["id"])] = await client.pages(
+                    "sync_phase_group_sets",
+                    "phaseGroup",
+                    "sets",
+                    str(node["id"]),
+                    per_page=SETS_PER_PAGE,
+                )
+        with Session(engine) as s:
+            store.sets(s, s.get(StartggEvent, event_id), by_group, now_utc(), counts, warnings)
             s.commit()
 
 

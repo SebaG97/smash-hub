@@ -359,12 +359,20 @@ def _pool_seeding(session, slug):
 
 
 def _start_gg_pools(request, project, fresh=False):
-    try:
-        found = pools.read(
-            request.app.state.settings.startgg_api_token, project.startgg_event_slug, fresh
-        )
-    except ImportFailure:
-        raise HTTPException(502, "start.gg no respondió") from None
+    # The local copy of start.gg first (ADR-022). "fresh" (the organizers' refresh, and
+    # adopting start.gg's seeding) always asks start.gg.
+    local = (
+        None if fresh else pools.read_local(request.app.state.engine, project.startgg_event_slug)
+    )
+    if local is not None:
+        found = local["found"]
+    else:
+        try:
+            found = pools.read(
+                request.app.state.settings.startgg_api_token, project.startgg_event_slug, fresh
+            )
+        except ImportFailure:
+            raise HTTPException(502, "start.gg no respondió") from None
     if not found or not found["seeds"]:
         raise HTTPException(422, "start.gg todavía no armó las fases de este evento.")
     return found

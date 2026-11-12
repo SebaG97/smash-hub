@@ -288,12 +288,34 @@ def _source(seed):
 
 
 async def fetch_structure(client, event_id):
-    """start.gg's preview sets of every phase, in order of play.
+    """start.gg's preview sets of every phase, in order of play (see assemble_structure)."""
+    data = await client.query("event_phases", {"id": event_id})
+    first = first_phase(data)
+    if first is None:
+        return None
+    sets, seeds = {}, {}
+    for phase in data["event"]["phases"]:
+        for node in (phase.get("phaseGroups") or {}).get("nodes") or []:
+            sets[str(node["id"])] = await _group_sets(client, node)
+        if phase["id"] != first["id"]:
+            seeds[str(phase["id"])] = await paged(
+                client,
+                "phase_progressions",
+                "phase",
+                "seeds",
+                {"id": str(phase["id"])},
+                per_page=64,
+            )
+    return assemble_structure(data, sets, seeds)
+
+
+def assemble_structure(data, sets, seeds):
+    """event_phases' answer, {pool id: set nodes} and {later phase id: seed nodes} -> the
+    structure. Shared by the live read and the local copy (ADR-022).
 
     `groups` are the first phase's (one per pool); `phases` the ones after it, each with
     its groups and, per seed, the pool and placement it is filled from (progressionSource).
     """
-    data = await client.query("event_phases", {"id": event_id})
     first = first_phase(data)
     if first is None:
         return None
@@ -303,7 +325,7 @@ async def fetch_structure(client, event_id):
         name = first.get("name") or "Bracket"
         if len(nodes) > 1:
             name = f"{name} · {node.get('displayIdentifier') or ''}".strip(" ·")
-        groups.append(dict(id=str(node["id"]), name=name, sets=await _group_sets(client, node)))
+        groups.append(dict(id=str(node["id"]), name=name, sets=sets.get(str(node["id"]), [])))
     # start.gg's phaseOrder does not always follow play ("TOP 8" before "TOP 32"): bigger
     # phases come first.
     later = sorted(
@@ -315,12 +337,9 @@ async def fetch_structure(client, event_id):
     )
     phases = []
     for phase in later:
-        seeds = await paged(
-            client, "phase_progressions", "phase", "seeds", {"id": str(phase["id"])}, per_page=64
-        )
         sources = {
             str(seed["id"]): _source(seed)
-            for seed in seeds
+            for seed in seeds.get(str(phase["id"]), [])
             if (seed.get("progressionSource") or {}).get("originPhaseGroup")
         }
         inner = (phase.get("phaseGroups") or {}).get("nodes") or []
@@ -330,7 +349,7 @@ async def fetch_structure(client, event_id):
             if len(inner) > 1:
                 name = f"{name} · {node.get('displayIdentifier') or ''}".strip(" ·")
             phase_groups.append(
-                dict(id=str(node["id"]), name=name, sets=await _group_sets(client, node))
+                dict(id=str(node["id"]), name=name, sets=sets.get(str(node["id"]), []))
             )
         phases.append(dict(name=phase.get("name"), groups=phase_groups, sources=sources))
     return dict(groups=groups, phases=phases, later=[p["name"] for p in later if p.get("name")])
@@ -498,10 +517,19 @@ def seeded(found, people):
     return dict(projected=True, source="startgg", later=later, groups=groups)
 
 
-def projection(token, event_id, people):
+def projection(token, event_id, people, engine=None):
     """start.gg's real first phase with the hub's seeds, or the hub's own winners bracket
-    when start.gg has not built one yet."""
-    found = structure(token, event_id) if event_id else None
+    when start.gg has not built one yet. With an engine, the local copy of start.gg answers
+    first (ADR-022); start.gg is asked only for brackets never synced."""
+    local = None
+    if engine is not None and event_id:
+        from app.sync import read as synced
+
+        local = synced.local(engine, synced.structure, str(event_id))
+    if local is not None:
+        found = local["structure"]
+    else:
+        found = structure(token, event_id) if event_id else None
     result = seeded(found, people) if found else None
     if result is None:
         result = projected(people)

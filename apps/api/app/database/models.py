@@ -49,6 +49,7 @@ from app.sync.models import (
     StartggPhase,
     StartggPhaseGroup,
     StartggSeed,
+    StartggSet,
     StartggSyncRun,
     StartggTournament,
 )
@@ -61,6 +62,7 @@ __all__ = [
     "StartggPhase",
     "StartggPhaseGroup",
     "StartggSeed",
+    "StartggSet",
     "StartggSyncRun",
     "StartggTournament",
     "AuthAuditEntry",
