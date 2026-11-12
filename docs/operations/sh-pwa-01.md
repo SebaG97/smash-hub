@@ -2,6 +2,8 @@
 
 Fecha: 12/11/2026. Estado: **integrado en `main` y con push (`600315f`), pero sin desplegar.** DigitalOcean respondió 403 y el despliegue del servicio `web` queda pendiente de hacerse a mano. Producción todavía no tiene `/install` ni el manifest: **no anunciar la instalación** hasta completar y verificar la [sección 8](#8-publicación-resultados-reales).
 
+> **Actualización:** [SH-PWA-02](sh-pwa-02.md) reemplaza el bloque del inicio por una tarjeta compacta junto al título y reorganiza `/install` (botón primero, estados y navegadores internos). Lo descrito abajo sobre el bloque y el orden de `/install` corresponde a SH-PWA-01.
+
 Smash Hub se puede instalar como Progressive Web App (PWA) en Android, iPhone, iPad y computadoras. Es la misma aplicación Next.js: no hay APK, app nativa ni un frontend aparte.
 
 ## 1. Qué se implementó

@@ -16,6 +16,8 @@ Misión SH-SYNC-01: copia local de start.gg en PostgreSQL (torneos, eventos, ins
 
 Misión SH-PWA-01: Smash Hub se instala como aplicación (PWA) en Android, iPhone y computadoras, sin APK ni app nativa. Manifest e íconos desde el logo oficial, página pública `/install` con instrucciones por dispositivo y bloque «Smash Hub en tu celular» con QR en el inicio. Sin service worker ni modo offline. Implementación, limitaciones por navegador y publicación: [docs/operations/sh-pwa-01.md](docs/operations/sh-pwa-01.md).
 
+Misión SH-PWA-02: `/install` muestra primero el botón de instalación, con estados explícitos (disponible, comprobando, instalando, instalada, no disponible), detecta WhatsApp, la app de Google y WebView de Android con «Abrir en Chrome», y reconoce una instalación previa. El anuncio del inicio pasa a ser una tarjeta compacta a la derecha del título. Diagnóstico y publicación: [docs/operations/sh-pwa-02.md](docs/operations/sh-pwa-02.md).
+
 ## Inicio local
 
 Requisitos: Git, Docker Desktop con motor Linux y Docker Compose v2. Puertos predeterminados: web 3000 y API 8000. PostgreSQL no publica puertos.
