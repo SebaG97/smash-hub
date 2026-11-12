@@ -302,10 +302,19 @@ def link(s, staff, user_id, player_id, verification, *, replace=False, reason=No
         method=row.method,
         verification=verification,
     )
+    _achievements_changed()
     return row
 
 
+def _achievements_changed():
+    # «Ese soy yo» follows the active link (SH-ACH-01).
+    from app.achievements import runner
+
+    runner.mark_dirty("link")
+
+
 def _end(s, staff, row, reason):
+    _achievements_changed()
     row.unlinked_at = now()
     row.unlinked_by = staff.id
     row.unlinked_by_name = staff.username

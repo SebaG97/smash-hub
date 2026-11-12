@@ -261,6 +261,10 @@ def cached(session):
 def invalidate():
     with _lock:
         _cache["data"] = None
+    # Results changed: achievements are re-evaluated in the background (SH-ACH-01).
+    from app.achievements import runner
+
+    runner.mark_dirty("results")
 
 
 # ---------------------------------------------------------------- per player
@@ -358,7 +362,8 @@ def player_insights(data, player, ranking_place=None):
         badge("lider", "Líder indiscutible", "Es el n.º 1 del ranking publicado.")
     if len(titles) >= 3:
         badge("trofeos", "Coleccionista de trofeos", f"Ganó {len(titles)} torneos.")
-    elif titles:
+    # SH-ACH-01: a higher tier never takes away the lower one.
+    if titles:
         badge("campeon", "Campeón", f"Ganó {titles[0]['tournament']}.")
     if side_titles:
         f = side_titles[0]

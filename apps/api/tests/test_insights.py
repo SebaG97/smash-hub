@@ -67,9 +67,11 @@ def test_player_badges_and_records():
     result = engine.player_insights(data, "a", ranking_place=1)
     ids = [b["id"] for b in result["badges"]]
     # September 2026 is over, so winning it also gives "Jugador del mes" (Mission 21).
+    # SH-ACH-01: "Campeón" stays next to "Coleccionista de trofeos".
     assert ids == [
         "lider",
         "trofeos",
+        "campeon",
         "david",
         "remontadas",
         "racha",

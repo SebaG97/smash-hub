@@ -857,6 +857,9 @@ def start_refresh(
 def set_published(session, project, published, actor):
     project.published = published
     audit(session, project, "publish" if published else "unpublish", actor)
+    from app.achievements import runner
+
+    runner.mark_dirty("ranking")
 
 
 PUBLIC_ROW = {

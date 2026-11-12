@@ -4,6 +4,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import ValidationError
 
+from app.achievements import runner as achievements_runner
+from app.achievements.router import router as achievements_router
 from app.auth.admin_router import router as accounts_admin_router
 from app.auth.router import router as auth_router
 from app.brackets.router import router as brackets_router
@@ -40,9 +42,13 @@ def create_app(settings: Settings | None = None, engine=None) -> FastAPI:
         app.state.engine = engine if engine is not None else build_engine(settings)
         # Background start.gg sync (ADR-022): only with STARTGG_SYNC_ENABLED and a token.
         scheduler = maybe_start(app.state.engine, settings)
+        # Background achievements (SH-ACH-01): only with ACHIEVEMENTS_AUTO.
+        achievements = achievements_runner.maybe_start(app.state.engine, settings)
         yield
         if scheduler is not None:
             scheduler.stop()
+        if achievements is not None:
+            achievements.stop()
         if engine is None:
             app.state.engine.dispose()
 
@@ -85,5 +91,6 @@ def create_app(settings: Settings | None = None, engine=None) -> FastAPI:
     app.include_router(links_router)
     app.include_router(accounts_admin_router)
     app.include_router(sync_router)
+    app.include_router(achievements_router)
 
     return app

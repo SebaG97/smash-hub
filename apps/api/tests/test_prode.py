@@ -448,3 +448,111 @@ def test_a_confirmed_start_sets_the_close_of_new_contests(db):
             actor="org",
         )
         assert other.locks_at == datetime(2026, 11, 14, 19, 0, tzinfo=UTC)  # unchanged
+
+
+def test_new_prode_achievements_are_pure():
+    picks = {f"u{i}": dict(champion="1", top8=top8(1, 2, 3, 4, 5, 6, 7, 9)) for i in range(9)}
+    picks["bold"] = dict(champion="7", top8=top8(1, 2, 3, 4, 5, 6, 7, 8))
+    results = engine.results_from({"7": 1, "1": 2, "2": 3, "3": 4, "4": 5, "5": 5, "6": 7, "8": 7})
+    ranked = engine.rank(
+        [
+            dict(user_id=u, **engine.score(engine.DEFAULT_RULES, results, p))
+            for u, p in picks.items()
+        ]
+    )
+    earned = engine.achievements(
+        "CS",
+        results,
+        picks,
+        ranked,
+        players={},
+        seeds={},
+        tags={},
+        placements={"1": 2, "7": 1, "9": 9},
+    )
+    kinds = {u: {a["kind"] for a in items} for u, items in earned.items()}
+    # 1 of 10 picked the champion: «Contra el pueblo»; 7 of 8 in the top 8: «Por un pelo».
+    assert "against_the_crowd" in kinds["bold"] and "against_the_crowd" not in kinds["u0"]
+    assert "almost_full" in kinds["u0"] and "almost_full" not in kinds["bold"]
+    history = {"x": [(1, 10, True), (2, 5, True), (3, 4, True)], "y": [(5, 0, False)]}
+    lifetime = engine.lifetime({"x": 3, "y": 1}, {"x": 1}, history)
+    assert {a["kind"] for a in lifetime["x"]} == {
+        "first_prode",
+        "podium_streak",
+        "paje",
+        "regular",
+    }
+    assert {a["kind"] for a in lifetime["y"]} == {"first_prode"}
+
+
+def test_settling_again_keeps_first_recognition_and_never_duplicates(db, world, client):
+    """SH-ACH-01: achievements are reconciled, not deleted and rebuilt."""
+    from app.prode.models import ProdeAchievement, ProdePrediction, ProdeScore
+
+    make_user(db, "org", role="admin")
+    org = account_sign_in(client(), "org")
+    contest = org.post("/api/v1/prode/tournaments/cs", headers=ADMIN).json()
+    url = f"/api/v1/prode/contests/{contest['id']}/picks"
+    ana = sign_in(client, db, "ana", "Ana")
+    ana.put(url, json=dict(champion="1", runner_up="2", top8=top8(*range(1, 9))), headers=WEB)
+    beto = sign_in(client, db, "beto", "Beto")
+    beto.put(url, json=dict(champion="3", runner_up="1", top8=top8(*range(2, 10))), headers=WEB)
+    org.post(f"/api/v1/prode/contests/{contest['id']}/lock", headers=ADMIN)
+    settle = f"/api/v1/prode/contests/{contest['id']}/settle"
+    final = {"1": 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 5, "7": 7, "8": 7, "9": 9}
+    world["placements"] = final
+
+    def stored():
+        with Session(db) as s:
+            return {
+                (r.user_id, r.contest_id, r.kind): (r.id, r.created_at, r.status)
+                for r in s.scalars(select(ProdeAchievement))
+            }
+
+    def picks_and_scores():
+        with Session(db) as s:
+            return (
+                sorted(str(p.value) for p in s.scalars(select(ProdePrediction))),
+                s.scalar(select(func.count()).select_from(ProdeScore)),
+            )
+
+    assert org.post(settle, headers=ADMIN).status_code == 200
+    first = stored()
+    kinds = {k[2] for k in first}
+    assert {"oracle", "full_house", "prode_champion", "first_prode"} <= kinds
+    before_picks = picks_and_scores()
+
+    # Same results again: same rows, same first recognition, nothing new.
+    assert org.post(settle, headers=ADMIN).status_code == 200
+    assert stored() == first
+    assert picks_and_scores() == before_picks
+
+    # A correction on start.gg: Ana's champion was wrong. Revoked, not deleted.
+    world["placements"] = {**final, "1": 2, "2": 1}
+    assert org.post(settle, headers=ADMIN).status_code == 200
+    corrected = stored()
+    assert set(first) <= set(corrected)  # nothing deleted; new ones (Beto's) added once
+    revoked = {k[2] for k, v in corrected.items() if v[2] == "revoked"}
+    assert "oracle" in revoked
+    ana_profile = client().get("/api/v1/prode").json()["leaderboard"]
+    assert ana_profile  # leaderboard keeps working
+
+    # Back to the right results: restored with their first recognition.
+    world["placements"] = final
+    assert org.post(settle, headers=ADMIN).status_code == 200
+    restored = stored()
+    assert {k: restored[k] for k in first} == first
+    assert all(restored[k][2] == "revoked" for k in set(restored) - set(first))
+
+    # Voiding a settled Prode revokes its achievements and the ones across contests.
+    assert (
+        org.post(f"/api/v1/prode/contests/{contest['id']}/void", headers=ADMIN).status_code == 200
+    )
+    after = stored()
+    assert set(after) == set(restored)
+    assert all(v[2] == "revoked" for v in after.values())
+    with Session(db) as s:
+        users = list(s.scalars(select(ProdeScore.user_id)))
+    shown = client().get(f"/api/v1/prode/users/{users[0]}").json()
+    assert shown["achievements"] == []
+    assert picks_and_scores() == before_picks

@@ -39,6 +39,11 @@ class Settings(BaseSettings):
     startgg_sync_finished_seconds: int = Field(default=86400, ge=600, le=604800)
     # Legacy shared admin key (ADR-011), kept only during the move to personal accounts
     # (ADR-021). It works only while ADMIN_TOKEN_EXPIRES is set and in the future.
+    # Achievements (SH-ACH-01): evaluate in the background after imports, ranking
+    # publications and Prode settlements, and every few hours. Off unless set; an
+    # administrator can always run a recalculation by hand.
+    achievements_auto: bool = False
+    achievements_interval_seconds: int = Field(default=21600, ge=600, le=604800)
     admin_token: SecretStr | None = None
     admin_token_expires: datetime | None = None
     # Header where the trusted proxy puts the visitor's address (App Platform:

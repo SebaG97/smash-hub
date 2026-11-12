@@ -406,8 +406,10 @@ def reopen(request: Request, contest_id: UUID, body: Reopen, actor: Admin):
 @router.post("/contests/{contest_id}/void")
 def void(request: Request, contest_id: UUID, actor: Admin):
     def change(s, found):
+        was_settled = found.status == "settled"
         found.status = "void"
-        service.audit(s, found, "void", actor)
+        revoked = service.void_achievements(s, found) if was_settled else 0
+        service.audit(s, found, "void", actor, achievements_revoked=revoked)
 
     return _admin_change(request, contest_id, change)
 

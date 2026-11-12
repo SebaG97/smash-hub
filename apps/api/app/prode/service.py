@@ -208,9 +208,64 @@ def picks_of(s, contest):
     return {user: data for user, data in out.items() if any(data[0].values())}
 
 
+def _first_saved(s, contest):
+    """{user id: first time they saved a pick in this contest} from the pick history."""
+    return dict(
+        s.execute(
+            select(ProdePrediction.user_id, func.min(ProdePredictionHistory.created_at))
+            .join(ProdePrediction, ProdePrediction.id == ProdePredictionHistory.prediction_id)
+            .join(ProdeQuestion, ProdeQuestion.id == ProdePrediction.question_id)
+            .where(ProdeQuestion.contest_id == contest.id)
+            .group_by(ProdePrediction.user_id)
+        ).all()
+    )
+
+
+def reconcile(s, existing, earned, *, contest_id, now, event_at=None):
+    """Bring stored achievements in line with what is earned now, without deleting.
+
+    existing: rows already stored for this scope; earned: {user id: [achievement]}. New
+    ones are inserted; those still earned keep their row and created_at (the first
+    recognition) and get the current wording; those no longer earned are revoked; revoked
+    ones earned again are reactivated. Returns {"added", "kept", "revoked", "restored"}."""
+    counts = dict(added=0, kept=0, revoked=0, restored=0)
+    stored = {(row.user_id, row.kind): row for row in existing}
+    wanted = {}
+    for user_id, items in earned.items():
+        for item in items:
+            wanted.setdefault((user_id, item["kind"]), item)
+    for key, item in wanted.items():
+        row = stored.get(key)
+        if row is None:
+            s.add(
+                ProdeAchievement(
+                    user_id=key[0],
+                    contest_id=contest_id,
+                    event_at=event_at,
+                    evidence=dict(detail=item["detail"]),
+                    **item,
+                )
+            )
+            counts["added"] += 1
+            continue
+        if row.status != "active":
+            row.status, row.revoked_at = "active", None
+            counts["restored"] += 1
+        else:
+            counts["kept"] += 1
+        row.title, row.detail, row.rare = item["title"], item["detail"], item["rare"]
+        row.evidence = dict(detail=item["detail"])
+    for key, row in stored.items():
+        if key not in wanted and row.status == "active":
+            row.status, row.revoked_at = "revoked", now
+            counts["revoked"] += 1
+    return counts
+
+
 def settle(s, contest, placements, *, actor, source):
-    """Score everyone from start.gg's final placements. Scores and achievements of the
-    contest are deleted and rebuilt, so settling again after a correction is safe."""
+    """Score everyone from start.gg's final placements. Scores are rebuilt; achievements
+    are reconciled (SH-ACH-01): settling again after a correction keeps each one's first
+    recognition, revokes what no longer holds and never duplicates."""
     if contest.status == "void":
         raise ProdeError("El Prode está anulado.")
     results = engine.results_from(placements)
@@ -232,7 +287,6 @@ def settle(s, contest, placements, *, actor, source):
         )
     ranked = engine.rank(rows)
     s.execute(delete(ProdeScore).where(ProdeScore.contest_id == contest.id))
-    s.execute(delete(ProdeAchievement).where(ProdeAchievement.contest_id == contest.id))
     s.flush()
     for row in ranked:
         s.add(ProdeScore(contest_id=contest.id, **row))
@@ -248,27 +302,52 @@ def settle(s, contest, placements, *, actor, source):
         players=links.startgg_ids_for_users(s, list(played)),
         seeds={c.startgg_player_id: c.seed for c in candidates},
         tags={c.startgg_player_id: c.tag for c in candidates},
+        placements={str(k): v for k, v in placements.items()},
+        opened_at=contest.created_at,
+        closes_at=contest.locked_at or contest.locks_at,
+        first_saved=_first_saved(s, contest),
+        last_saved={user: saved for user, (_, saved) in played.items()},
+        candidates={c.startgg_player_id for c in candidates if c.withdrawn_at is None},
     )
-    for user_id, items in earned.items():
-        for item in items:
-            s.add(ProdeAchievement(user_id=user_id, contest_id=contest.id, **item))
+    existing = list(
+        s.scalars(select(ProdeAchievement).where(ProdeAchievement.contest_id == contest.id))
+    )
+    counts = reconcile(s, existing, earned, contest_id=contest.id, now=now, event_at=now)
     contest.status, contest.settled_at = "settled", now
     contest.locked_at = contest.locked_at or now
     s.flush()
     _lifetime(s, list(played))
-    audit(s, contest, "settle", actor, source=source, players=len(ranked))
+    audit(s, contest, "settle", actor, source=source, players=len(ranked), achievements=counts)
+    from app.achievements import runner
+
+    runner.mark_dirty("prode")  # «La mufa no funciona» reads settled Prodes
     return ranked
 
 
+def void_achievements(s, contest):
+    """A voided contest stops counting: its achievements are revoked (not deleted) and
+    the achievements across contests of its forecasters are recalculated."""
+    now = _now()
+    rows = list(
+        s.scalars(select(ProdeAchievement).where(ProdeAchievement.contest_id == contest.id))
+    )
+    revoked = 0
+    for row in rows:
+        if row.status == "active":
+            row.status, row.revoked_at = "revoked", now
+            revoked += 1
+    s.flush()
+    users = list(s.scalars(select(ProdeScore.user_id).where(ProdeScore.contest_id == contest.id)))
+    _lifetime(s, users)
+    return revoked
+
+
 def _lifetime(s, user_ids):
-    """Rebuild the achievements across contests of these forecasters."""
+    """Reconcile the achievements across contests of these forecasters."""
     if not user_ids:
         return
-    s.execute(
-        delete(ProdeAchievement).where(
-            ProdeAchievement.user_id.in_(user_ids), ProdeAchievement.contest_id.is_(None)
-        )
-    )
+    # Two settlements at once must not both insert the same achievement across contests.
+    s.execute(select(func.pg_advisory_xact_lock(func.hashtextextended("prode:lifetime", 0))))
     settled = select(ProdeContest.id).where(ProdeContest.status == "settled")
     played = dict(
         s.execute(
@@ -289,16 +368,43 @@ def _lifetime(s, user_ids):
             .group_by(ProdeScore.user_id)
         ).all()
     )
-    for user_id, items in engine.lifetime(played, won).items():
-        for item in items:
-            s.add(ProdeAchievement(user_id=user_id, contest_id=None, **item))
+    hits = set(
+        s.execute(
+            select(ProdeAchievement.user_id, ProdeAchievement.contest_id).where(
+                ProdeAchievement.user_id.in_(user_ids),
+                ProdeAchievement.kind == "oracle",
+                ProdeAchievement.status == "active",
+            )
+        ).all()
+    )
+    history = {}
+    for user_id, contest_id, rank, points in s.execute(
+        select(ProdeScore.user_id, ProdeScore.contest_id, ProdeScore.rank, ProdeScore.points)
+        .join(ProdeContest, ProdeContest.id == ProdeScore.contest_id)
+        .where(ProdeScore.user_id.in_(user_ids), ProdeContest.status == "settled")
+        .order_by(ProdeContest.settled_at, ProdeContest.created_at)
+    ):
+        history.setdefault(user_id, []).append((rank, points, (user_id, contest_id) in hits))
+    existing = list(
+        s.scalars(
+            select(ProdeAchievement).where(
+                ProdeAchievement.user_id.in_(user_ids), ProdeAchievement.contest_id.is_(None)
+            )
+        )
+    )
+    earned = engine.lifetime(played, won, history)
+    reconcile(s, existing, earned, contest_id=None, now=_now())
 
 
 def achievements_of(s, user_ids):
     rows = s.execute(
         select(ProdeAchievement, ProdeContest.name, ProdeContest.tournament_slug)
         .outerjoin(ProdeContest, ProdeContest.id == ProdeAchievement.contest_id)
-        .where(ProdeAchievement.user_id.in_(user_ids))
+        .where(
+            ProdeAchievement.user_id.in_(user_ids),
+            ProdeAchievement.status == "active",
+            ProdeAchievement.hidden.is_(False),
+        )
         .order_by(ProdeAchievement.rare.desc(), ProdeAchievement.created_at.desc())
     ).all()
     return [

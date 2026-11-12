@@ -3,6 +3,9 @@
 The backend always computes the points; the web only shows them.
 """
 
+from collections import Counter
+from datetime import timedelta
+
 DEFAULT_RULES = {"champion": 10, "runner_up": 7, "top8": 2}
 KINDS = ("champion", "runner_up", "top8")
 TOP8_PLACEMENT = 7  # double elimination: 1, 2, 3, 4, 5, 5, 7, 7
@@ -61,11 +64,34 @@ def _achievement(kind, title, detail, rare=False):
     return dict(kind=kind, title=title, detail=detail, rare=rare)
 
 
-def achievements(contest, results, picks, ranked, *, players, seeds, tags):
+CROWD_SHARE = 0.10  # "Contra el pueblo": the champion was picked by this share or less
+CROWD_MIN = 10  # ...of at least this many forecasters
+EARLY = timedelta(hours=1)
+LATE = timedelta(minutes=10)
+
+
+def achievements(
+    contest,
+    results,
+    picks,
+    ranked,
+    *,
+    players,
+    seeds,
+    tags,
+    placements=None,
+    opened_at=None,
+    closes_at=None,
+    first_saved=None,
+    last_saved=None,
+    candidates=None,
+):
     """{user id: [achievement]} earned in one settled contest.
 
     picks: {user id: {kind: value}}; ranked: rank() rows with user_id; players: {user id:
-    their start.gg player id}; seeds and tags by start.gg player id.
+    their start.gg player id}; seeds and tags by start.gg player id. SH-ACH-01 adds, all
+    optional: placements {start.gg id: final placement}; when the contest opened and
+    closed; each user's first and last saved pick; the start.gg ids that were entrants.
     """
     earned = {}
 
@@ -74,6 +100,8 @@ def achievements(contest, results, picks, ranked, *, players, seeds, tags):
 
     champions = set(results.get("champion") or [])
     top8 = set(results.get("top8") or [])
+    champion_votes = Counter(c["champion"] for c in picks.values() if c.get("champion"))
+    voters = sum(champion_votes.values())
     for user, chosen in picks.items():
         champion = chosen.get("champion")
         right = bool(champion) and champion in champions
@@ -152,6 +180,72 @@ def achievements(contest, results, picks, ranked, *, players, seeds, tags):
                     rare=True,
                 ),
             )
+        # SH-ACH-01.
+        right8 = len(picked8 & top8)
+        if len(picked8) == 8 and right8 == 7:
+            give(
+                user,
+                _achievement(
+                    "almost_full", "Por un pelo", f"Acertó 7 de los 8 del Top 8 de {contest}."
+                ),
+            )
+        if right and voters >= CROWD_MIN:
+            share = champion_votes[champion] / voters
+            if share <= CROWD_SHARE:
+                give(
+                    user,
+                    _achievement(
+                        "against_the_crowd",
+                        "Contra el pueblo",
+                        f"Acertó a {tags.get(champion, champion)} en {contest}: lo eligió el "
+                        f"{round(100 * share)} % de los participantes.",
+                        rare=True,
+                    ),
+                )
+        if champion and placements and placements.get(champion, 0) > TOP8_PLACEMENT + 1:
+            give(
+                user,
+                _achievement(
+                    "jinx",
+                    "Mufa confirmada",
+                    f"Eligió campeón a {tags.get(champion, champion)} en {contest} y terminó "
+                    f"{placements[champion]}.º.",
+                ),
+            )
+        first = (first_saved or {}).get(user)
+        if first and opened_at and first - opened_at <= EARLY:
+            give(
+                user,
+                _achievement(
+                    "early_bird", "Madrugador", f"Pronosticó en la primera hora de {contest}."
+                ),
+            )
+    for row in ranked:
+        if row["points"] <= 0:
+            continue
+        user = row["user_id"]
+        last = (last_saved or {}).get(user)
+        if row["rank"] <= 3 and last and closes_at and timedelta(0) <= closes_at - last <= LATE:
+            give(
+                user,
+                _achievement(
+                    "last_minute",
+                    "Sobre la hora",
+                    f"Cambió su pronóstico en los últimos minutos y terminó {row['rank']}.º en "
+                    f"{contest}.",
+                ),
+            )
+        mine = players.get(user)
+        if row["rank"] == 1 and mine and candidates and mine in candidates:
+            give(
+                user,
+                _achievement(
+                    "double_duty",
+                    "Doble función",
+                    f"Jugó {contest} y ganó su Prode.",
+                    rare=True,
+                ),
+            )
     for row in ranked:
         if row["points"] <= 0:
             continue
@@ -172,10 +266,41 @@ def achievements(contest, results, picks, ranked, *, players, seeds, tags):
     return earned
 
 
-def lifetime(played, won):
+def _streak(flags, length=3):
+    run = 0
+    for flag in flags:
+        run = run + 1 if flag else 0
+        if run >= length:
+            return True
+    return False
+
+
+def lifetime(played, won, history=None):
     """Achievements across contests: {user id: [achievement]} from settled contests played
-    and Prodes won per user."""
+    and Prodes won per user. history (SH-ACH-01, optional): {user id: [(rank, points,
+    champion hit)]} of the settled contests they played, oldest first."""
     earned = {}
+    for user, rows in (history or {}).items():
+        mine = earned.setdefault(user, [])
+        if rows:
+            mine.append(_achievement("first_prode", "Primer pronóstico", "Jugó su primer Prode."))
+        if len(rows) >= 10:
+            mine.append(
+                _achievement("infaltable", "Infaltable", f"Jugó {len(rows)} Prodes.", rare=True)
+            )
+        if _streak([points > 0 and rank <= 3 for rank, points, _ in rows]):
+            mine.append(
+                _achievement(
+                    "podium_streak",
+                    "Siempre en el podio",
+                    "Terminó en el podio de 3 Prodes seguidos.",
+                    rare=True,
+                )
+            )
+        if _streak([hit for _, _, hit in rows]):
+            mine.append(
+                _achievement("paje", "Paje", "Acertó al campeón en 3 Prodes seguidos.", rare=True)
+            )
     for user, count in played.items():
         if count >= 3:
             earned.setdefault(user, []).append(

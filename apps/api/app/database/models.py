@@ -1,4 +1,12 @@
 # Import all modules to register metadata for migrations and tests.
+from app.achievements.models import (
+    AchievementAudit,
+    AchievementRun,
+    AchievementStat,
+    AchievementSubject,
+    PlayerAchievement,
+    UserShowcase,
+)
 from app.auth.models import AuthAuditEntry, PasswordResetToken, User, UserSession
 from app.communities.models import Community, CommunityGame, Country, Region
 from app.competitions.models import (
@@ -56,6 +64,12 @@ from app.sync.models import (
 from app.teams.models import TeamPrefix
 
 __all__ = [
+    "AchievementAudit",
+    "AchievementRun",
+    "AchievementStat",
+    "AchievementSubject",
+    "PlayerAchievement",
+    "UserShowcase",
     "StartggEntrant",
     "StartggEntrantMember",
     "StartggEvent",

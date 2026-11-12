@@ -1,8 +1,9 @@
 """Prode: predictions on upcoming tournaments (Mission SH-PRODE-01, ADR-020).
 
 Players are referenced by their start.gg id, like the preview, so foreign entrants the hub
-has never imported can be picked too. Scores and achievements are derived: settling a
-contest deletes and rebuilds them, so settling twice changes nothing.
+has never imported can be picked too. Scores are derived: settling a contest deletes and
+rebuilds them. Achievements are reconciled instead (SH-ACH-01): settling again keeps the
+first recognition date, revokes what no longer holds and never duplicates.
 """
 
 from sqlalchemy import (
@@ -11,6 +12,7 @@ from sqlalchemy import (
     Column,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     String,
     UniqueConstraint,
@@ -110,7 +112,18 @@ class ProdeAchievement(Record, Base):
     """The Prode's prize: achievements on the forecaster's profile (and player profile)."""
 
     __tablename__ = "prode_achievements"
-    __table_args__ = (UniqueConstraint("user_id", "contest_id", "kind"),)
+    __table_args__ = (
+        UniqueConstraint("user_id", "contest_id", "kind"),
+        # NULLs are distinct in a unique constraint: achievements across contests need
+        # their own index to never repeat (SH-ACH-01).
+        Index(
+            "uq_prode_achievements_lifetime",
+            "user_id",
+            "kind",
+            unique=True,
+            postgresql_where=text("contest_id IS NULL"),
+        ),
+    )
     user_id = Column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     # Null for achievements across contests ("Habitué del Prode").
     contest_id = Column(
@@ -120,6 +133,12 @@ class ProdeAchievement(Record, Base):
     title = Column(String(80), nullable=False)
     detail = Column(String(240), nullable=False)
     rare = Column(Boolean, nullable=False, server_default=text("false"))
+    # SH-ACH-01: created_at is the first recognition and is never rewritten.
+    event_at = Column(DateTime(timezone=True))
+    evidence = Column(JSON)
+    status = Column(String(10), nullable=False, server_default="active")
+    revoked_at = Column(DateTime(timezone=True))
+    hidden = Column(Boolean, nullable=False, server_default=text("false"))
 
 
 class ProdeAuditEntry(Record, Base):
