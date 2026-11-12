@@ -62,7 +62,7 @@ def test_catalog_keeps_the_25_existing_and_registers_109():
         assert a.universe in catalog.UNIVERSES
         assert (a.status == "pending") == (a.pending is not None), a.id
     # Nothing that needs data we do not have is active.
-    for aid in ("vbash_rojo", "bvash", "nde_ru", "dueno_del_pool", "fiel_al_regimen"):
+    for aid in ("vbash_rojo", "bvash", "nde_ru", "dueno_del_pool", "fiel_al_regimen", "pombero"):
         assert catalog.get(aid).status == "pending"
 
 
@@ -582,3 +582,40 @@ def test_evaluation_over_an_imported_startgg_tournament(db):
         assert all(catalog.get(r.achievement_id).status == "active" for r in rows)
     again = service.run(db, trigger="test", actor="tester")
     assert again["counts"]["added"] == 0 and again["counts"]["revoked"] == 0
+
+
+def test_migration_0024_stops_on_duplicated_lifetime_achievements(db):
+    """0024 never deletes Prode achievements: duplicates abort the migration."""
+    import uuid
+    from pathlib import Path
+
+    from alembic import command
+    from alembic.config import Config
+    from sqlalchemy import text
+
+    cfg = Config(str(Path(__file__).parents[1] / "alembic.ini"))
+    user = make_user(db, "dup")
+    command.downgrade(cfg, "0023")
+    try:
+        with db.begin() as conn:
+            for _ in range(2):
+                conn.execute(
+                    text(
+                        "INSERT INTO prode_achievements (id, user_id, contest_id, kind, title,"
+                        " detail, rare) VALUES (:id, :u, NULL, 'regular', 'Habitué del Prode',"
+                        " 'Jugó 3 Prodes.', false)"
+                    ),
+                    {"id": uuid.uuid4(), "u": user.id},
+                )
+        with pytest.raises(RuntimeError, match="duplicated Prode achievements"):
+            command.upgrade(cfg, "0024")
+        with db.connect() as conn:
+            rows = conn.execute(text("SELECT count(*) FROM prode_achievements")).scalar()
+            revision = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
+        assert rows == 2 and revision == "0023"  # nothing deleted, nothing applied
+        with db.begin() as conn:
+            conn.execute(text("DELETE FROM prode_achievements"))
+    finally:
+        command.upgrade(cfg, "head")
+    with db.connect() as conn:
+        assert conn.execute(text("SELECT version_num FROM alembic_version")).scalar() == "0024"

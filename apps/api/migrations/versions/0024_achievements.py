@@ -1,10 +1,9 @@
 """Achievements (SH-ACH-01): player achievements with history, stats, subjects, runs,
 audit and showcase; additive columns on prode_achievements.
 
-Additive: new tables and nullable (or defaulted) columns. The only data step removes
-exact duplicates of achievements across contests (same user and kind, contest NULL),
-keeping the oldest, so the new unique index can be created. Earlier code deleted and
-rebuilt them, so duplicates are not expected.
+Additive: new tables and nullable (or defaulted) columns. No data is changed: if
+achievements across contests (same user and kind, contest NULL) are duplicated, the
+migration stops with an error before the new unique index instead of deleting rows.
 """
 
 import sqlalchemy as sa
@@ -168,15 +167,24 @@ def upgrade():
         "prode_achievements",
         sa.Column("hidden", sa.Boolean(), server_default=sa.text("false"), nullable=False),
     )
-    op.execute(
-        """
-        DELETE FROM prode_achievements a
-        USING prode_achievements b
-        WHERE a.contest_id IS NULL AND b.contest_id IS NULL
-          AND a.user_id = b.user_id AND a.kind = b.kind
-          AND (a.created_at, a.id::text) > (b.created_at, b.id::text)
-        """
+    # Achievements across contests (contest NULL) must be unique before the index. The
+    # earlier code deleted and rebuilt them, so duplicates are not expected; if any exist,
+    # stop instead of deleting anything (SH-ACH-01 publication rule).
+    duplicates = (
+        op.get_bind()
+        .execute(
+            sa.text(
+                "SELECT count(*) FROM (SELECT user_id, kind FROM prode_achievements "
+                "WHERE contest_id IS NULL GROUP BY user_id, kind HAVING count(*) > 1) d"
+            )
+        )
+        .scalar()
     )
+    if duplicates:
+        raise RuntimeError(
+            f"0024: {duplicates} duplicated Prode achievements across contests; "
+            "nothing was changed. Review them by hand before migrating."
+        )
     op.create_index(
         "uq_prode_achievements_lifetime",
         "prode_achievements",

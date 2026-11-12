@@ -4,9 +4,9 @@ Estado: **implementado** (SH-ACH-01). El catálogo vive en `apps/api/app/achieve
 
 ### Estado de la implementación respecto de esta propuesta
 
-- **Activos (53 nuevos):** toda la primera tanda (T1, 28) y los T2 con datos fiables: `reset_y_corona`, `purete`, `barrida`, `reverse_3_0`, `cincuenta_brackets`, `trescientos`, `nunca_muerto`, `tricampeon_mes`, `constancia`, `volvio`, `conoce_a_todos`, `jopara`, `clasico`, `paje`, `early_bird`, `last_minute`, `jinx`, `podium_streak`, `en_bici_hasta_cde`, `la_mufa_no_funciona`, `pombero`, `nerfeado_por_la_trama`, `los_johns`, `independencia` y `coleccionista`.
+- **Activos (52 nuevos):** toda la primera tanda (T1, 28) y los T2 con datos fiables: `reset_y_corona`, `purete`, `barrida`, `reverse_3_0`, `cincuenta_brackets`, `trescientos`, `nunca_muerto`, `tricampeon_mes`, `constancia`, `volvio`, `conoce_a_todos`, `jopara`, `clasico`, `paje`, `early_bird`, `last_minute`, `jinx`, `podium_streak`, `en_bici_hasta_cde`, `la_mufa_no_funciona`, `nerfeado_por_la_trama`, `los_johns`, `independencia` y `coleccionista`.
 - **Preparados y desactivados hasta tener identidad y consentimiento (9):** los automáticos de Spike y de vBash, incluido `todos_somos_vbash`.
-- **Pasaron a pendientes respecto de la propuesta:** `fue_numero_uno`, `top10_ranking`, `escalador` y `destronar` (no hay un historial verificable de publicaciones del ranking); `nande` (sin historial de prefijos por torneo); `estuve_ahi` (falta marcar ediciones); `fundador` (es de cuenta).
+- **Pasaron a pendientes respecto de la propuesta:** `fue_numero_uno`, `top10_ranking`, `escalador` y `destronar` (no hay un historial verificable de publicaciones del ranking); `nande` (sin historial de prefijos por torneo); `estuve_ahi` (falta marcar ediciones); `fundador` (es de cuenta); `pombero` (desactivado en la publicación porque la hora de start.gg no es fiable).
 - **Ajustes de condición:**
   - `primer_top8` y `fijo_top8` usan posición ≤ 8, igual que el emblema existente `top8`.
   - `puerta_de_atras` exige llegar a la gran final desde la final de losers.

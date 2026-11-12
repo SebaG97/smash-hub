@@ -58,6 +58,6 @@ Verificado en PostgreSQL efímero: upgrade a 0022, downgrade a 0019, re-upgrade,
 
 ## Revisión 0024 — Logros
 
-`0024_achievements.py` (SH-ACH-01, ADR-023), sobre 0023. Crea `player_achievements`, `achievement_stats`, `achievement_subjects`, `achievement_runs`, `achievement_audit` y `user_showcase`, y agrega a `prode_achievements` cinco columnas nulas o con valor por defecto y el índice único parcial `uq_prode_achievements_lifetime`. El único paso de datos borra duplicados exactos de logros acumulados del Prode (no se esperan).
+`0024_achievements.py` (SH-ACH-01, ADR-023), sobre 0023. Crea `player_achievements`, `achievement_stats`, `achievement_subjects`, `achievement_runs`, `achievement_audit` y `user_showcase`, y agrega a `prode_achievements` cinco columnas nulas o con valor por defecto y el índice único parcial `uq_prode_achievements_lifetime`. No modifica datos: si hay logros acumulados del Prode duplicados, aborta antes de crear el índice y no aplica nada.
 
 Verificado en PostgreSQL efímero: upgrade a head, comparación de metadatos sin diferencias y roundtrip base ↔ head de la suite. El downgrade borra el historial de logros de jugador y las columnas nuevas del Prode; antes de usarlo, borrar las filas de `prode_achievements` con `status = 'revoked'`. Aplicar con `APPROVED_MIGRATION=0024` tras backup y revisión humana. Procedimiento: [sh-ach-01.md](sh-ach-01.md#7-pasos-exactos-para-publicar-requieren-autorización).

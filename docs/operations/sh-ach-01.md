@@ -1,6 +1,6 @@
 # SH-ACH-01 — Sistema de logros: implementación y publicación
 
-Fecha: 12/11/2026. Rama local `sh-ach-01`. **Sin push, sin migraciones en producción y sin despliegue:** este documento describe qué hay que hacer cuando se autorice. Diseño: [docs/logros/](../logros/README.md). Decisión: [ADR-023](../adr/ADR-023.md).
+Fecha: 12/11/2026. Publicación autorizada el 12/11/2026; su estado real está en la [sección 8](#8-publicación-resultados-reales). Diseño: [docs/logros/](../logros/README.md). Decisión: [ADR-023](../adr/ADR-023.md).
 
 ## 1. Qué se implementó
 
@@ -23,9 +23,9 @@ Fecha: 12/11/2026. Rama local `sh-ach-01`. **Sin push, sin migraciones en produc
 
 ## 2. Logros activos
 
-**Automáticos desde el primer recálculo (53 nuevos más los 21 existentes permanentes o del Prode).**
+**Automáticos desde el primer recálculo (52 nuevos más los 21 existentes permanentes o del Prode).**
 
-- **Jugador (43):** `mbarete`, `puerta_de_atras`, `reset_y_corona`, `purete`, `ndeee`, `py_aguasu`, `primer_podio`, `primer_top8`, `desde_el_fondo`, `barrida`, `reverse_3_0`, `kane_o`, `runback`, `doble_corona`, `graduado`, `estreno`, `bautismo`, `de_la_casa`, `tuja`, `cincuenta_brackets`, `medio_centenar`, `trescientos`, `aplanadora`, `nunca_muerto`, `fijo_top8`, `tricampeon_mes`, `constancia`, `volvio`, `conoce_a_todos`, `jopara`, `che_raa`, `clasico`, `exorcismo`, `en_bici_hasta_cde`, `siempre_en_la_ronda`, `ese_soy_yo`, `la_mufa_no_funciona`, `casi_kp`, `pombero`, `nerfeado_por_la_trama`, `los_johns`, `independencia`, `coleccionista`.
+- **Jugador (42):** `mbarete`, `puerta_de_atras`, `reset_y_corona`, `purete`, `ndeee`, `py_aguasu`, `primer_podio`, `primer_top8`, `desde_el_fondo`, `barrida`, `reverse_3_0`, `kane_o`, `runback`, `doble_corona`, `graduado`, `estreno`, `bautismo`, `de_la_casa`, `tuja`, `cincuenta_brackets`, `medio_centenar`, `trescientos`, `aplanadora`, `nunca_muerto`, `fijo_top8`, `tricampeon_mes`, `constancia`, `volvio`, `conoce_a_todos`, `jopara`, `che_raa`, `clasico`, `exorcismo`, `en_bici_hasta_cde`, `siempre_en_la_ronda`, `ese_soy_yo`, `la_mufa_no_funciona`, `casi_kp`, `nerfeado_por_la_trama`, `los_johns`, `independencia`, `coleccionista`.
 - **Prode (10, al liquidar):** `first_prode`, `almost_full`, `against_the_crowd`, `paje`, `infaltable`, `double_duty`, `early_bird`, `last_minute`, `jinx`, `podium_streak`.
 - **Existentes:** los 9 emblemas permanentes ahora se guardan con historial. Los 4 estados (`lider`, `nuevo`, `especialista`, `camaleon`) se siguen calculando al vuelo. Los 12 del Prode no cambian sus condiciones.
 
@@ -35,7 +35,7 @@ Incluye los 28 de la primera tanda (T1) y todos los T2 con datos fiables.
 
 **Manuales (4):** `anfitrion`, `decreto_supremo` y `el_dictador_ha_hablado`. Los dos últimos solo funcionan con la colección de Spike activa. `el_verdadero_vbash` funciona con la de vBash activa.
 
-**Pendientes, registrados y nunca otorgados (18):**
+**Pendientes, registrados y nunca otorgados (19):**
 
 | Logro | Motivo |
 | --- | --- |
@@ -50,6 +50,7 @@ Incluye los 28 de la primera tanda (T1) y todos los T2 con datos fiables.
 | `fundador` | Es un logro de cuenta; falta un almacén por cuenta. |
 | `vbash_rojo` | start.gg no informa el color usado en cada partida. |
 | `fiel_al_regimen` | No se guarda quién organiza cada torneo. |
+| `pombero` | Desactivado temporalmente en la publicación: la hora de start.gg puede ser la de carga del resultado. La regla queda escrita y probada. |
 
 ## 3. Migración `0024`
 
@@ -57,7 +58,7 @@ Incluye los 28 de la primera tanda (T1) y todos los T2 con datos fiables.
 
 - **Crea tablas:** `player_achievements` (único por `player_id, achievement_id, occurrence`), `achievement_stats`, `achievement_subjects`, `achievement_runs`, `achievement_audit` y `user_showcase`.
 - **Agrega a `prode_achievements`:** `event_at` y `evidence` (nulos), `status` (`'active'` por defecto), `revoked_at` (nulo) y `hidden` (`false` por defecto). Las filas existentes quedan activas y visibles, igual que hoy.
-- **Paso de datos único:** borra duplicados exactos de logros acumulados (mismo usuario y `kind`, `contest_id` nulo) conservando el más antiguo, y crea `uq_prode_achievements_lifetime (user_id, kind) WHERE contest_id IS NULL`. El código anterior borraba y recreaba esos logros, así que no se esperan duplicados.
+- **No modifica datos.** Antes de crear `uq_prode_achievements_lifetime (user_id, kind) WHERE contest_id IS NULL`, cuenta los logros acumulados duplicados (mismo usuario y `kind`, `contest_id` nulo). Si hay alguno, **aborta con un error y no aplica nada**: no borra registros del Prode. Probado en `test_migration_0024_stops_on_duplicated_lifetime_achievements`.
 - **Verificado en PostgreSQL efímero:** upgrade a head, comparación de metadatos sin diferencias (`test_schema_matches_metadata`) y roundtrip base ↔ head (`test_migration_roundtrip`).
 - **El downgrade** borra las tablas nuevas y las columnas agregadas. Si se usara, los logros del Prode revocados volverían a mostrarse: antes de bajar, borrar las filas con `status = 'revoked'`.
 
@@ -65,7 +66,7 @@ Incluye los 28 de la primera tanda (T1) y todos los T2 con datos fiables.
 
 | Suite | Resultado |
 | --- | --- |
-| API completa (PostgreSQL 17 efímero, `TEST_DATABASE_URL`) | **354 aprobadas.** Nuevas: `tests/test_achievements.py` (11) y 2 en `tests/test_prode.py`. |
+| API completa (PostgreSQL 17 efímero, `TEST_DATABASE_URL`) | **355 aprobadas.** Nuevas: `tests/test_achievements.py` (12) y 2 en `tests/test_prode.py`. |
 | Web (Vitest) | **137 aprobadas**, incluidas 6 nuevas en `tests/achievements.test.tsx`. |
 | `ruff check`, `ruff format --check` | Sin observaciones. |
 | `tsc --noEmit`, `eslint --max-warnings 0` | Sin errores. |
@@ -105,7 +106,7 @@ Incluye los 28 de la primera tanda (T1) y todos los T2 con datos fiables.
 1. **No hubo prueba visual en un navegador real.** Están verificados los componentes (Vitest), los tipos y el build. Conviene revisar `/logros`, una ficha y Mi cuenta en un celular antes de anunciar.
 2. **Calibración pendiente.** Las rarezas de diseño no se compararon con datos reales. Revisarlas con la primera corrida: si un épico lo tiene más del 20 % de su universo, ajustar el umbral.
 3. **Primer reconocimiento retroactivo.** La primera corrida marca todo como «reconocido retroactivamente» (`backfilled`). Algunos logros no tienen fecha real del hecho (`mes`, `tricampeon_mes`, `todos_somos_vbash`, `coleccionista`), así que no participan de «primero en conseguirlo».
-4. **«Pombero»** usa `completed_at` de start.gg, que puede ser la hora en que se cargó el resultado y no la del set.
+4. **«Pombero»** usa `completed_at` de start.gg, que puede ser la hora en que se cargó el resultado y no la del set. Por eso quedó desactivado (pendiente).
 5. **Importaciones desde la CLI** (otro proceso) no avisan al proceso de la API. Las detecta la corrida periódica (cada 6 h por defecto) o un recálculo manual. Las importaciones desde la web sí avisan.
 6. **Un logro por jugador:** se guarda el primer desbloqueo (`occurrence = ''`); las repeticiones solo se cuentan en la evidencia de algunos.
 7. **Corregir o despublicar un torneo** revoca los logros que dependían de él (se ven como revocados en la base, no en la web).
@@ -132,3 +133,23 @@ Incluye los 28 de la primera tanda (T1) y todos los T2 con datos fiables.
 8. **Encender la evaluación automática:** `ACHIEVEMENTS_AUTO=true` en `api` (redeploy). Desde ahí se evalúa después de cada importación desde la web, publicación de ranking, liquidación o vinculación, y cada 6 h.
 9. **Spike y vBash, solo con consentimiento:** un superadmin, en `/admin` → Logros → Personas de referencia, carga el ID de jugador de start.gg, marca el consentimiento y activa la colección. Después, «Recalcular ahora».
 10. **Logros manuales:** desde `/admin` → Logros manuales, con motivo público.
+
+## 8. Publicación: resultados reales
+
+Autorizada el 12/11/2026. App `smash-hub-app` (`https://smash-hub-app-d4eh4.ondigitalocean.app`), base `segir-db-1` (PostgreSQL 18).
+
+### 8.1 Verificaciones previas (12/11/2026, ~19:00 UTC)
+
+| Verificación | Resultado |
+| --- | --- |
+| Rama vs `main` | `origin/main` = `b50e19f` (SH-FIX-01, ya incluye SH-SYNC-01) es ancestro de `sh-ach-01`: la integración es un avance rápido y no se pierde ningún cambio de `main`. |
+| Código en producción | El contrato `GET /api/openapi.json` de producción es **idéntico** al de `b50e19f`: producción corre SH-FIX-01. Existen `/api/v1/sync` (401 sin sesión) y `/prode/contests/{id}/locks-at`. `/api/v1/achievements/catalog` responde 404, como se espera antes de publicar. |
+| Revisión de la base | **No se pudo confirmar.** El token de `doctl` (contexto `smashhub`) no tiene permisos sobre Apps (403: ni spec, ni logs del job `migrate`, ni despliegues) y DigitalOcean no entrega las credenciales de la base. Por comportamiento, `/insights/calendar` y la previa de Center Stage responden 200, pero las lecturas de la copia local caen a start.gg si la base falla (ADR-022), así que eso no prueba que `0023` esté aplicada. |
+| Respaldo | Backups diarios automáticos disponibles; el último es del **12/11/2026 00:43 UTC** (~99 MB). Lo posterior, incluidos los pronósticos del Prode de hoy, solo se recupera con la restauración a un punto en el tiempo del clúster. No se pudo hacer `pg_dump` (sin credenciales). |
+| Prode de Center Stage (línea base) | `bc47671b…`: `open`, **8 participantes**, 91 candidatos, `locks_at = 2026-11-14T19:00:00+00:00`, sin liquidar. Es el único Prode y la tabla general está vacía: no hay liquidaciones, así que no debería haber filas en `prode_achievements`. |
+| Observación ajena a SH-ACH-01 | El cierre de Center Stage sigue a las **19:00 UTC (16:00 en Asunción)**: el paso 5 de [SH-FIX-01](sh-fix-01.md) (14:00 en Asunción, `17:00 UTC`) no figura aplicado. No se tocó. |
+
+### 8.2 Cambios previos a publicar (pedidos en la autorización)
+
+- **`pombero` desactivado:** pasa a pendiente en el catálogo (sigue visible como «Próximamente») y no se otorga.
+- **`0024` no borra registros del Prode.** Si hubiera logros acumulados duplicados, la migración **aborta** con `RuntimeError` antes de crear el índice: el job `migrate` falla, el despliegue no avanza y la base queda en `0023`. Reemplaza la deduplicación anterior.

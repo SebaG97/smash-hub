@@ -1241,8 +1241,12 @@ ACHIEVEMENTS = [
         "Gana cuando todos duermen.",
         "Ganar un set terminado entre las 00:00 y las 03:59.",
         "raro",
+        status="pending",
         secret=True,
         origin="paraguaya",
+        universe="none",
+        pending="Desactivado temporalmente: la hora que informa start.gg puede ser la de "
+        "carga del resultado y no la del set.",
     ),
     _a(
         "nerfeado_por_la_trama",
