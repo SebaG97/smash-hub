@@ -139,11 +139,13 @@ class StartGGClient:
         external_id: str,
         *,
         variables: dict | None = None,
+        per_page: int = 10,
     ) -> list:
         result, seen, expected = [], set(), None
         for page in range(1, 10001):
             data = await self.query(
-                document, {"id": external_id, "page": page, "perPage": 10, **(variables or {})}
+                document,
+                {"id": external_id, "page": page, "perPage": per_page, **(variables or {})},
             )
             try:
                 conn = data[root][connection]
@@ -156,7 +158,7 @@ class StartGGClient:
                     or pages < 0
                     or pages > 10000
                     or not isinstance(nodes, list)
-                    or len(nodes) > 10
+                    or len(nodes) > per_page
                     or (expected is not None and expected != (total, pages))
                 ):
                     raise ValueError

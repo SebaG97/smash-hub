@@ -22,6 +22,21 @@ class Settings(BaseSettings):
     startgg_api_token: SecretStr | None = None
     # Uploading a seeding to start.gg (the hub's only write there) stays off unless set.
     startgg_seeding_writes: bool = False
+    # Background copy of start.gg into PostgreSQL (SH-SYNC-01, ADR-022). Off unless set:
+    # the pages then read whatever was synced before (or start.gg live, as before).
+    startgg_sync_enabled: bool = False
+    # Seconds between scheduler checks, and between two requests of one sync.
+    startgg_sync_tick_seconds: int = Field(default=60, ge=15, le=900)
+    startgg_sync_request_interval: float = Field(default=1.2, ge=0.8, le=10)
+    # Country whose upcoming tournaments are tracked by themselves (the calendar).
+    startgg_sync_country: str = Field(default="PY", pattern=r"^[A-Z]{2}$")
+    startgg_sync_discovery_seconds: int = Field(default=3600, ge=300, le=86400)
+    # How often a tracked tournament is synced, by how close it is (ADR-022).
+    startgg_sync_far_seconds: int = Field(default=21600, ge=300, le=604800)
+    startgg_sync_week_seconds: int = Field(default=1800, ge=120, le=86400)
+    startgg_sync_day_seconds: int = Field(default=600, ge=60, le=86400)
+    startgg_sync_live_seconds: int = Field(default=180, ge=60, le=86400)
+    startgg_sync_finished_seconds: int = Field(default=86400, ge=600, le=604800)
     # Legacy shared admin key (ADR-011), kept only during the move to personal accounts
     # (ADR-021). It works only while ADMIN_TOKEN_EXPIRES is set and in the future.
     admin_token: SecretStr | None = None

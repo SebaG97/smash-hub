@@ -42,9 +42,21 @@ from app.seeding.models import (
     SeedingRun,
     SeedingSet,
 )
+from app.sync.models import (
+    StartggEntrant,
+    StartggEntrantMember,
+    StartggEvent,
+    StartggSyncRun,
+    StartggTournament,
+)
 from app.teams.models import TeamPrefix
 
 __all__ = [
+    "StartggEntrant",
+    "StartggEntrantMember",
+    "StartggEvent",
+    "StartggSyncRun",
+    "StartggTournament",
     "AuthAuditEntry",
     "PasswordResetToken",
     "PlayerLink",

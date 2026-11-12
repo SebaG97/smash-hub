@@ -15,6 +15,7 @@ from app.integrations.startgg.client import ImportFailure, StartGGClient
 from app.integrations.startgg.images import tournament_images
 from app.players.mains import player_mains
 from app.players.summary import ranking_place
+from app.sync import read as synced
 from app.teams import service as teams
 
 router = APIRouter(prefix="/api/v1/insights", tags=["insights"])
@@ -135,9 +136,32 @@ def _event(event):
     )
 
 
+def _calendar_item(t):
+    return dict(
+        name=t["name"],
+        slug=t["slug"].removeprefix("tournament/"),
+        url=f"https://www.start.gg/{t['slug']}",
+        starts_at=datetime.fromtimestamp(t["startAt"], UTC).isoformat()
+        if t.get("startAt")
+        else None,
+        city=t.get("city"),
+        venue=t.get("venueName"),
+        attendees=t.get("numAttendees"),
+        images=tournament_images(t.get("images")),
+        event=_event(preview.singles_event(t)),
+    )
+
+
 @router.get("/calendar")
 def calendar(request: Request):
-    """Upcoming offline tournaments in Paraguay from start.gg, cached for an hour."""
+    """Upcoming offline tournaments in Paraguay: the local copy of start.gg (ADR-022), or
+    start.gg itself, cached for an hour, while no discovery has completed."""
+    local = synced.local(request.app.state.engine, synced.calendar)
+    if local is not None:
+        return {
+            "items": [_calendar_item(t) for t in local["tournaments"]],
+            "synced_at": local["synced_at"].isoformat(),
+        }
     if _calendar["items"] is not None and time.monotonic() - _calendar["at"] < CALENDAR_SECONDS:
         return {"items": _calendar["items"]}
     token = request.app.state.settings.startgg_api_token
@@ -153,19 +177,7 @@ def calendar(request: Request):
     except ImportFailure:
         return {"items": _calendar["items"] or [], "unavailable": True}
     items = [
-        dict(
-            name=t["name"],
-            slug=t["slug"].removeprefix("tournament/"),
-            url=f"https://www.start.gg/{t['slug']}",
-            starts_at=datetime.fromtimestamp(t["startAt"], UTC).isoformat()
-            if t.get("startAt")
-            else None,
-            city=t.get("city"),
-            venue=t.get("venueName"),
-            attendees=t.get("numAttendees"),
-            images=tournament_images(t.get("images")),
-            event=_event(preview.singles_event(t)),
-        )
+        _calendar_item(t)
         for t in ((data.get("tournaments") or {}).get("nodes") or [])
         if not t.get("isOnline") and t.get("slug", "").startswith("tournament/")
     ]
@@ -178,7 +190,7 @@ def upcoming(request: Request, slug: str = Path(pattern=r"^[a-z0-9-]{1,120}$")):
     """Preview of an upcoming tournament: entrants from start.gg, the rest from the hub."""
     # Only the start.gg answer is cached: the projection is rebuilt every time, so
     # publishing, unpublishing or moving a seeding shows up right away.
-    tournament, event, entrants = _upcoming(request, slug)
+    tournament, event, entrants, synced_at = _startgg_preview(request, slug)
     with Session(request.app.state.engine) as s:
         order, source, profiles = preview.projected_order(s, event and event.get("slug"))
         ids = preview.hub_players(s, [e["startgg_player_id"] for e in entrants])
@@ -206,15 +218,30 @@ def upcoming(request: Request, slug: str = Path(pattern=r"^[a-z0-9-]{1,120}$")):
         if source["source"] == "seeding" and event
         else None
     )
+    # Where start.gg's part came from: the local copy and when it was synced, or live.
+    result["startgg"] = dict(
+        source="local" if synced_at else "live",
+        synced_at=synced_at.isoformat() if synced_at else None,
+    )
     return result
 
 
 def _upcoming(request, slug):
-    """start.gg's tournament, singles event and entrants, refreshed every PREVIEW_SECONDS.
+    """start.gg's tournament, singles event and entrants (see _startgg_preview)."""
+    return _startgg_preview(request, slug)[:3]
 
-    Once a preview loaded, a stale copy answers right away while start.gg is asked again in
-    the background, so the page stays up when start.gg is slow or down.
+
+def _startgg_preview(request, slug):
+    """start.gg's tournament, singles event, entrants and when they were synced.
+
+    The local copy answers first (ADR-022), so a visit never waits on start.gg and a
+    start.gg outage leaves the page as it was last synced. Tournaments never synced are
+    read from start.gg (synced_at None), refreshed every PREVIEW_SECONDS: once loaded, a
+    stale copy answers right away while start.gg is asked again in the background.
     """
+    local = synced.local(request.app.state.engine, synced.upcoming, slug)
+    if local is not None:
+        return local["tournament"], local["event"], local["entrants"], local["synced_at"]
     token = request.app.state.settings.startgg_api_token
 
     def load():
@@ -225,7 +252,7 @@ def _upcoming(request, slug):
         return asyncio.run(fetch())
 
     try:
-        return stale.cached(_previews, slug, PREVIEW_SECONDS, load)
+        return (*stale.cached(_previews, slug, PREVIEW_SECONDS, load), None)
     except ImportFailure as exc:
         if "not_found" in str(exc):
             raise HTTPException(404, "Tournament not found") from None

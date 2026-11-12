@@ -20,6 +20,8 @@ from app.live.router import router as live_router
 from app.prode.router import router as prode_router
 from app.seeding.router import router as seeding_router
 from app.statistics.router import router as statistics_router
+from app.sync.router import router as sync_router
+from app.sync.scheduler import maybe_start
 from app.teams.router import router as teams_router
 
 
@@ -36,7 +38,11 @@ def create_app(settings: Settings | None = None, engine=None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app):
         app.state.engine = engine if engine is not None else build_engine(settings)
+        # Background start.gg sync (ADR-022): only with STARTGG_SYNC_ENABLED and a token.
+        scheduler = maybe_start(app.state.engine, settings)
         yield
+        if scheduler is not None:
+            scheduler.stop()
         if engine is None:
             app.state.engine.dispose()
 
@@ -78,5 +84,6 @@ def create_app(settings: Settings | None = None, engine=None) -> FastAPI:
     app.include_router(prode_router)
     app.include_router(links_router)
     app.include_router(accounts_admin_router)
+    app.include_router(sync_router)
 
     return app

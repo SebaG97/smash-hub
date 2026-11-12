@@ -464,3 +464,17 @@ Cuentas propias, roles y vinculación con fichas. Detalle en [arquitectura de cu
 Borrar una cuenta borra en cascada sesiones, tokens, solicitudes y vinculaciones; las referencias a quien actuó (`linked_by`, `reviewed_by`, `issued_by`, `actor_id`) quedan en nulo y el nombre se conserva como texto. `player_links.player_id` y `player_link_requests.player_id` no borran en cascada: una ficha vinculada no se puede borrar sin desvincularla antes.
 
 Datos: cada cuenta existente (start.gg) recibe el usuario `sgg-<provider_user_id>`, sin correo ni contraseña, y su `startgg_player_id` se convierte en una vinculación `startgg_legacy` si la ficha existe (la pareja más antigua, si hubiera dos).
+
+### Migración 0020 (ADR-022)
+
+Copia local de start.gg, etapa 1. Tablas nuevas, sin cambios en las existentes ni FKs hacia el modelo canónico. Las claves primarias son los IDs de start.gg (texto); `created_at` y `updated_at` como en el resto.
+
+| Tabla | Contenido |
+| --- | --- |
+| `startgg_tournaments` | Torneo: `slug` (único, sin `tournament/`), `name`, `start_at`, `end_at`, `state` (1 creado, 2 activo, 3 terminado), `city`, `venue`, `country_code`, `attendees`, `is_online`, `images` (JSON). Seguimiento: `tracked`, `track_reason` (`calendar`, `seeding`, `manual`, por check), `in_calendar`, `next_sync_at` (indexada), `last_attempt_at`, `last_success_at`, `last_status` (`completed`/`failed`), `last_error` y `failures` (≥ 0). |
+| `startgg_events` | Evento: `tournament_id` (FK), `slug` (indexada, `tournament/<t>/event/<e>`), `name`, `videogame_id`, `is_online`, `start_at`, `state`, `num_entrants`, `team_max_players`, `entrants_synced_at`, `active`, `last_seen_at`. |
+| `startgg_entrants` | Inscripción: `event_id` (FK), `name`, `initial_seed`, `active`, `first_seen_at`, `last_seen_at`, `removed_at` (baja). |
+| `startgg_entrant_members` | Participante de una inscripción, clave (`entrant_id`, `position`): `participant_id`, `player_id` (Player.id, indexada), `gamer_tag`, `prefix`, `country`. |
+| `startgg_sync_runs` | Una ejecución (UUID): `tournament_id` (FK, nulo en descubrimientos o si start.gg no encontró el torneo), `slug`, `kind` (`tournament`/`discovery`), `trigger` (`auto`/`manual`), `actor`, `status` (`running`/`completed`/`failed`), `started_at`, `finished_at`, `counts` y `warnings` (JSON), `error_code`. Índice (`status`, `started_at`). |
+
+Ninguna fila se borra por una respuesta de start.gg: lo que deja de aparecer queda `active = false`. La única excepción es el roster de una inscripción que start.gg sigue listando, que se reemplaza por el que lista.

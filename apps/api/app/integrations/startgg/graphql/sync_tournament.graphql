@@ -1,0 +1,11 @@
+query SyncTournament($slug: String!) {
+  tournament(slug: $slug) {
+    id name slug startAt endAt state city countryCode venueName numAttendees isOnline
+    images { type url }
+    events(limit: 50) {
+      id name slug numEntrants isOnline startAt state
+      teamRosterSize { maxPlayers }
+      videogame { id }
+    }
+  }
+}
