@@ -14,6 +14,8 @@ flowchart LR
 
 La web no consulta la base. `NEXT_PUBLIC_API_URL` configura la API accesible por el navegador; es público y se fija durante la compilación de producción. En App Platform se usa `/api/v1`, conservando `/api` en ingress. La web puede compilar sin API ni base.
 
+La web es instalable como PWA (SH-PWA-01): manifest estático en `/manifest.webmanifest`, sin service worker ni caché. `NEXT_PUBLIC_SITE_URL` (opcional, pública, fijada en la compilación) define el origen del QR de instalación; si falta o no es un origen `https` limpio, se usa `https://smashclubpy.com`. Ver [sh-pwa-01](../operations/sh-pwa-01.md).
+
 FastAPI usa una factory y lifespan: valida configuración antes de atender, crea un engine por proceso y lo libera al detenerse. SQLAlchemy 2 utiliza sesiones síncronas cortas; endpoints síncronos corren en el threadpool de FastAPI. El pool se limita a 3 conexiones persistentes y 2 adicionales por proceso; no se escala el número de workers sin recalcular el presupuesto de conexiones.
 
 Alembic mantiene una revisión congelada y un bloqueo asesor transaccional para serializar migraciones. El servidor nunca hace `create_all` ni migra en startup. El bootstrap usa upserts PostgreSQL dentro de una transacción explícita. Los triggers diferidos validan el estado final al commit, permitiendo construir un equipo o resultado en varios INSERT dentro de la misma transacción.

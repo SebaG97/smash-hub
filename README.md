@@ -14,6 +14,8 @@ Misión SH-RULES-01: reglamento oficial por torneo, público, en una pestaña de
 
 Misión SH-SYNC-01: copia local de start.gg en PostgreSQL (torneos, eventos, inscripciones, participantes, fases, pools, seeds y sets, con sus IDs y relaciones originales) y sincronización automática en segundo plano, con frecuencia según qué tan cerca está cada torneo. Previas, calendario, pools y brackets leen la copia local y solo consultan start.gg si nunca se sincronizó; una caída de start.gg ya no las deja vacías. Sincronización manual y registro de cada ejecución en `/admin`. Apagada por defecto (`STARTGG_SYNC_ENABLED`). Decisión: [ADR-022](docs/adr/ADR-022.md); operación y DigitalOcean: [docs/operations/startgg-sync.md](docs/operations/startgg-sync.md).
 
+Misión SH-PWA-01: Smash Hub se instala como aplicación (PWA) en Android, iPhone y computadoras, sin APK ni app nativa. Manifest e íconos desde el logo oficial, página pública `/install` con instrucciones por dispositivo y bloque «Smash Hub en tu celular» con QR en el inicio. Sin service worker ni modo offline. Implementación, limitaciones por navegador y publicación: [docs/operations/sh-pwa-01.md](docs/operations/sh-pwa-01.md).
+
 ## Inicio local
 
 Requisitos: Git, Docker Desktop con motor Linux y Docker Compose v2. Puertos predeterminados: web 3000 y API 8000. PostgreSQL no publica puertos.
