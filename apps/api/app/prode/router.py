@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from app.auth.models import User
 from app.auth.service import MaybeUser, SignedUser
 from app.core.admin import Admin
+from app.core.times import LOCAL_PATTERN, from_asuncion
 from app.insights import preview
 from app.integrations.startgg.client import ImportFailure, StartGGClient
 from app.links import service as links
@@ -36,6 +37,12 @@ class Picks(BaseModel):
     champion: PlayerId | None = None
     runner_up: PlayerId | None = None
     top8: list[PlayerId] = Field(default_factory=list, max_length=8)
+
+
+class LocksAt(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    # Date and time in Asunción ("2026-11-14T14:00").
+    locks_at: str = Field(pattern=LOCAL_PATTERN)
 
 
 class Reopen(BaseModel):
@@ -366,6 +373,20 @@ def lock(request: Request, contest_id: UUID, actor: Admin):
             raise service.ProdeError("Solo se puede cerrar un Prode abierto.")
         found.status, found.locked_at = "locked", service._now()
         service.audit(s, found, "lock", actor)
+
+    return _admin_change(request, contest_id, change)
+
+
+@router.post("/contests/{contest_id}/locks-at")
+def set_locks_at(request: Request, contest_id: UUID, body: LocksAt, actor: Admin):
+    """Change when an open contest closes, in Asunción time (SH-FIX-01). Picks stay."""
+    try:
+        when = from_asuncion(body.locks_at)
+    except ValueError:
+        raise HTTPException(422, "Fecha u hora inválida.") from None
+
+    def change(s, found):
+        service.set_locks_at(s, found, when, actor, s.scalar(select(func.now())))
 
     return _admin_change(request, contest_id, change)
 

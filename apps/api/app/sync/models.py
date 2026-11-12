@@ -61,6 +61,10 @@ class StartggTournament(Stamped, Base):
     last_status = Column(String(20))
     last_error = Column(String(80))
     failures = Column(Integer, nullable=False, server_default=text("0"))
+    # Start time an administrator confirmed (SH-FIX-01). start_at stays as start.gg sent
+    # it; when this is set, the schedule, previews and new Prodes use it instead.
+    start_confirmed_at = Column(DateTime(timezone=True))
+    start_confirmed_by = Column(String(60))
     __table_args__ = (
         CheckConstraint("track_reason IN ('calendar','seeding','manual')", name="track_reason"),
         CheckConstraint(

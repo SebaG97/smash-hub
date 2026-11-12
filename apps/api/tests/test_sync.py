@@ -253,7 +253,8 @@ def at(days=0, hours=0):
         (at(days=5), 1, "week"),
         (at(hours=10), 1, "day"),
         (at(hours=1), 1, "live"),  # doors open two hours before
-        (at(days=5), 2, "live"),  # start.gg says it already started
+        (at(days=5), 2, "week"),  # ACTIVE on start.gg, but days away (SH-FIX-01)
+        (None, 2, "live"),  # no start time: only then start.gg's state counts
         (at(days=-1, hours=-7), 1, "finished"),
         (at(days=3), 3, "finished"),
     ],
@@ -737,3 +738,97 @@ def test_projected_bracket_reads_the_local_copy_when_startgg_is_down(db, monkeyp
     # The hub's seeds 2 and 3 meet where start.gg put seed numbers 2 and 3.
     match = bracket["groups"][0]["winners"][0]["sets"][0]
     assert [side["seed"] for side in match["sides"]] == [2, 3]
+
+
+# ------------------------------------------------------------------ confirmed start (SH-FIX-01)
+
+# Center Stage 2026: start.gg says Saturday 14/11 19:00 UTC (16:00 in Asunción) and keeps
+# the tournament ACTIVE since Thursday; it really starts at 14:00 in Asunción = 17:00 UTC.
+STARTGG_START = datetime(2026, 11, 14, 19, 0, tzinfo=UTC)
+REAL_START = datetime(2026, 11, 14, 17, 0, tzinfo=UTC)
+
+
+def center_stage(confirmed=True):
+    return SimpleNamespace(
+        start_at=STARTGG_START,
+        end_at=datetime(2026, 11, 15, 23, 0, tzinfo=UTC),
+        state=2,
+        failures=0,
+        start_confirmed_at=REAL_START if confirmed else None,
+    )
+
+
+def test_asuncion_times_convert_with_the_iana_zone():
+    from app.core.times import from_asuncion, to_asuncion
+
+    assert from_asuncion("2026-11-14T14:00") == REAL_START
+    assert to_asuncion(REAL_START) == "2026-11-14T14:00"
+    assert to_asuncion(STARTGG_START) == "2026-11-14T16:00"
+    for bad in ("2026-11-14 14:00", "2026-11-14T14:00Z", "2026-13-01T10:00", ""):
+        with pytest.raises(ValueError):
+            from_asuncion(bad)
+
+
+@pytest.mark.parametrize(
+    ("now", "expected"),
+    [
+        (datetime(2026, 11, 12, 14, 0, tzinfo=UTC), "week"),  # Thursday: ACTIVE, not live
+        (datetime(2026, 11, 13, 16, 59, tzinfo=UTC), "week"),
+        (datetime(2026, 11, 13, 17, 0, tzinfo=UTC), "day"),  # last 24 h before 14:00
+        (datetime(2026, 11, 14, 16, 59, tzinfo=UTC), "day"),
+        (datetime(2026, 11, 14, 17, 0, tzinfo=UTC), "live"),  # 14:00 in Asunción
+        (datetime(2026, 11, 15, 22, 0, tzinfo=UTC), "live"),  # Sunday, before the end
+        (datetime(2026, 11, 16, 5, 1, tzinfo=UTC), "finished"),
+    ],
+)
+def test_center_stage_follows_its_confirmed_start(now, expected):
+    assert service.tier(center_stage(), now) == expected
+
+
+def test_frequencies_change_at_the_last_day_and_at_the_real_start():
+    conf = settings()
+    row = center_stage()
+    for now, seconds in (
+        (datetime(2026, 11, 13, 16, 0, tzinfo=UTC), 1800),
+        (datetime(2026, 11, 13, 17, 0, tzinfo=UTC), 600),
+        (datetime(2026, 11, 14, 17, 0, tzinfo=UTC), 180),
+    ):
+        assert service.next_sync(row, now, conf, failed=False) == now + timedelta(seconds=seconds)
+
+
+def test_unconfirmed_tournaments_keep_their_previous_schedule():
+    row = center_stage(confirmed=False)
+    # Without a confirmed start: start.gg's 19:00 minus the two-hour margin, as before.
+    assert service.tier(row, datetime(2026, 11, 14, 16, 59, tzinfo=UTC)) == "day"
+    assert service.tier(row, datetime(2026, 11, 14, 17, 0, tzinfo=UTC)) == "live"
+    assert service.tier(row, datetime(2026, 11, 13, 18, 59, tzinfo=UTC)) == "week"
+
+
+def test_administrators_confirm_the_start_and_syncs_never_overwrite_it(db):
+    fake = FakeStartGG()
+    sync(db, fake)
+    url = "/api/v1/sync/tournaments/center-stage-2026/start"
+    with client_for(db) as client:
+        assert client.put(url, json={"starts_at": "2026-11-14T14:00"}).status_code == 401
+        bad = client.put(url, json={"starts_at": "2026-11-14T14:00Z"}, headers=AUTH)
+        assert bad.status_code == 422
+        r = client.put(url, json={"starts_at": "2026-11-14T14:00"}, headers=AUTH)
+        assert r.status_code == 200 and r.json()["starts_at"] == "2026-11-14T14:00"
+        again = client.put(url, json={"starts_at": "2026-11-14T14:00"}, headers=AUTH)
+        assert again.json() == r.json()  # idempotent
+        missing = "/api/v1/sync/tournaments/nope/start"
+        assert client.put(missing, json={"starts_at": None}, headers=AUTH).status_code == 404
+    sync(db, fake)  # start.gg still sends its own start time
+    with Session(db) as s:
+        row = s.get(StartggTournament, "900")
+        assert row.start_confirmed_at == REAL_START and row.start_confirmed_by == "clave:Org"
+        assert row.start_at == datetime.fromtimestamp(START, UTC)  # start.gg's, as received
+        local = read.upcoming(s, "center-stage-2026")
+        assert local["tournament"]["startAt"] == int(REAL_START.timestamp())
+        assert local["tournament"]["startAtConfirmed"] is True
+    with client_for(db) as client:
+        status = client.get("/api/v1/sync", headers=AUTH).json()["tournaments"][0]
+        assert status["start_confirmed"] is True and status["startgg_state"] == 1
+        assert status["starts_at"].startswith("2026-11-14T17:00")
+        cleared = client.put(url, json={}, headers=AUTH)
+        assert cleared.json()["confirmed"] is False

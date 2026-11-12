@@ -294,3 +294,7 @@ Fase 0 más fase 1, en ese orden y sin el modo B:
 - Auditoría solo-inserción de toda acción de organizador.
 
 Es la versión que más aprovecha lo existente: inscriptos y seeding de la previa, posiciones de la importación, patrón de auditoría y componentes visuales. Además no depende de la demora del en vivo ni de los IDs provisorios de start.gg, que son los dos puntos más frágiles del modo por enfrentamientos.
+
+## Cambio del cierre (SH-FIX-01)
+
+El cierre (`locks_at`) se fija al abrir el Prode con el inicio confirmado del torneo, si un administrador lo cargó en la sincronización, o si no con el `startAt` del evento de start.gg (o del torneo). La sincronización nunca lo vuelve a escribir. Un administrador puede moverlo mientras el Prode está abierto y su cierre no pasó: `POST /api/v1/prode/contests/{id}/locks-at` con día y hora de Asunción (`{"locks_at": "AAAA-MM-DDTHH:MM"}`), o «Cambiar cierre» en la pestaña. Es idempotente, queda auditado (`set_locks_at`) y no toca pronósticos ni participantes. Ver [sh-fix-01.md](../operations/sh-fix-01.md).

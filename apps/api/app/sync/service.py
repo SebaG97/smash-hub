@@ -112,16 +112,32 @@ def _error(exc):
 # ------------------------------------------------------------------ schedule
 
 
+# start.gg's start time is often approximate: syncing every few minutes starts this long
+# before it. A start confirmed by an administrator is exact and gets no margin.
+UNCONFIRMED_MARGIN = timedelta(hours=2)
+
+
+def starts_at(tournament):
+    """The start the hub goes by: the confirmed one, else start.gg's (aware, or None)."""
+    return _aware(getattr(tournament, "start_confirmed_at", None)) or _aware(tournament.start_at)
+
+
 def tier(tournament, now):
-    """How close a tournament is: far, week, day, live or finished (ADR-022)."""
-    start, end = _aware(tournament.start_at), _aware(tournament.end_at)
+    """How close a tournament is, by time (ADR-022, SH-FIX-01): far, week, day, live or
+    finished. start.gg's official state never makes a future tournament live: start.gg
+    marks published tournaments ACTIVE (2) days before they begin. It only counts when
+    there is no start time at all."""
+    confirmed = getattr(tournament, "start_confirmed_at", None) is not None
+    start, end = starts_at(tournament), _aware(tournament.end_at)
     if end is None and start is not None:
         end = start + timedelta(days=1)
     if tournament.state == 3 or (end is not None and now > end + timedelta(hours=6)):
         return "finished"
-    if tournament.state == 2 or (start is not None and now >= start - timedelta(hours=2)):
+    if start is None:
+        return "live" if tournament.state == 2 else "far"
+    if now >= start - (timedelta(0) if confirmed else UNCONFIRMED_MARGIN):
         return "live"
-    if start is None or start - now > timedelta(days=7):
+    if start - now > timedelta(days=7):
         return "far"
     if start - now > timedelta(days=1):
         return "week"
@@ -413,7 +429,11 @@ def status(session, limit=30):
             dict(
                 slug=t.slug,
                 name=t.name,
-                starts_at=iso(t.start_at),
+                starts_at=iso(starts_at(t)),
+                startgg_starts_at=iso(t.start_at),
+                start_confirmed=t.start_confirmed_at is not None,
+                start_confirmed_by=t.start_confirmed_by,
+                startgg_state=t.state,
                 tracked=t.tracked,
                 reason=t.track_reason,
                 in_calendar=t.in_calendar,
@@ -444,6 +464,21 @@ def status(session, limit=30):
             for r in runs
         ],
     )
+
+
+def confirm_start(session, slug, start, actor, settings, now=None):
+    """Set (or clear, with None) the start time an administrator confirmed and reschedule
+    the next sync from it. Idempotent. None if the tournament is not in the copy."""
+    row = session.scalar(select(StartggTournament).where(StartggTournament.slug == slug))
+    if row is None:
+        return None
+    now = now or now_utc()
+    if _aware(row.start_confirmed_at) != start:
+        row.start_confirmed_at = start
+        row.start_confirmed_by = actor[:60] if start else None
+    if row.tracked:
+        row.next_sync_at = next_sync(row, now, settings, failed=False)
+    return row
 
 
 def set_tracked(session, slug, tracked, now=None):

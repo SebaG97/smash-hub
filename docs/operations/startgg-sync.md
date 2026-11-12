@@ -15,8 +15,8 @@ Todas las variables son del servicio `api`, `RUN_TIME`. Solo `STARTGG_API_TOKEN`
 | `STARTGG_SYNC_DISCOVERY_SECONDS` | `3600` | Cada cuánto se busca el calendario del país. |
 | `STARTGG_SYNC_FAR_SECONDS` | `21600` | Torneos a más de 7 días. |
 | `STARTGG_SYNC_WEEK_SECONDS` | `1800` | Entre 7 días y 24 h antes. |
-| `STARTGG_SYNC_DAY_SECONDS` | `600` | Últimas 24 h antes (hasta 2 h antes del inicio). |
-| `STARTGG_SYNC_LIVE_SECONDS` | `180` | En curso: desde 2 h antes del inicio, o con start.gg en estado activo, hasta 6 h después del fin. |
+| `STARTGG_SYNC_DAY_SECONDS` | `600` | Últimas 24 h antes del inicio. |
+| `STARTGG_SYNC_LIVE_SECONDS` | `180` | En curso: desde el inicio confirmado por un administrador (o, sin él, desde 2 h antes del inicio de start.gg) hasta 6 h después del fin. El estado ACTIVE de start.gg no adelanta este tramo (SH-FIX-01). |
 | `STARTGG_SYNC_FINISHED_SECONDS` | `86400` | Terminados, durante 3 días; después se dejan de sincronizar. |
 
 Valores fuera de rango hacen fallar el arranque de la API (validación de configuración), igual que el resto de la configuración.
@@ -38,6 +38,10 @@ Consideraciones:
 - **Token**: el mismo `STARTGG_API_TOKEN` lo usan las descargas de seeding, la subida de seeds y lo que todavía se lee en vivo. Mientras una descarga de seeding está en curso, la sincronización espera.
 - **Despliegues y reinicios**: los datos sincronizados están en PostgreSQL y no se pierden. Si un proceso muere a mitad de una ejecución, esa ejecución queda `running` y deja de bloquear a los 20 minutos (se cierra como `abandoned`).
 - **Apagarla**: `STARTGG_SYNC_ENABLED=false`. Las páginas siguen leyendo lo último sincronizado de cada torneo. Para volver a leer todo en vivo habría que dejar de seguir los torneos y esperar a que pierdan vigencia; no hace falta borrar nada.
+
+## Inicio confirmado (SH-FIX-01)
+
+Si start.gg tiene mal la hora de inicio, en `/admin` → «Confirmar inicio» se carga el día y la hora de Paraguay (`PUT /api/v1/sync/tournaments/<slug>/start` con `{"starts_at": "AAAA-MM-DDTHH:MM"}`; `{}` vuelve al de start.gg). Se guarda aparte del dato de start.gg, que la sincronización sigue actualizando, y lo usan el horario de sincronización, la previa, el calendario y los Prodes que se abran después. Para un Prode ya abierto, cambiar su cierre desde la pestaña Prode. Ver [sh-fix-01.md](sh-fix-01.md).
 
 ## Sincronización manual
 

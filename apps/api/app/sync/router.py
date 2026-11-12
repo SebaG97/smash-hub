@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
 from app.core.admin import Admin
+from app.core.times import LOCAL_PATTERN, from_asuncion, to_asuncion
 from app.integrations.startgg.client import ImportFailure, parse_slug
 from app.sync import service
 
@@ -22,6 +23,12 @@ class SyncRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     # Link or slug of the start.gg tournament.
     tournament: str = Field(min_length=1, max_length=300)
+
+
+class StartRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    # Date and time in Asunción ("2026-11-14T14:00"); null goes back to start.gg's.
+    starts_at: str | None = Field(default=None, pattern=LOCAL_PATTERN)
 
 
 class TrackRequest(BaseModel):
@@ -86,3 +93,24 @@ def tracking(request: Request, slug: str, body: TrackRequest, actor: Admin):
             raise HTTPException(404, "Ese torneo no está en la copia local.")
         s.commit()
         return {"slug": slug, "tracked": row.tracked}
+
+
+@router.put("/tournaments/{slug}/start")
+def confirm_start(request: Request, slug: str, body: StartRequest, actor: Admin):
+    """Confirm the real start (Asunción time) when start.gg's is wrong. start.gg's value
+    is kept; the schedule, previews and Prodes opened afterwards use this one."""
+    try:
+        start = from_asuncion(body.starts_at) if body.starts_at else None
+    except ValueError:
+        raise HTTPException(422, "Fecha u hora inválida.") from None
+    with Session(request.app.state.engine) as s:
+        row = service.confirm_start(s, slug, start, actor, request.app.state.settings)
+        if row is None:
+            raise HTTPException(404, "Ese torneo no está en la copia local.")
+        s.commit()
+        return {
+            "slug": slug,
+            "starts_at": to_asuncion(service.starts_at(row)),
+            "confirmed": row.start_confirmed_at is not None,
+            "tier": service.tier(row, service.now_utc()),
+        }

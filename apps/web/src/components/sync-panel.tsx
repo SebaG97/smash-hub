@@ -11,7 +11,11 @@ type Tier = "far" | "week" | "day" | "live" | "finished";
 export type SyncTournament = {
   slug: string;
   name: string;
+  /** The start the hub goes by: confirmed by an administrator, else start.gg's. */
   starts_at: string | null;
+  startgg_starts_at?: string | null;
+  start_confirmed?: boolean;
+  start_confirmed_by?: string | null;
   tracked: boolean;
   reason: "calendar" | "seeding" | "manual";
   in_calendar: boolean;
@@ -97,6 +101,9 @@ export function SyncPanel() {
   const admin = useAdmin();
   const [state, setState] = useState<SyncStatus | null>(null);
   const [link, setLink] = useState("");
+  const [startSlug, setStartSlug] = useState("");
+  const [startDay, setStartDay] = useState("");
+  const [startTime, setStartTime] = useState("");
   const [message, setMessage] = useState("");
   const [tick, setTick] = useState(0);
   const running = state?.runs.some((r) => r.status === "running") ?? false;
@@ -203,7 +210,16 @@ export function SyncPanel() {
                     <br />
                     <small>{REASONS[t.reason]}</small>
                   </td>
-                  <td>{TIERS[t.tier]}</td>
+                  <td>
+                    {TIERS[t.tier]}
+                    <br />
+                    <small>
+                      Inicio {when(t.starts_at)}
+                      {t.start_confirmed
+                        ? ` (confirmado; start.gg dice ${when(t.startgg_starts_at ?? null)})`
+                        : " (según start.gg)"}
+                    </small>
+                  </td>
                   <td>
                     {when(t.last_success_at)}
                     {t.last_status === "failed" && (
@@ -244,6 +260,66 @@ export function SyncPanel() {
             </tbody>
           </table>
         </div>
+      )}
+      {state && state.tournaments.length > 0 && (
+        <form
+          className="seeding-tools"
+          aria-label="Confirmar inicio"
+          onSubmit={(e) => {
+            e.preventDefault();
+            send("PUT", `/tournaments/${startSlug}/start`, {
+              starts_at: `${startDay}T${startTime}`,
+            });
+          }}
+        >
+          <label>
+            Torneo
+            <select
+              value={startSlug}
+              onChange={(e) => setStartSlug(e.target.value)}
+              required
+            >
+              <option value="">Elegí un torneo</option>
+              {state.tournaments.map((t) => (
+                <option key={t.slug} value={t.slug}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Día
+            <input
+              type="date"
+              value={startDay}
+              onChange={(e) => setStartDay(e.target.value)}
+              required
+            />
+          </label>
+          <label>
+            Hora de Paraguay
+            <input
+              type="time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              required
+            />
+          </label>
+          <button className="primary-button">Confirmar inicio</button>
+          <button
+            type="button"
+            className="link-button"
+            disabled={!startSlug}
+            onClick={() => send("PUT", `/tournaments/${startSlug}/start`, {})}
+          >
+            Usar el de start.gg
+          </button>
+          <small>
+            Si start.gg tiene mal la hora de inicio: el horario de
+            sincronización, las previas y los Prodes que se abran después usan
+            esta. El dato de start.gg no se modifica.
+          </small>
+        </form>
       )}
       {state && state.runs.length > 0 && (
         <details>

@@ -11,6 +11,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
+from app.core.times import ASUNCION
 from app.main import create_app
 from app.prode import engine
 from app.prode import router as prode_router
@@ -376,3 +377,74 @@ def test_disabled_accounts_leave_the_leaderboard_but_keep_their_data(db, world, 
     assert anon.get(f"/api/v1/prode/users/{fan_id}").status_code == 404
     with Session(db) as s:
         assert s.scalar(select(func.count()).select_from(ProdePrediction)) == 1
+
+
+# SH-FIX-01: organizers move the close to the real start, in Asunción time.
+
+
+def test_organizers_move_the_close_keeping_every_pick(db, world, client):
+    from app.prode.models import ProdeAuditEntry, ProdeContest, ProdePrediction
+
+    anon = client()
+    contest = anon.post("/api/v1/prode/tournaments/cs", headers=LEGACY).json()
+    fan = sign_in(client, db, "early")
+    picks = f"/api/v1/prode/contests/{contest['id']}/picks"
+    assert fan.put(picks, json=dict(champion="1", top8=["1", "2"]), headers=WEB).status_code == 200
+    url = f"/api/v1/prode/contests/{contest['id']}/locks-at"
+    later = (datetime.now(UTC) + timedelta(days=2)).astimezone(ASUNCION)
+    local = later.strftime("%Y-%m-%dT14:00")
+    assert fan.post(url, json=dict(locks_at=local), headers=WEB).status_code == 403
+    assert anon.post(url, json=dict(locks_at="mañana"), headers=LEGACY).status_code == 422
+    moved = anon.post(url, json=dict(locks_at=local), headers=LEGACY)
+    assert moved.status_code == 200
+    expected = datetime.fromisoformat(local).replace(tzinfo=ASUNCION)
+    assert datetime.fromisoformat(moved.json()["locks_at"]) == expected
+    assert expected.astimezone(UTC).hour == 17  # 14:00 in Asunción
+    assert moved.json()["participants"] == 1
+    again = anon.post(url, json=dict(locks_at=local), headers=LEGACY)
+    assert again.json()["locks_at"] == moved.json()["locks_at"]
+    past = anon.post(url, json=dict(locks_at="2020-01-01T10:00"), headers=LEGACY)
+    assert past.status_code == 422
+    with Session(db) as s:
+        changes = s.scalars(
+            select(ProdeAuditEntry).where(ProdeAuditEntry.action == "set_locks_at")
+        ).all()
+        assert len(changes) == 1  # the repeated request changed nothing
+        assert s.scalar(select(func.count()).select_from(ProdePrediction)) == 2
+        # The close arrives: the backend refuses any change, whatever the page shows.
+        row = s.get(ProdeContest, contest["id"])
+        row.locks_at = datetime.now(UTC) - timedelta(seconds=1)
+        s.commit()
+    late = fan.put(picks, json=dict(champion="2"), headers=WEB)
+    assert late.status_code == 409
+    assert anon.post(url, json=dict(locks_at=local), headers=LEGACY).status_code == 409
+    mine = fan.get("/api/v1/prode/tournaments/cs").json()["mine"]
+    assert mine["champion"] == "1" and mine["top8"] == ["1", "2"]
+
+
+def test_a_confirmed_start_sets_the_close_of_new_contests(db):
+    from app.prode import service
+
+    real = int(datetime(2026, 11, 14, 17, 0, tzinfo=UTC).timestamp())
+    startgg = int(datetime(2026, 11, 14, 19, 0, tzinfo=UTC).timestamp())
+    with Session(db) as s:
+        contest = service.create(
+            s,
+            slug="cs",
+            tournament=dict(name="CS", startAt=real, startAtConfirmed=True),
+            event=dict(id=55, slug="tournament/cs/event/s", name="Singles", startAt=startgg),
+            entrants=[],
+            seeds={},
+            actor="org",
+        )
+        assert contest.locks_at == datetime(2026, 11, 14, 17, 0, tzinfo=UTC)
+        other = service.create(
+            s,
+            slug="ot",
+            tournament=dict(name="OT", startAt=real),
+            event=dict(id=56, slug="tournament/ot/event/s", name="Singles", startAt=startgg),
+            entrants=[],
+            seeds={},
+            actor="org",
+        )
+        assert other.locks_at == datetime(2026, 11, 14, 19, 0, tzinfo=UTC)  # unchanged

@@ -98,7 +98,9 @@ describe("start.gg sync panel", () => {
     serve();
     signInAsAdmin();
     render(<SyncPanel />);
-    expect(await screen.findByText("Center Stage 2026")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("cell", { name: /Center Stage 2026/ }),
+    ).toBeInTheDocument();
     expect(screen.getByText("Esta semana")).toBeInTheDocument();
     expect(screen.getByText(/está encendida/)).toBeInTheDocument();
     expect(screen.getByRole("note")).toHaveTextContent(
@@ -113,7 +115,7 @@ describe("start.gg sync panel", () => {
     const calls = serve();
     signInAsAdmin();
     render(<SyncPanel />);
-    await screen.findByText("Center Stage 2026");
+    await screen.findByRole("cell", { name: /Center Stage 2026/ });
     fireEvent.change(screen.getByLabelText("Link del torneo"), {
       target: { value: " https://www.start.gg/tournament/otro " },
     });

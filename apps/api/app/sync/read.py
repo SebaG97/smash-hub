@@ -61,7 +61,9 @@ def provider_tournament(row, events):
         id=row.id,
         name=row.name,
         slug=f"tournament/{row.slug}",
-        startAt=_epoch(row.start_at),
+        # The confirmed start when an administrator set one (SH-FIX-01), else start.gg's.
+        startAt=_epoch(row.start_confirmed_at or row.start_at),
+        startAtConfirmed=row.start_confirmed_at is not None,
         endAt=_epoch(row.end_at),
         city=row.city,
         venueName=row.venue,

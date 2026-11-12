@@ -72,7 +72,11 @@ def sync_candidates(s, contest, entrants, seeds):
 def create(s, *, slug, tournament, event, entrants, seeds, actor):
     if s.scalar(select(ProdeContest).where(ProdeContest.startgg_event_slug == event["slug"])):
         raise ProdeError("Este evento ya tiene Prode.")
-    starts = event.get("startAt") or tournament.get("startAt")
+    # A start confirmed by organizers (SH-FIX-01) wins over start.gg's event and tournament.
+    if tournament.get("startAtConfirmed"):
+        starts = tournament["startAt"]
+    else:
+        starts = event.get("startAt") or tournament.get("startAt")
     contest = ProdeContest(
         tournament_slug=slug,
         startgg_event_id=str(event["id"]),
@@ -94,6 +98,28 @@ def create(s, *, slug, tournament, event, entrants, seeds, actor):
 
 def closed(contest, now):
     return contest.status != "open" or (contest.locks_at is not None and now >= contest.locks_at)
+
+
+def set_locks_at(s, contest, when, actor, now):
+    """Move an open contest's close (SH-FIX-01). Idempotent: the same time changes nothing.
+    Picks and participants are untouched. A time already past is refused: closing now is
+    what "Cerrar ahora" is for."""
+    if closed(contest, now):  # locked, settled, void, or its close already passed
+        raise ProdeError("Solo se puede cambiar el cierre de un Prode abierto.")
+    if when <= now:
+        raise ProdeError("El nuevo cierre tiene que ser posterior a este momento.", 422)
+    if contest.locks_at is not None and contest.locks_at == when:
+        return False
+    audit(
+        s,
+        contest,
+        "set_locks_at",
+        actor,
+        before=contest.locks_at and contest.locks_at.isoformat(),
+        after=when.isoformat(),
+    )
+    contest.locks_at = when
+    return True
 
 
 def lock_if_due(s, contest):

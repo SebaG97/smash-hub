@@ -500,3 +500,7 @@ Copia local de start.gg, etapa 3: sets. Aditiva: una tabla nueva y `startgg_even
 | `startgg_sets` | Set de un pool, incluidos los de vista previa de un bracket sin empezar (`preview_…`): `id` (hasta 60 caracteres), `event_id` y `phase_group_id` (FKs), `position` (orden de start.gg), `round` (negativo en losers), `full_round_text`, `state`, `winner_entrant_id`, `display_score`, `completed_at`, `slots` (JSON: por lado `prereqId`, `prereqType`, `prereqPlacement`, `seedNum`, `entrantId`, `score`), `active`, `last_seen_at`. |
 
 Estos sets no reemplazan a `sets`/`set_sides` (resultados canónicos importados): solo sirven para dibujar y proyectar brackets de torneos en curso o próximos.
+
+### Migración 0023 (SH-FIX-01)
+
+Aditiva: `startgg_tournaments.start_confirmed_at` (timestamptz, nullable) y `start_confirmed_by` (varchar 60, nullable). Inicio real confirmado por un administrador y quién lo hizo; `start_at` sigue siendo el de start.gg. La sincronización no escribe estas columnas.

@@ -138,6 +138,9 @@ export function ProdeTab({ slug }: { slug: string }) {
   );
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  // Organizers move the close in Paraguay's time (SH-FIX-01); the API converts it.
+  const [closeDay, setCloseDay] = useState("");
+  const [closeTime, setCloseTime] = useState("");
   if (loading) return <p role="status">Cargando el Prode…</p>;
 
   async function organizer(path: string, body?: object) {
@@ -206,6 +209,37 @@ export function ProdeTab({ slug }: { slug: string }) {
               >
                 Cerrar ahora
               </button>
+            )}
+            {data.status === "open" && (
+              <form
+                aria-label="Cambiar cierre"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void organizer(`prode/contests/${data.id}/locks-at`, {
+                    locks_at: `${closeDay}T${closeTime}`,
+                  });
+                }}
+              >
+                <label>
+                  Día del cierre
+                  <input
+                    type="date"
+                    value={closeDay}
+                    onChange={(e) => setCloseDay(e.target.value)}
+                    required
+                  />
+                </label>
+                <label>
+                  Hora de Paraguay
+                  <input
+                    type="time"
+                    value={closeTime}
+                    onChange={(e) => setCloseTime(e.target.value)}
+                    required
+                  />
+                </label>
+                <button disabled={busy}>Cambiar cierre</button>
+              </form>
             )}
             {data.status === "locked" && (
               <button

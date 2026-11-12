@@ -51,3 +51,7 @@ Verificado en PostgreSQL efímero: upgrade con cuentas heredadas, downgrade a 00
 `0020_startgg_sync.py`, `0021_startgg_pools.py` y `0022_startgg_sets.py` (Misión SH-SYNC-01, ADR-022), sobre 0019 intacta. Solo agregan tablas `startgg_*` y dos columnas nullable en `startgg_events`, creada por 0020: no modifican ni leen tablas existentes, no migran datos y no tocan cuentas, vinculaciones, Prode, seeding ni resultados.
 
 Verificado en PostgreSQL efímero: upgrade a 0022, downgrade a 0019, re-upgrade, `alembic check` sin operaciones, roundtrip base ↔ head y comparación de metadatos de la suite. El downgrade borra solo la copia local de start.gg, que se rehace sincronizando. Aplicar en producción con `APPROVED_MIGRATION=0022` (aplica las tres) tras backup y revisión humana. Pasos: [startgg-sync.md](startgg-sync.md#digitalocean-app-platform).
+
+## Revisión 0023 — Inicio confirmado
+
+`0023_confirmed_start.py` (SH-FIX-01), sobre 0022. Solo agrega dos columnas nullable a `startgg_tournaments`; no lee ni modifica datos. Verificado en PostgreSQL efímero: upgrade a 0023, downgrade a 0022, re-upgrade y `alembic check` sin operaciones, más el roundtrip y la comparación de metadatos de la suite. El downgrade descarta los inicios confirmados (se vuelven a cargar desde `/admin`). Aplicar con `APPROVED_MIGRATION=0023`. Procedimiento: [sh-fix-01.md](sh-fix-01.md).
