@@ -55,3 +55,9 @@ Verificado en PostgreSQL efímero: upgrade a 0022, downgrade a 0019, re-upgrade,
 ## Revisión 0023 — Inicio confirmado
 
 `0023_confirmed_start.py` (SH-FIX-01), sobre 0022. Solo agrega dos columnas nullable a `startgg_tournaments`; no lee ni modifica datos. Verificado en PostgreSQL efímero: upgrade a 0023, downgrade a 0022, re-upgrade y `alembic check` sin operaciones, más el roundtrip y la comparación de metadatos de la suite. El downgrade descarta los inicios confirmados (se vuelven a cargar desde `/admin`). Aplicar con `APPROVED_MIGRATION=0023`. Procedimiento: [sh-fix-01.md](sh-fix-01.md).
+
+## Revisión 0024 — Logros
+
+`0024_achievements.py` (SH-ACH-01, ADR-023), sobre 0023. Crea `player_achievements`, `achievement_stats`, `achievement_subjects`, `achievement_runs`, `achievement_audit` y `user_showcase`, y agrega a `prode_achievements` cinco columnas nulas o con valor por defecto y el índice único parcial `uq_prode_achievements_lifetime`. El único paso de datos borra duplicados exactos de logros acumulados del Prode (no se esperan).
+
+Verificado en PostgreSQL efímero: upgrade a head, comparación de metadatos sin diferencias y roundtrip base ↔ head de la suite. El downgrade borra el historial de logros de jugador y las columnas nuevas del Prode; antes de usarlo, borrar las filas de `prode_achievements` con `status = 'revoked'`. Aplicar con `APPROVED_MIGRATION=0024` tras backup y revisión humana. Procedimiento: [sh-ach-01.md](sh-ach-01.md#7-pasos-exactos-para-publicar-requieren-autorización).

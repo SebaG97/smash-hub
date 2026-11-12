@@ -443,7 +443,7 @@ Tablas nuevas, sin cambios en las existentes:
 | `prode_predictions` | Respuesta de un usuario a una pregunta (única por pregunta y usuario); `value` en JSON. |
 | `prode_prediction_history` | Cada valor guardado; la aplicación solo inserta. |
 | `prode_scores` | Derivada: puntos, aciertos exactos, aciertos, pronósticos, posición y último guardado por concurso y usuario. Se rehace al liquidar. |
-| `prode_achievements` | Logros por usuario, concurso (nulo en los acumulados) y `kind`, con `title`, `detail` y `rare`. Se rehacen al liquidar. |
+| `prode_achievements` | Logros por usuario, concurso (nulo en los acumulados) y `kind`, con `title`, `detail` y `rare`. Desde `0024` se concilian al liquidar, sin rehacerse (ver más abajo). |
 | `prode_audit_entries` | Acciones de organizadores; la aplicación solo inserta. |
 
 Todas las FKs borran en cascada desde el concurso o el usuario.
@@ -504,3 +504,18 @@ Estos sets no reemplazan a `sets`/`set_sides` (resultados canónicos importados)
 ### Migración 0023 (SH-FIX-01)
 
 Aditiva: `startgg_tournaments.start_confirmed_at` (timestamptz, nullable) y `start_confirmed_by` (varchar 60, nullable). Inicio real confirmado por un administrador y quién lo hizo; `start_at` sigue siendo el de start.gg. La sincronización no escribe estas columnas.
+
+### Migración 0024 (SH-ACH-01, ADR-023)
+
+Sistema de logros. Aditiva.
+
+| Tabla | Contenido |
+| --- | --- |
+| `player_achievements` | Logros por jugador (`player_id` → `players`), con `achievement_id` (ID del catálogo, ≤ 40) y `occurrence` (`''` para el primer desbloqueo); únicos por los tres. `recognized_at` es el primer reconocimiento y no se reescribe; `event_at` es la fecha real del hecho si se conoce. También: `backfilled`, origen (`tournament_id`, `event_id`, `set_id`, `opponent_player_id`), `evidence` (JSON) y `source` (`auto` o `manual`, por check, con `granted_by` y `reason`). Además `rule_version`, `status` (`active` o `revoked`, por check, con `revoked_at` y `revoked_reason`) y `hidden` (decisión del dueño). |
+| `achievement_stats` | Por logro: `holders`, `universe`, `coverage`, `first_event_at`, `first_holders` (JSON), `first_verified` y `computed_at`. Se rehace al terminar cada evaluación. |
+| `achievement_subjects` | Persona de referencia de una colección (`key`: spike, vbash): `player_id`, `startgg_player_id`, `consent_at`, `active`, `set_by` y `updated_at`. |
+| `achievement_runs` | Cada evaluación: `trigger`, `actor`, `status` (running, completed, skipped, failed), `started_at`, `finished_at`, `counts` (JSON) y `error`. |
+| `achievement_audit` | Solo se insertan filas: `action` (grant, revoke, subject), `actor`, `achievement_id`, `player_id` y `details`. |
+| `user_showcase` | Vitrina del dueño de la cuenta: `user_id` (cascada), `slot` (1–3, por check), `achievement_id` y `source` (`player` o `prode`, por check). Clave primaria `(user_id, slot)`. |
+
+`prode_achievements` agrega `event_at`, `evidence` (nulos), `status` (`'active'` por defecto), `revoked_at` y `hidden` (`false` por defecto). Un índice único parcial, `uq_prode_achievements_lifetime (user_id, kind) WHERE contest_id IS NULL`, evita duplicar los acumulados, porque los nulos son distintos en la restricción única existente. La migración borra antes los duplicados exactos, conservando el más antiguo.

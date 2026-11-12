@@ -76,6 +76,12 @@ services:
       - key: STARTGG_SYNC_ENABLED
         scope: RUN_TIME
         value: "false"
+      # Achievements (SH-ACH-01): background evaluation inside this service. Set to "true"
+      # once migration 0024 is applied and a first manual recalculation was reviewed
+      # (docs/operations/sh-ach-01.md).
+      - key: ACHIEVEMENTS_AUTO
+        scope: RUN_TIME
+        value: "false"
       # App Platform's ingress puts the visitor's IP here (X-Forwarded-For carries the
       # ingress's own address). Used for sign-in throttling and the audit (ADR-021).
       - key: CLIENT_IP_HEADER

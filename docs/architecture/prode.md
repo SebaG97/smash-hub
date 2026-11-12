@@ -298,3 +298,19 @@ Es la versión que más aprovecha lo existente: inscriptos y seeding de la previ
 ## Cambio del cierre (SH-FIX-01)
 
 El cierre (`locks_at`) se fija al abrir el Prode con el inicio confirmado del torneo, si un administrador lo cargó en la sincronización, o si no con el `startAt` del evento de start.gg (o del torneo). La sincronización nunca lo vuelve a escribir. Un administrador puede moverlo mientras el Prode está abierto y su cierre no pasó: `POST /api/v1/prode/contests/{id}/locks-at` con día y hora de Asunción (`{"locks_at": "AAAA-MM-DDTHH:MM"}`), o «Cambiar cierre» en la pestaña. Es idempotente, queda auditado (`set_locks_at`) y no toca pronósticos ni participantes. Ver [sh-fix-01.md](../operations/sh-fix-01.md).
+
+## Logros conciliados (SH-ACH-01)
+
+Desde SH-ACH-01 ([ADR-023](../adr/ADR-023.md)), liquidar **ya no borra y recrea los logros**. Los puntajes sí se rehacen, como antes. Los logros se concilian contra lo guardado:
+- los nuevos se insertan;
+- los que siguen vigentes conservan su fila y su `created_at` (el primer reconocimiento);
+- los que dejan de cumplirse por una corrección se revocan (`status = 'revoked'`);
+- los que vuelven a cumplirse se reactivan.
+
+Lo mismo pasa con los acumulados, con un índice único parcial que impide duplicarlos. Anular un Prode liquidado revoca sus logros y recalcula los acumulados de sus participantes. Las reglas de puntuación no cambiaron.
+
+Logros nuevos del Prode:
+- **Por concurso:** «Por un pelo» (7 de 8), «Contra el pueblo» (campeón elegido por el 10 % o menos, con 10 o más participantes), «Mufa confirmada» (su campeón terminó fuera del top 8), «Madrugador» (primer pronóstico en la primera hora), «Sobre la hora» (último cambio en los 10 minutos previos al cierre y podio, secreto) y «Doble función» (su jugador vinculado jugó el evento y ganó el Prode).
+- **Acumulados:** «Primer pronóstico», «Infaltable» (10 Prodes), «Siempre en el podio» (3 podios seguidos) y «Paje» (3 campeones seguidos).
+
+Los nombres y la rareza visibles salen del catálogo único (`GET /api/v1/achievements/catalog`).

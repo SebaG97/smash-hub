@@ -365,3 +365,23 @@ Solo superadministrador:
   - `POST /api/v1/prode/contests/{id}/reopen` lo reabre, con `{locks_at}` opcional.
   - `POST /api/v1/prode/contests/{id}/void` lo anula.
   - `POST /api/v1/prode/contests/{id}/settle` liquida con las posiciones finales de start.gg (409 si todavía no hay campeón y Top 8 finales; 502 si start.gg no responde). Se puede repetir.
+
+## Logros (SH-ACH-01, ADR-023)
+
+Prefijo `/api/v1/achievements`. Leer nunca evalúa ni consulta start.gg.
+
+| Ruta | Acceso | Contenido |
+| --- | --- | --- |
+| `GET /catalog` | Público; con sesión revela los secretos propios | `categories`, `rarities`, `universes`, `collections` (avance y si está activa), `progress` (con sesión) y `achievements`: catálogo con `stats` (`holders`, `universe`, `percent` o null, `label`, `note`, `first`), `available`, `mine` y `revealed`. |
+| `GET /{id}` | Público | El logro con sus estadísticas, `recent` (últimos poseedores públicos) y `my_awards` (con sesión). 404 si no existe. |
+| `GET /players/{id}` | Público | `showcase` (`automatic`, `items`), `achievements` y `prode` (sin ocultos), `states` (Líder, Nuevo, Especialista, Camaleón, en vivo), `progress` y `collections`. |
+| `GET /users/{id}` | Público | Lo mismo para una cuenta (perfil del Prode). |
+| `GET /me` | Cuenta | Sus logros, también los ocultos, y su vitrina. |
+| `PUT /me/showcase` | Cuenta + `X-Requested-With` | `{items: [{source, achievement_id}]}`: hasta 3, propios y sin repetir. |
+| `PUT /me/visibility` | Cuenta + `X-Requested-With` | `{source, achievement_id, hidden}`. |
+| `GET /admin/status` | Admin | Configuración, conteos del catálogo y de logros, personas de referencia y últimas corridas. |
+| `POST /admin/recalculate` | Admin | 202; 409 si ya hay una corrida. |
+| `PUT /admin/subjects/{spike\|vbash}` | Superadmin | `{startgg_player_id, consent, active}`; 422 si el ID no es un jugador del hub o si se activa sin consentimiento. |
+| `GET /admin/grants`, `POST /admin/grants`, `POST /admin/grants/{id}/revoke` | Admin | Logros manuales con motivo público (mínimo 5 caracteres); 422 si el logro no es manual; 409 si ya lo tiene o la colección está inactiva. |
+
+Compatibilidad: `GET /insights/players/{id}` mantiene `badges` (`id`, `name`, `why`), y ahora «Campeón» aparece junto a «Coleccionista de trofeos». `GET /prode/users/{id}` y `GET /prode/players/{id}/achievements` mantienen su forma, pero omiten los logros revocados u ocultos.
