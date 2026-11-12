@@ -153,3 +153,24 @@ Autorizada el 12/11/2026. App `smash-hub-app` (`https://smash-hub-app-d4eh4.ondi
 
 - **`pombero` desactivado:** pasa a pendiente en el catálogo (sigue visible como «Próximamente») y no se otorga.
 - **`0024` no borra registros del Prode.** Si hubiera logros acumulados duplicados, la migración **aborta** con `RuntimeError` antes de crear el índice: el job `migrate` falla, el despliegue no avanza y la base queda en `0023`. Reemplaza la deduplicación anterior.
+
+### 8.3 Integración y push
+
+- `sh-ach-01` se integró en `main` por avance rápido y se hizo push: `origin/main` pasó de `b50e19f` a **`ab6c22a`**. Commits: `0538ba1` (backend), `8cd423f` (web), `4b07e55` (docs) y `ab6c22a` (pombero y protección de `0024`).
+- Pruebas antes del push: **API 355 aprobadas** (PostgreSQL 17 efímero), web 137 aprobadas, `ruff`, `tsc`, `eslint` y `next build` sin errores. La CI de GitHub no se pudo consultar desde esta máquina (no hay `gh`).
+- El push **no desplegó**: después de hacerlo, `/api/v1/achievements/catalog` en producción sigue respondiendo 404 (no hay `deploy_on_push`).
+
+### 8.4 Publicación detenida: falta acceso a App Platform
+
+Los pasos 4 a 9 de la sección 7 **no se ejecutaron**. El token de `doctl` responde 403 en Apps, así que desde aquí no se puede:
+- editar el spec (`APPROVED_MIGRATION`, `ACHIEVEMENTS_AUTO`);
+- desplegar ni ver qué commit corre;
+- leer los logs del job `migrate`.
+
+Tampoco hay una sesión de administrador para usar «Recalcular ahora», ni un navegador para la revisión visual. Además, la revisión de la base y un respaldo posterior a las 00:43 UTC siguen sin confirmar (8.1).
+
+Para continuar, el propietario (desde el panel, como en el despliegue del Prode) o un token con permisos de Apps:
+1. En el panel, abrir el último despliegue → job `migrate` → logs: confirmar la revisión aplicada (se espera `0023`).
+2. Confirmar el respaldo o la restauración a un punto en el tiempo del clúster `segir-db-1`.
+3. Editar el spec en una sola edición: job `migrate` `APPROVED_MIGRATION=0024`; `api` agregar `ACHIEVEMENTS_AUTO=false`. Desplegar `ab6c22a`.
+4. Avisar para verificar desde aquí (salud, catálogo de 109, `/logros`, perfiles y Prode de Center Stage contra la línea base de 8.1). Después, un administrador ejecuta el primer recálculo en `/admin` y se revisan conteos y revocaciones antes de encender `ACHIEVEMENTS_AUTO=true`.
