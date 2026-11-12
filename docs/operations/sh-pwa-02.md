@@ -1,6 +1,6 @@
 # SH-PWA-02 — Instalación en Android y anuncio compacto
 
-Fecha: 12/11/2026. Base: [SH-PWA-01](sh-pwa-01.md), desplegada en producción. Estado: **implementado y probado en local, en la rama `sh-pwa-02`.** Sin push ni despliegue: falta autorización ([sección 8](#8-publicación-requiere-autorización)).
+Fecha: 12/11/2026. Base: [SH-PWA-01](sh-pwa-01.md), desplegada en producción. Estado: **integrado en `main` y con push (`366e566`), sin desplegar.** DigitalOcean respondió 403 y el despliegue de `web` queda pendiente de hacerse a mano. Producción sigue con SH-PWA-01: ver la [sección 9](#9-publicación-resultados-reales). No hubo pruebas en Android ni iPhone físicos.
 
 ## 1. Diagnóstico de la instalación en Android
 
@@ -177,3 +177,41 @@ Solo cambia el servicio `web`, sin variables nuevas.
 5. Recién después, anunciar.
 
 **Reversión:** redesplegar en `web` el commit anterior (`9e07727`, SH-PWA-01). No hay datos ni migraciones. Quien ya instaló la app conserva el ícono.
+
+## 9. Publicación: resultados reales
+
+Publicación autorizada el 12/11/2026. No se tocaron backend, API, PostgreSQL, migraciones ni variables de entorno.
+
+### 9.1 Verificaciones previas (12/11/2026, ~21:50 UTC)
+
+| Verificación | Resultado |
+| --- | --- |
+| Rama vs `main` | `origin/main` = `9e07727` (SH-PWA-01) es ancestro de `sh-pwa-02`. No hay commits en el remoto que falten en la rama. La integración es un avance rápido y no se pierde nada. |
+| Producción antes de publicar | Corre SH-PWA-01: `/install` y `/manifest.webmanifest` responden 200, y el manifest **no** tiene `related_applications`. |
+| Línea base | Catálogo de logros: 109. Prode de Center Stage: `open`, 8 participantes, `locks_at = 2026-11-14T19:00:00+00:00`, sin liquidar. Responden 200: `/`, `/install`, `/prode`, `/logros`, `/logros/oracle`, `/rankings`, `/players`, `/players/{id}`, `/ingresar`, `/cuenta`, `/api/v1/health/ready` y `/api/v1/achievements/players/{id}`. |
+
+### 9.2 Integración y push
+
+- `sh-pwa-02` se integró en `main` por avance rápido y se hizo push: `origin/main` pasó de `9e07727` a **`366e566`**.
+- Commits: `ccf8aaa` (código) y `366e566` (documentación). Después se suma el commit de esta sección, que solo cambia la documentación.
+- **Commit a desplegar en `web`:** `366e566` o posterior. El código de la aplicación es el de `ccf8aaa`.
+
+### 9.3 Despliegue: detenido por falta de permisos
+
+- `doctl --context smashhub apps list` respondió **403 Forbidden**. Siguiendo la instrucción, no se insistió ni se cambiaron credenciales.
+- El push no desplegó (no hay `deploy_on_push`). A las 21:58 UTC el manifest de producción seguía sin `related_applications`: el servicio `web` corre SH-PWA-01.
+- Ninguna de las verificaciones posteriores al despliegue se pudo hacer.
+
+### 9.4 Para completar a mano
+
+1. En el panel de DigitalOcean, app `smash-hub-app`, desplegar **solo el servicio `web`** desde `main` (`366e566` o posterior). Sin cambios en el spec ni en las variables. No tocar `api` ni `migrate`.
+2. Avisar para verificar desde aquí, contra la línea base de 9.1:
+   - `/manifest.webmanifest` con `related_applications` (confirma que el despliegue tomó el código nuevo) y `/install`: 200.
+   - En Chrome (DevTools Protocol), `/install`: sin errores de instalabilidad y con «Instalar Smash Hub» en la primera pantalla cuando Chrome manda el evento.
+   - El QR de la tarjeta apunta a `https://smashclubpy.com/install`.
+   - Con sesión: tarjeta a la derecha del título en la computadora (1280 / 1024) y debajo en el celular (390 / 320), sin desbordamiento.
+   - Modo standalone: sin tarjeta, y `/install` dice «Ya estás usando Smash Hub instalada».
+   - Prode (mismo estado, `locks_at` y participantes), logros (109), rankings, perfiles y `/ingresar` sin cambios.
+3. Pruebas en dispositivos físicos (sección 8, paso 4). **Hasta hacerlas, la instalación no está probada en Android ni en iPhone reales.**
+
+**Reversión:** redesplegar `web` en `9e07727` (SH-PWA-01).
