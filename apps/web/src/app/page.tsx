@@ -2,6 +2,7 @@ import { HomeBoard } from "../components/home-board";
 import { HomeSpotlight } from "../components/home-spotlight";
 import { LiveMatches, LiveNotice } from "../components/live";
 import { Logo } from "../components/logo";
+import { HomeInstallCard } from "../components/pwa";
 
 export default function Home() {
   return (
@@ -18,6 +19,7 @@ export default function Home() {
       </section>
       <LiveNotice />
       <LiveMatches />
+      <HomeInstallCard />
       <HomeSpotlight />
       <HomeBoard />
     </div>

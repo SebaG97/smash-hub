@@ -1,14 +1,27 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Link from "next/link";
+import Script from "next/script";
 import { AdminBadge } from "../components/admin-panel";
 import { AccountBadge } from "../components/account";
 import { Logo } from "../components/logo";
 import { NavLinks } from "../components/nav-links";
+import { InstallListener } from "../components/pwa";
+import { EARLY_PROMPT_SCRIPT } from "../lib/install";
+import { APP_BACKGROUND } from "./manifest";
 import { siteOrigin } from "../lib/previews";
 import "./globals.css";
 
 const description =
   "Ranking, torneos y mains de la escena de Smash Ultimate en Paraguay.";
+
+// viewport-fit=cover lets the installed app use the whole screen; body pads the
+// notch and home-indicator areas back (globals.css, safe areas).
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: APP_BACKGROUND,
+};
 
 export async function generateMetadata(): Promise<Metadata> {
   // Absolute URLs for link previews, from the host the visitor used.
@@ -20,7 +33,13 @@ export async function generateMetadata(): Promise<Metadata> {
       template: "%s | Smash Club Paraguay",
     },
     description,
-    icons: { icon: "/smashclublogo.jpg", apple: "/smashclublogo.jpg" },
+    applicationName: "Smash Hub",
+    icons: {
+      icon: "/smashclublogo.jpg",
+      apple: { url: "/icons/apple-touch-icon.png", sizes: "180x180" },
+    },
+    // iPhone: open full screen from the home screen, with a dark status bar.
+    appleWebApp: { capable: true, title: "Smash Hub", statusBarStyle: "black" },
     openGraph: {
       siteName: "Smash Club Paraguay",
       title: "Smash Club Paraguay",
@@ -51,6 +70,10 @@ export default function RootLayout({
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Big+Shoulders+Display:wght@700;800;900&display=swap"
         />
+        {/* Keeps Chromium's one-time install offer if it arrives before hydration. */}
+        <Script id="install-offer" strategy="beforeInteractive">
+          {EARLY_PROMPT_SCRIPT}
+        </Script>
       </head>
       <body>
         <a href="#contenido" className="skip-link">
@@ -70,6 +93,7 @@ export default function RootLayout({
           <AdminBadge />
         </header>
         <main id="contenido">{children}</main>
+        <InstallListener />
         <footer>
           <Link className="footer-brand" href="/">
             Smash Club Paraguay
