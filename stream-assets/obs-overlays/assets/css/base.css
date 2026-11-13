@@ -92,6 +92,9 @@ img:not([src]),
 [data-ocultar-vacio].vacio {
   display: none !important;
 }
+.oculto {
+  display: none !important;
+}
 ul {
   list-style: none;
   margin: 0;

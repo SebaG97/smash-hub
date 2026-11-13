@@ -57,21 +57,25 @@ La cámara 1 corresponde al jugador de la izquierda del marcador. Si cambiás lo
 
 Las escenas pueden tomar los datos de competencia directamente de TSH, que ya se conecta con start.gg. No hace falta otro token y el paquete **solo lee**: no escribe en TSH ni en start.gg.
 
-1. Copiá la carpeta `obs-overlays` completa dentro de la carpeta `layout` de tu TSH, por ejemplo `TSH/layout/smash-hub/`. Debe quedar `TSH/layout/smash-hub/gameplay.html`.
-2. Iniciá TSH y su servidor web (la dirección y el puerto se ven en TSH).
-3. En OBS usá **URL** (no «Archivo local») y agregá `?tsh=1`:
+1. Copiá la carpeta `obs-overlays` completa dentro de la carpeta `layout` de tu TSH (por ejemplo, `TSH/layout/smash-hub/`). Si al descomprimir quedó una carpeta de más (`TSH/layout/ZIP/obs-overlays/`), también funciona.
+2. Activá TSH en `config/evento.js`:
+   ```js
+   tsh: true,
    ```
-   http://127.0.0.1:5000/layout/smash-hub/gameplay.html?tsh=1
-   http://127.0.0.1:5000/layout/smash-hub/bracket.html?tsh=1&perfil=center-stage
-   ```
-   El puerto 5000 es un ejemplo. Para otro marcador de TSH: `&scoreboardNumber=2`.
-4. Cargá el set en TSH como siempre. Las escenas leen `out/program_state.json` cada segundo.
+3. En OBS, cualquiera de las dos formas:
+   - **Archivo local** (lo más simple): elegí el `.html` dentro de `TSH/layout/…`.
+   - **URL del servidor web de TSH** (puerto **5500** por defecto): `http://127.0.0.1:5500/layout/smash-hub/gameplay.html`. Con esta forma también se puede activar TSH agregando `?tsh=1` a la URL, sin tocar `evento.js`.
+4. Cargá el set en TSH como siempre: las escenas se actualizan cada segundo.
 
-**Qué toma de TSH:** nombres (o nombre de equipo en dobles), prefijo, personaje, marcador, ronda, formato (BO3/BO5), los dos primeros comentaristas y el **Top 8 completo**, si el final del bracket es el estándar de doble eliminación (winners 2-1-1 más reset, losers 2-2-1-1). El set del Top 8 que coincide con el marcador se marca solo como «En juego». Si el bracket no tiene esa forma, se usa `config/bracket.js`.
+**Dónde busca los datos, en orden:** la ruta `/program-state` del servidor web de TSH; `out/program_state.json`, dos carpetas más arriba (la ubicación estándar `TSH/layout/<carpeta>/`); y ese mismo archivo una carpeta más arriba o más abajo. Si tu instalación es distinta: `?tshRuta=ruta/al/program_state.json`.
+
+**Qué toma de TSH:** nombres (o nombre de equipo en dobles), prefijo, personaje, marcador, ronda, formato (BO3/BO5), los dos primeros comentaristas y el **Top 8 completo**, si el final del bracket es el estándar de doble eliminación (winners 2-1-1 más reset, losers 2-2-1-1). El set del Top 8 que coincide con el marcador se marca solo como «En juego». Si el bracket no tiene esa forma, se usa `config/bracket.js`. Lo que TSH deja vacío queda vacío: no aparecen los ejemplos de `config/`.
 
 **Qué sigue saliendo de `config/`:** evento, fecha, lugar, logos, patrocinadores, redes, textos y perfil.
 
-Si TSH deja de exportar el archivo, se conserva el último dato recibido. Para revisar la lectura, abrí la escena en el navegador y escribí `SH_TSH` en la consola: `ok: true` es lectura correcta y `bracket: true` indica que el Top 8 se reconoció. Sin `?tsh=1` todo vuelve al modo manual.
+**Si no aparecen los datos:** con TSH activado y sin datos, la escena muestra un **aviso rojo** con el motivo (por ejemplo, TSH cerrado o el paquete fuera de `TSH/layout/`). Desaparece en cuanto encuentra los datos. Se apaga con `diagnostico: false`. Si TSH se cae durante el stream, se conserva el último dato recibido. Para más detalle, abrí la escena en Chrome y escribí `SH_TSH` en la consola: `ok: true` significa que está leyendo, `fuente` dice de dónde lee y `bracket: true` indica que el Top 8 se reconoció.
+
+Para otro marcador de TSH: `scoreboard: "2"` en `evento.js`, o `&scoreboardNumber=2` en la URL.
 
 ## Cambiar textos, marcadores y patrocinadores
 
@@ -119,7 +123,7 @@ Para una escena puntual, los datos también se pueden pasar en la URL de la fuen
 file:///C:/ruta/obs-overlays/gameplay.html?p1=Nombre&p2=Nombre&s1=1&s2=0&ronda=Grand%20Final
 ```
 
-Parámetros: `p1`, `p2`, `s1`, `s2`, `e1`, `e2` (equipos), `c1`, `c2` (personajes), `ronda`, `formato`, `evento`, `tema`, `perfil`, `logoEvento`, `inicio`, `bracket` (otro archivo de bracket), `tsh`, `scoreboardNumber`, `tshRuta` (otra ubicación de `program_state.json`).
+Parámetros: `p1`, `p2`, `s1`, `s2`, `e1`, `e2` (equipos), `c1`, `c2` (personajes), `ronda`, `formato`, `evento`, `tema`, `perfil`, `logoEvento`, `inicio`, `bracket` (otro archivo de bracket), `tsh=1`, `scoreboardNumber`, `tshRuta` (ubicación exacta del estado de TSH).
 
 ## Center Stage
 

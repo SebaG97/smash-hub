@@ -10,6 +10,13 @@ window.SH_EVENTO = {
   // (colores, logos, auspiciantes y textos de config/perfiles/center-stage.js).
   perfil: "",
 
+  // Tournament Stream Helper: true = jugadores, marcador, ronda, comentaristas y Top 8
+  // salen de TSH (el paquete tiene que estar dentro de TSH/layout/). Ver README.
+  // Equivale a agregar ?tsh=1 a la URL, y sirve también con «Archivo local» en OBS.
+  tsh: false,
+  scoreboard: "1", // número de marcador de TSH
+  diagnostico: true, // aviso rojo en pantalla si TSH está activado y no se encuentran datos
+
   // Tema visual si no hay perfil: "smash-hub" o "center-stage".
   tema: "smash-hub",
 

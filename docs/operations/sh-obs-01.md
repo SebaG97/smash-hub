@@ -247,3 +247,45 @@ Corrección encontrada en la revisión: los marcos de las cámaras chicas hereda
 
 - Probar con TSH real: confirmar el campo de personajes y el bracket con un torneo de start.gg cargado en TSH.
 - Decidir si `commentators.html` debe usar las medidas de la v3 (810 × 453).
+
+## 12. TSH no mostraba los datos: diagnóstico y corrección
+
+Reporte del 13/11/2026: con TSH conectado, el overlay seguía mostrando placeholders.
+
+### 12.1 Causas posibles, confirmadas en el código de TSH
+
+Se revisaron `TSHWebServer.py`, `TSHWebServerActions.py` y `StateManager.py` de `joaorb64/TournamentStreamHelper`:
+- El servidor web de TSH usa por defecto el **puerto 5500**, no el 5000 que figuraba de ejemplo (tomado del pack v3).
+- El servidor sirve la carpeta de trabajo de TSH entera (`/layout/…`, `/out/…`) y tiene la ruta **`/program-state`**, que devuelve `{ state, delta_index }`.
+- `StateManager` escribe `./out/program_state.json` en cada cambio.
+
+Con eso, el modo anterior fallaba sin avisar en tres situaciones:
+1. **OBS con «Archivo local»:** no se puede agregar `?tsh=1`, así que la escena quedaba en modo manual con los placeholders. Es la causa más probable.
+2. **Una carpeta de más al descomprimir el ZIP** (`layout/CENTER-STAGE-OVERLAYS/center-stage-overlays/`): `../../out/program_state.json` no existía.
+3. **URL con un puerto equivocado.**
+
+Además, los campos que TSH dejaba vacíos mantenían los ejemplos de `config/` («Winners Final», «Comentarista 1»).
+
+### 12.2 Cambios en `assets/js/overlay.js`
+
+- `tsh: true` en `config/evento.js` activa TSH sin parámetros de URL, así que funciona con «Archivo local». También se agregan `scoreboard` y `diagnostico`.
+- **Búsqueda automática:** primero `/program-state` (desenvuelve `state`); después `../../out/program_state.json`, `../out/…`, `../../../out/…` y `/out/program_state.json`. Recuerda la que funcionó.
+- **Compatibilidad** con el formato de un solo marcador (`score.team`) de versiones viejas de TSH.
+- **Aviso rojo en pantalla** cuando TSH está activado y no hay datos (después de 4 s), con el motivo. Se apaga con `diagnostico: false`.
+- **En modo TSH**, ronda, formato y comentaristas toman siempre el valor de TSH, aunque esté vacío. Las placas de comentaristas sin nombre se ocultan.
+- Lectura cada segundo con TSH; cada 2 s sin TSH.
+- La herramienta de capturas reintenta si Windows tiene un PNG bloqueado.
+
+### 12.3 Pruebas
+
+Con una carpeta TSH simulada (`TSH/out/program_state.json` y el paquete en `TSH/layout/CENTER-STAGE-OVERLAYS/center-stage-overlays/`) y un servidor que imita al de TSH en el puerto 5500:
+
+| Caso | Resultado |
+| --- | --- |
+| A. URL con `?tsh=1`, carpeta de más | Lee de `/program-state`; nombres, marcador, ronda y BO5 correctos; Top 8 reconocido |
+| B. URL sin `?tsh=1` y `tsh: false` | Modo manual con placeholders (reproduce el reporte) |
+| C. URL sin `?tsh=1`, `tsh: true` | Lee de `/program-state` |
+| D. Archivo local como en OBS, `tsh: true`, carpeta de más | Lee de `../../../out/program_state.json` |
+| E. TSH activado y archivo inexistente | Aviso rojo con el error HTTP 404; datos manuales intactos |
+
+Sin errores de JavaScript; las 31 capturas se regeneraron sin errores. Sigue pendiente una prueba con TSH real (sección 11.4).

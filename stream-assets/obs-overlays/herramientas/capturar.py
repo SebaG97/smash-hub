@@ -72,6 +72,17 @@ CAPTURAS = [
 ]
 
 
+def guardar(ruta: Path, datos: bytes) -> None:
+    """Escribe la captura; reintenta si el archivo está abierto en otro programa (Windows)."""
+    for intento in range(8):
+        try:
+            ruta.write_bytes(datos)
+            return
+        except OSError:
+            time.sleep(0.5 * (intento + 1))
+    raise OSError(f"no se pudo escribir {ruta}: el archivo está bloqueado")
+
+
 def main() -> None:
     filtro = sys.argv[1] if len(sys.argv) > 1 else ""
     SALIDA.mkdir(exist_ok=True)
@@ -104,7 +115,7 @@ def main() -> None:
             p.wait_for_function("document.documentElement.classList.contains('listo')")
             p.evaluate("document.fonts.ready")
             time.sleep(2.2)  # que terminen las entradas
-            p.screenshot(path=str(SALIDA / salida), omit_background=transparente)
+            guardar(SALIDA / salida, p.screenshot(omit_background=transparente))
             if fuera:
                 errores.append(f"{salida}: pidió recursos externos {fuera}")
             print("ok", salida)

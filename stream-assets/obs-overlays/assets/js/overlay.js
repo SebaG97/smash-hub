@@ -49,12 +49,15 @@
           partida: clonar(window.SH_PARTIDA || {}),
           bracket: clonar(window.SH_BRACKET || {}),
         };
-        if (!TSH.activo) {
+        // TSH se activa con ?tsh=1 en la URL o con  tsh: true  en config/evento.js
+        // (esto último sirve para OBS con «Archivo local», donde no se puede agregar ?tsh=1).
+        TSH.estado.activo = TSH.forzado || d.evento.tsh === true;
+        if (!TSH.estado.activo) {
           aplicarUrl(d.evento, d.partida);
           return d;
         }
         // Modo TSH: los datos de competencia vienen de Tournament Stream Helper.
-        return leerJson(ROOT + TSH.ruta + "?v=" + Date.now())
+        return leerTsh()
           .then(function (estado) {
             TSH.ultimo = estado;
             TSH.estado.ok = true;
@@ -86,22 +89,90 @@
   }
 
   // ------------------------------------------------------------------ Tournament Stream Helper
-  // ?tsh=1 lee el estado que exporta TSH (out/program_state.json) y lo usa para
-  // jugadores, prefijos, personajes, marcador, ronda, formato, comentaristas y Top 8.
-  // Solo lee: no escribe en TSH ni en start.gg. Si el archivo falla, se conserva
-  // el último dato recibido. Estado de la lectura: window.SH_TSH en la consola.
-  //   ?scoreboardNumber=2   otro marcador de TSH (por defecto, el 1)
-  //   ?tshRuta=ruta.json    otra ubicación del archivo (por defecto ../../out/program_state.json,
-  //                         que es la correcta si el paquete está en TSH/layout/<carpeta>/)
+  // Lee el estado de TSH y lo usa para jugadores, prefijos, personajes, marcador,
+  // ronda, formato, comentaristas y Top 8. Solo lee: no escribe en TSH ni en start.gg.
+  // Se activa con ?tsh=1 en la URL o con  tsh: true  en config/evento.js.
+  // Si la lectura falla, se conserva el último dato recibido.
+  // Estado de la lectura: window.SH_TSH en la consola del navegador.
+  //   ?scoreboardNumber=2   otro marcador de TSH (por defecto, el 1; también scoreboard: en evento.js)
+  //   ?tshRuta=ruta.json    ubicación exacta del estado, si no se encuentra sola
+  // Dónde busca, en orden:
+  //   1. http://<servidor de TSH>/program-state        (servidor web de TSH, puerto 5500 por defecto)
+  //   2. ../../out/program_state.json                   (paquete en TSH/layout/<carpeta>/)
+  //   3. ../out/program_state.json y ../../../out/…     (una carpeta de más o de menos)
   var Q = new URLSearchParams(location.search);
+  var INICIO = Date.now();
   var TSH = {
-    activo: Q.get("tsh") === "1",
-    tablero: Q.get("scoreboardNumber") || "1",
-    ruta: /\.json$/i.test(Q.get("tshRuta") || "") ? Q.get("tshRuta") : "../../out/program_state.json",
+    forzado: Q.get("tsh") === "1",
+    tablero: Q.get("scoreboardNumber") || "",
+    ruta: /\.json$/i.test(Q.get("tshRuta") || "") ? Q.get("tshRuta") : "",
+    fuente: "",
     ultimo: null,
-    estado: { ok: false, error: "sin leer todavía", bracket: false, leido: "" },
+    estado: { activo: false, ok: false, error: "sin leer todavía", bracket: false, leido: "", fuente: "" },
   };
   window.SH_TSH = TSH.estado;
+
+  function candidatosTsh() {
+    if (TSH.ruta) return [/^(https?:|file:|\/)/.test(TSH.ruta) ? TSH.ruta : ROOT + TSH.ruta];
+    var http = /^https?:$/.test(location.protocol);
+    var c = [];
+    if (TSH.fuente) c.push(TSH.fuente);
+    if (http) c.push(location.origin + "/program-state");
+    c.push(ROOT + "../../out/program_state.json", ROOT + "../out/program_state.json", ROOT + "../../../out/program_state.json");
+    if (http) c.push(location.origin + "/out/program_state.json");
+    return c.filter(function (u, i) {
+      return c.indexOf(u) === i;
+    });
+  }
+
+  /** Prueba las ubicaciones posibles hasta encontrar un estado de TSH con marcador. */
+  function leerTsh() {
+    var urls = candidatosTsh();
+    var errores = [];
+    var i = 0;
+    var intentar = function () {
+      if (i >= urls.length) return Promise.reject(new Error(errores.join(" | ")));
+      var url = urls[i++];
+      return leerJson(url + (url.indexOf("?") < 0 ? "?" : "&") + "v=" + Date.now())
+        .then(function (j) {
+          // /program-state del servidor de TSH devuelve { state: {...}, delta_index }
+          var e = j && j.state && !j.score ? j.state : j;
+          if (!e || !e.score) throw new Error(url + ": no tiene datos de marcador");
+          TSH.fuente = url;
+          TSH.estado.fuente = url;
+          return e;
+        })
+        .catch(function (err) {
+          errores.push(err.message || String(err));
+          return intentar();
+        });
+    };
+    return intentar();
+  }
+
+  /** Aviso en pantalla mientras TSH está activado pero no se pudo leer nada. */
+  function avisoTsh(d) {
+    var n = document.getElementById("sh-aviso-tsh");
+    var mostrar =
+      TSH.estado.activo && !TSH.estado.ok && d.evento.diagnostico !== false && Date.now() - INICIO > 4000;
+    if (!mostrar) {
+      if (n) n.remove();
+      return;
+    }
+    if (!n) {
+      n = document.createElement("div");
+      n.id = "sh-aviso-tsh";
+      n.style.cssText =
+        "position:fixed;left:12px;top:12px;z-index:99;max-width:900px;padding:10px 14px;" +
+        "background:#b3122e;color:#fff;font:700 15px/1.35 Verdana,sans-serif;border-radius:4px;" +
+        "box-shadow:0 6px 20px rgba(0,0,0,.5)";
+      document.body.append(n);
+    }
+    n.textContent =
+      "TSH: no se encuentran los datos. ¿Está abierto TSH? ¿La carpeta está dentro de TSH/layout/? " +
+      "Detalle: " +
+      TSH.estado.error.slice(0, 260);
+  }
 
   /** Lee un JSON por XHR: funciona por http (servidor de TSH) y en archivos locales de OBS. */
   function leerJson(url) {
@@ -179,8 +250,11 @@
   }
 
   function aplicarTsh(estado, d) {
-    var tablero = estado && estado.score && estado.score[String(TSH.tablero)];
-    if (!tablero || !tablero.team) throw new Error("TSH no tiene el marcador " + TSH.tablero);
+    var numero = String(TSH.tablero || d.evento.scoreboard || "1");
+    var sc = (estado && estado.score) || {};
+    // TSH actual: score["1"], score["2"]…; versiones viejas: un solo marcador en score.
+    var tablero = sc[numero] || (sc.team ? sc : null);
+    if (!tablero || !tablero.team) throw new Error("TSH no tiene el marcador " + numero);
     [1, 2].forEach(function (i) {
       var eq = tablero.team[String(i)] || {};
       var jugadores = lista(eq.player);
@@ -191,18 +265,18 @@
       var s = Number(eq.score);
       j.marcador = isFinite(s) && s >= 0 ? s : 0;
     });
-    var ronda = tablero.match || tablero.phase;
-    if (ronda) d.partida.ronda = ronda;
+    // Con TSH, lo que TSH deja vacío queda vacío: no se muestran los ejemplos de config/.
+    d.partida.ronda = tablero.match || tablero.phase || "";
     var bo = Number(tablero.best_of) || Number(String(tablero.best_of_text || "").replace(/\D+/g, ""));
-    if (bo) d.partida.formato = "BO" + bo;
-    var com = lista(estado.commentary).filter(function (c) {
-      return c && c.name;
-    });
-    if (com.length) {
-      d.evento.comentaristas = com.slice(0, 2).map(function (c) {
+    d.partida.formato = bo ? "BO" + bo : "";
+    d.evento.comentaristas = lista(estado.commentary)
+      .filter(function (c) {
+        return c && c.name;
+      })
+      .slice(0, 2)
+      .map(function (c) {
         return { nombre: c.name, usuario: c.twitter ? "@" + String(c.twitter).replace(/^@/, "") : "" };
       });
-    }
     TSH.estado.bracket = bracketTsh(estado.bracket, d);
     // El set del Top 8 que coincide con el marcador actual (y no terminó) queda «en juego».
     if (TSH.estado.bracket) {
@@ -489,6 +563,9 @@
         var x = c[k] || {};
         slot.querySelector(".com-nombre").textContent = x.nombre || "";
         slot.querySelector(".com-usuario").textContent = x.usuario || "";
+        // Sin nombre, la placa no se muestra (la cámara queda limpia).
+        var placa = slot.matches(".caster") ? slot : slot.querySelector(".placa");
+        if (placa) placa.classList.toggle("oculto", !x.nombre);
       });
     },
     mensajes: function (n, d) {
@@ -666,6 +743,7 @@
   // ------------------------------------------------------------------ ciclo
   function ciclo() {
     leerDatos().then(function (d) {
+      avisoTsh(d);
       var firma = JSON.stringify(d);
       if (firma !== ultimo) {
         ultimo = firma;
@@ -674,7 +752,13 @@
     });
   }
 
+  // Con TSH se relee cada segundo, para que el marcador cambie casi al instante.
+  function programar() {
+    setTimeout(function () {
+      ciclo();
+      programar();
+    }, TSH.estado.activo ? 1000 : INTERVALO);
+  }
   ciclo();
-  // Con TSH se relee más seguido, para que el marcador cambie casi al instante.
-  if (!Q.has("fijo")) setInterval(ciclo, TSH.activo ? 1000 : INTERVALO);
+  if (!Q.has("fijo")) programar();
 })();
