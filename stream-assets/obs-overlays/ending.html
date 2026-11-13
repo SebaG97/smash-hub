@@ -1,0 +1,59 @@
+<!doctype html>
+<!--
+  CIERRE — escena completa (opaca), para el final de la transmisión.
+  OBS: Fuente de navegador, archivo local, 1920 × 1080.
+  Textos: config/evento.js (textos.cierre, textos.cierreEtiqueta, textos.lema, redes, sitio).
+-->
+<html lang="es" data-tema="smash-hub">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Cierre · Smash Hub</title>
+    <link rel="stylesheet" href="assets/css/base.css" />
+    <link rel="stylesheet" href="assets/css/starting-soon.css" />
+    <link rel="stylesheet" href="assets/css/broadcast.css" />
+    <link rel="stylesheet" href="assets/css/temas/center-stage.css" />
+  </head>
+  <body>
+    <main class="escena escena-cierre">
+      <div class="fondo"></div>
+      <div class="rayas"></div>
+      <div class="losa" style="left: -300px; top: -120px; width: 1260px; height: 1320px"></div>
+      <div class="brasas" data-lista="brasas" data-cantidad="30"></div>
+
+      <header class="marca marca-mesa entra-izq">
+        <img class="logo-club" data-src="evento.logoClub" alt="" width="80" height="80" />
+        <img class="logo-evento-h" data-src="evento.logoEventoHorizontal" alt="" height="72" />
+        <div class="marca-texto">
+          <div class="marca-evento display" data-campo="evento.evento"></div>
+          <div class="etiqueta" data-campo="evento.organizacion"></div>
+        </div>
+      </header>
+
+      <section class="cierre">
+        <span class="chip entra-izq"><span data-campo="evento.textos.cierreEtiqueta"></span></span>
+        <h1 class="titulo display">
+          <span class="linea entra-izq" style="--retraso: 0.1s" data-campo="evento.textos.cierre.0" data-ajustar="0.6"></span>
+          <span class="linea linea-acento entra-izq" style="--retraso: 0.2s" data-campo="evento.textos.cierre.1" data-ajustar="0.6"></span>
+        </h1>
+        <p class="cierre-lema display entra-izq" style="--retraso: 0.3s" data-campo="evento.textos.lema"></p>
+        <ul class="redes entra-izq" style="--retraso: 0.35s" data-lista="redes"></ul>
+      </section>
+
+      <section class="emblema emblema-cierre entra" style="--retraso: 0.2s">
+        <div class="emblema-luz"></div>
+        <div class="anillo anillo-1"></div>
+        <div class="anillo anillo-2"></div>
+        <img class="logo-club" data-src="evento.logoClub" alt="" width="460" height="460" />
+        <img class="logo-evento" data-src="evento.logoEvento" alt="" width="460" height="460" />
+      </section>
+
+      <footer class="banda entra" style="--retraso: 0.45s">
+        <span class="banda-etiqueta"><span>Auspician</span></span>
+        <div class="banda-logos" data-lista="todos" data-rotar="8" data-pagina="4"></div>
+        <span class="banda-sitio display" data-campo="evento.sitio"></span>
+      </footer>
+    </main>
+    <script src="assets/js/overlay.js"></script>
+  </body>
+</html>

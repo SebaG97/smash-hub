@@ -1,0 +1,66 @@
+<!doctype html>
+<!--
+  MESA DE ANÁLISIS — una cámara general para toda la mesa (hueco transparente).
+  OBS: la cámara DEBAJO de esta fuente, recortada a 16:9:
+    Cámara general: x 80, y 140, 1280 × 720
+  Mismas posiciones que el pack CENTER-STAGE-OBS-PACK v3.
+  Textos: config/evento.js («comentaristas», textos.mesa) o TSH con ?tsh=1.
+-->
+<html lang="es" data-tema="smash-hub">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Mesa de análisis · Smash Hub</title>
+    <link rel="stylesheet" href="assets/css/base.css" />
+    <link rel="stylesheet" href="assets/css/broadcast.css" />
+    <link rel="stylesheet" href="assets/css/temas/center-stage.css" />
+  </head>
+  <body>
+    <main class="escena">
+      <div class="perforado perforado-mesa">
+        <div class="fondo"></div>
+        <div class="rayas"></div>
+        <div class="fantasma" style="right: -60px; top: 420px; font-size: 280px">En vivo</div>
+        <div class="brasas" data-lista="brasas" data-cantidad="14"></div>
+      </div>
+
+      <div class="hueco" style="--x: 80px; --y: 140px; --w: 1280px; --h: 720px">
+        <i class="esq esq-1"></i><i class="esq esq-2"></i><i class="esq esq-3"></i><i class="esq esq-4"></i>
+      </div>
+
+      <header class="marca marca-mesa entra-izq">
+        <img class="logo-club" data-src="evento.logoClub" alt="" width="80" height="80" />
+        <img class="logo-evento-h" data-src="evento.logoEventoHorizontal" alt="" height="72" />
+        <div class="marca-texto">
+          <div class="marca-evento display" data-campo="evento.evento"></div>
+          <div class="etiqueta" data-campo="evento.organizacion"></div>
+        </div>
+      </header>
+      <span class="chip chip-mesa entra-der"><span class="punto"></span><span>En vivo</span></span>
+
+      <section class="mesa entra-der" style="--retraso: 0.1s" data-lista="comentaristas">
+        <div class="mesa-etiqueta etiqueta"><span data-campo="evento.evento"></span> · en la cabina</div>
+        <h1 class="mesa-titulo display">
+          <span class="linea" data-campo="evento.textos.mesa.0" data-ajustar="0.6"></span>
+          <span class="linea linea-acento" data-campo="evento.textos.mesa.1" data-ajustar="0.6"></span>
+        </h1>
+        <div class="caster" data-comentarista="0">
+          <span class="etiqueta">Comentarista 1</span>
+          <span class="com-nombre display" data-ajustar="0.55"></span>
+          <span class="com-usuario"></span>
+        </div>
+        <div class="caster" data-comentarista="1">
+          <span class="etiqueta">Comentarista 2</span>
+          <span class="com-nombre display" data-ajustar="0.55"></span>
+          <span class="com-usuario"></span>
+        </div>
+      </section>
+
+      <footer class="banda entra" style="--retraso: 0.35s">
+        <span class="banda-etiqueta"><span>Auspician</span></span>
+        <div class="banda-logos" data-lista="todos" data-rotar="8" data-pagina="4"></div>
+      </footer>
+    </main>
+    <script src="assets/js/overlay.js"></script>
+  </body>
+</html>

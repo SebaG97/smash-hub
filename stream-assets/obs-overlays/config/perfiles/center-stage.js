@@ -29,8 +29,9 @@ window.SH_PERFIL = {
       { nombre: "Pulso Gamer", logo: "assets/images/patrocinadores/center-stage/6.png" },
       { nombre: "Heineken", logo: "assets/images/patrocinadores/center-stage/7.png" },
       { nombre: "EON", logo: "assets/images/patrocinadores/center-stage/8.png" },
-      // Azul oscuro sobre fondo oscuro no se lee: se muestra en blanco, como en el video del evento.
-      { nombre: "Santa Bárbara", logo: "assets/images/patrocinadores/center-stage/9.png", estilo: "blanco" },
+      // Azul oscuro: sobre fondo oscuro no se lee, así que va sobre una placa clara con sus
+      // colores originales (como en el pack v3). Alternativa: estilo: "blanco".
+      { nombre: "Santa Bárbara", logo: "assets/images/patrocinadores/center-stage/9.png", estilo: "placa" },
       { nombre: "Apocalypse Boutique", logo: "assets/images/patrocinadores/center-stage/10.png" },
       { nombre: "Performance Corporation", logo: "assets/images/patrocinadores/center-stage/11.png" },
     ],
@@ -42,6 +43,10 @@ window.SH_PERFIL = {
     comentarios: "En la cabina",
     patrocinadores: "Auspician",
     proximoSet: "Próximo set",
+    mesa: ["Mesa de", "análisis"],
+    cierre: ["Nos vemos", "en stage"],
+    cierreEtiqueta: "Gracias por ser parte",
+    lema: "El escenario es tuyo",
   },
 
   mensajes: [

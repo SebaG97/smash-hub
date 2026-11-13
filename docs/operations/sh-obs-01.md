@@ -197,3 +197,53 @@ El ZIP del pack quedó en `stream-assets/obs-overlays/` y se agregó `stream-ass
 - Redes, sitio y comentaristas reales de Center Stage (siguen los de ejemplo en `evento.js`).
 - Confirmar con la organización si hay un auspiciante principal y si está bien mostrar Santa Bárbara en blanco.
 - Probar en OBS 31+ con captura real, como en la sección 8.
+
+## 11. Pack Center Stage v3: escenas con cámaras, cierre y Tournament Stream Helper
+
+Pedido del 13/11/2026: actualizar todo con `CENTER-STAGE-OBS-PACK-v3.zip` (más escenas y conexión con TSH).
+
+### 11.1 Qué traía la v3 y qué se hizo
+
+| v3 | En el paquete |
+| --- | --- |
+| `gameplay-broadcast.html` (juego + 2 cámaras de jugadores) | Escena nueva con nuestro diseño: marcador igual al del gameplay, columna con cámaras, nombres y puntos por jugador, auspiciante rotando y pie con lema. **Mismas posiciones de cámara** que la v3 |
+| `commentators-wide.html` (una cámara para toda la mesa) | Escena nueva: hueco 1280 × 720 en la misma posición, título «Mesa de análisis», dos placas de comentaristas y banda grande de auspiciantes |
+| `ending.html` (cierre) | Escena nueva: «Nos vemos en stage» (CS) o «Gracias por ver» (Smash Hub), lema, redes, emblema con anillos y auspiciantes |
+| `tsh-adapter.js` (lectura de TSH) | Lectura propia de TSH en `assets/js/overlay.js`, para **todas** las escenas y las dos identidades (ver 11.2). Se usó el adaptador del pack como referencia del esquema y se contrastó con los layouts oficiales de TSH |
+| Santa Bárbara sobre placa blanca | Adoptado (`estilo: "placa"`): conserva los colores del logo, en lugar de pasarlo a blanco |
+| Panel, servidor, videos | No se usan (sin panel ni servidor, como pide la consigna) |
+
+Las posiciones de cámara de `commentators.html` (dos cámaras de 860 × 484) no se cambiaron: difieren de las del pack (810 × 453), porque la escena se diseñó antes.
+
+### 11.2 Tournament Stream Helper
+
+- Se activa con `?tsh=1` en la URL. El paquete se copia en `TSH/layout/<carpeta>/` y se usa por el servidor web de TSH. Lee `../../out/program_state.json` cada segundo, por XHR, de modo que funciona por http y también como archivo local en OBS.
+- **Esquema usado**, contrastado el 13/11/2026 con `TournamentStreamHelper-layouts` (`scoreboard/index.js` e `include/globals.js`):
+  - marcador: `score[N].team["1"|"2"]`, con `player[*].name`, `player[*].team` (prefijo), `team.score`, `teamName`;
+  - partido: `phase`, `match`, `best_of` / `best_of_text`;
+  - comentaristas: `commentary[*].name` y `twitter`.
+- **Supuestos, según el adaptador del pack y no según los layouts oficiales:**
+  - el bracket en `bracket.bracket.rounds` y `bracket.players.slot`;
+  - el personaje en `player.character["1"].en_name|name`.
+- **Personajes:** los nombres de TSH se convierten a los íconos del paquete, con alias para Hero, Piranha Plant, Incineroar, Pyra/Mythra, Min Min, Mii, etc. Si un personaje no tiene ícono, se oculta.
+- **Top 8:** solo con la cola estándar de doble eliminación (winners 2-1-1-1 con reset, losers 2-2-1-1); si no coincide, no adivina y se queda con `config/bracket.js`. El reset aparece si la Grand Final la ganó el lado de losers y el reset tiene jugadores. El set que coincide con el marcador actual se marca «En juego».
+- **Errores:** si no se puede leer el archivo, se conserva el último dato; el estado queda en `window.SH_TSH` (`ok`, `error`, `bracket`, `leido`).
+
+**Prueba:** con un `program_state.json` simulado (`previews/datos/tsh-estado-ejemplo.json`), servido por HTTP local, en gameplay, versus, commentators-wide, gameplay-broadcast y bracket:
+- nombres, prefijo, marcador, ronda «Losers Semi-Final», BO5;
+- personajes «Pyra & Mythra» → `homura` y «Mr. Game & Watch» → `mr_game_and_watch`;
+- comentaristas con `@`;
+- los 11 sets del Top 8 en su lugar, con LSF «en juego».
+
+Con una ruta inexistente, `SH_TSH.ok = false`, con el error HTTP 404, y la escena sigue con los datos manuales. **No se probó contra una instalación real de TSH** ni con un torneo real.
+
+### 11.3 Capturas nuevas
+
+`09-gameplay-broadcast(-simulado).png`, `10-commentators-wide(-simulado).png`, `11-ending.png`, `07-center-stage-{gameplay-broadcast,commentators-wide,ending}.png` y, desde TSH simulado, `12-tsh-bracket-center-stage.png` y `12-tsh-gameplay-broadcast.png`. Total: 31 capturas, sin errores ni pedidos externos. Las vistas `*-simulado` usan `previews/broadcast-simulado.html`.
+
+Corrección encontrada en la revisión: los marcos de las cámaras chicas heredaban la posición vertical de su contenedor y salían desplazados.
+
+### 11.4 Pendientes
+
+- Probar con TSH real: confirmar el campo de personajes y el bracket con un torneo de start.gg cargado en TSH.
+- Decidir si `commentators.html` debe usar las medidas de la v3 (810 × 453).

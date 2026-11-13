@@ -400,6 +400,13 @@ html:not(.listo) .escena {
 .logo-blanco img {
   filter: brightness(0) invert(1);
 }
+/* Logo sobre placa clara (estilo: "placa"): conserva sus colores sobre fondos oscuros */
+.logo-placa img {
+  background: #f8f5fb;
+  padding: 6% 9%;
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
 /* Logo horizontal del evento (logoEventoHorizontal): en los encabezados
    reemplaza al logo redondo y al nombre del evento. */
 .logo-evento-h {

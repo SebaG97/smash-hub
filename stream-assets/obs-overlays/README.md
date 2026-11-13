@@ -1,6 +1,6 @@
 # Overlays de Smash Hub para OBS
 
-Siete escenas para transmitir torneos de Smash Ultimate, con dos identidades: Smash Hub (por defecto) y Center Stage. Son archivos locales (HTML, CSS e imágenes): no necesitan internet, ni instalar nada, ni un servidor.
+Diez escenas para transmitir torneos de Smash Ultimate, con dos identidades: Smash Hub (por defecto) y Center Stage. Son archivos locales (HTML, CSS e imágenes): no necesitan internet, ni instalar nada, ni un servidor. Opcionalmente leen los datos de **Tournament Stream Helper** (ver más abajo).
 
 | Escena | Archivo | Fondo |
 | --- | --- | --- |
@@ -11,6 +11,9 @@ Siete escenas para transmitir torneos de Smash Ultimate, con dos identidades: Sm
 | Comentaristas | `commentators.html` | Opaco, con **dos huecos transparentes** para cámaras |
 | Patrocinadores | `sponsors.html` | Opaco |
 | Bracket Top 8 | `bracket.html` | Opaco |
+| Gameplay con cámaras de jugadores | `gameplay-broadcast.html` | Opaco, con **huecos** para juego y dos cámaras |
+| Mesa de análisis (una cámara) | `commentators-wide.html` | Opaco, con **un hueco** para la cámara general |
+| Cierre | `ending.html` | Opaco |
 
 Las capturas de cada una están en [`previews/`](previews/).
 
@@ -36,6 +39,39 @@ Poné las dos cámaras **debajo** de `commentators.html`, con estas posiciones y
 | 2 | 990 | 250 | 860 × 484 |
 
 En OBS: clic derecho en la cámara → **Transformar → Editar transformación** y cargá esos valores. Si la cámara no es 16:9, usá **Recortar** o «Ajustar a la caja delimitadora».
+
+### Gameplay con cámaras y mesa de análisis
+
+Mismas posiciones que el pack oficial de Center Stage (v3), así que una escena de OBS ya armada para ese pack sirve igual. Todas las fuentes van **debajo** del HTML y recortadas a 16:9:
+
+| Escena | Fuente | x | y | Ancho × alto |
+| --- | --- | --- | --- | --- |
+| `gameplay-broadcast.html` | Captura del juego | 24 | 140 | 1536 × 864 |
+| | Cámara jugador 1 | 1584 | 225 | 320 × 180 |
+| | Cámara jugador 2 | 1584 | 520 | 320 × 180 |
+| `commentators-wide.html` | Cámara general | 80 | 140 | 1280 × 720 |
+
+La cámara 1 corresponde al jugador de la izquierda del marcador. Si cambiás los lados, revisá qué cámara física es de cada jugador.
+
+## Con Tournament Stream Helper (TSH)
+
+Las escenas pueden tomar los datos de competencia directamente de TSH, que ya se conecta con start.gg. No hace falta otro token y el paquete **solo lee**: no escribe en TSH ni en start.gg.
+
+1. Copiá la carpeta `obs-overlays` completa dentro de la carpeta `layout` de tu TSH, por ejemplo `TSH/layout/smash-hub/`. Debe quedar `TSH/layout/smash-hub/gameplay.html`.
+2. Iniciá TSH y su servidor web (la dirección y el puerto se ven en TSH).
+3. En OBS usá **URL** (no «Archivo local») y agregá `?tsh=1`:
+   ```
+   http://127.0.0.1:5000/layout/smash-hub/gameplay.html?tsh=1
+   http://127.0.0.1:5000/layout/smash-hub/bracket.html?tsh=1&perfil=center-stage
+   ```
+   El puerto 5000 es un ejemplo. Para otro marcador de TSH: `&scoreboardNumber=2`.
+4. Cargá el set en TSH como siempre. Las escenas leen `out/program_state.json` cada segundo.
+
+**Qué toma de TSH:** nombres (o nombre de equipo en dobles), prefijo, personaje, marcador, ronda, formato (BO3/BO5), los dos primeros comentaristas y el **Top 8 completo**, si el final del bracket es el estándar de doble eliminación (winners 2-1-1 más reset, losers 2-2-1-1). El set del Top 8 que coincide con el marcador se marca solo como «En juego». Si el bracket no tiene esa forma, se usa `config/bracket.js`.
+
+**Qué sigue saliendo de `config/`:** evento, fecha, lugar, logos, patrocinadores, redes, textos y perfil.
+
+Si TSH deja de exportar el archivo, se conserva el último dato recibido. Para revisar la lectura, abrí la escena en el navegador y escribí `SH_TSH` en la consola: `ok: true` es lectura correcta y `bracket: true` indica que el Top 8 se reconoció. Sin `?tsh=1` todo vuelve al modo manual.
 
 ## Cambiar textos, marcadores y patrocinadores
 
@@ -83,7 +119,7 @@ Para una escena puntual, los datos también se pueden pasar en la URL de la fuen
 file:///C:/ruta/obs-overlays/gameplay.html?p1=Nombre&p2=Nombre&s1=1&s2=0&ronda=Grand%20Final
 ```
 
-Parámetros: `p1`, `p2`, `s1`, `s2`, `e1`, `e2` (equipos), `c1`, `c2` (personajes), `ronda`, `formato`, `evento`, `tema`, `perfil`, `logoEvento`, `inicio`, `bracket` (otro archivo de bracket).
+Parámetros: `p1`, `p2`, `s1`, `s2`, `e1`, `e2` (equipos), `c1`, `c2` (personajes), `ronda`, `formato`, `evento`, `tema`, `perfil`, `logoEvento`, `inicio`, `bracket` (otro archivo de bracket), `tsh`, `scoreboardNumber`, `tshRuta` (otra ubicación de `program_state.json`).
 
 ## Center Stage
 
@@ -97,7 +133,7 @@ Eso activa todo lo de `config/perfiles/center-stage.js`: paleta oficial (fucsia 
 
 - Los logos vienen del pack oficial `CENTER-STAGE-OBS-PACK`; se les quitó solo el fondo negro (los JPEG originales están en `assets/images/eventos/center-stage/originales/`).
 - Con 11 auspiciantes, las tiras muestran tandas de 5 o 6 que cambian cada 8 segundos; la pantalla de patrocinadores los muestra a todos.
-- Santa Bárbara (azul oscuro) se muestra en blanco para que se lea sobre el fondo oscuro, como en el video del evento. Se cambia con `estilo: "blanco"` en el perfil.
+- Santa Bárbara (azul oscuro) va sobre una placa clara con sus colores originales, como en el pack v3 (`estilo: "placa"`). Alternativa: `estilo: "blanco"`.
 - Para destacar un auspiciante como principal, completá `principal` en el perfil.
 
 Para otro evento con identidad propia: copiá `config/perfiles/center-stage.js` y `assets/css/temas/center-stage.css` con otro nombre.
@@ -107,7 +143,8 @@ Para otro evento con identidad propia: copiá `config/perfiles/center-stage.js` 
 ```
 obs-overlays/
 ├── gameplay.html, versus.html, starting-soon.html,
-│   intermission.html, commentators.html, sponsors.html, bracket.html
+│   intermission.html, commentators.html, sponsors.html, bracket.html,
+│   gameplay-broadcast.html, commentators-wide.html, ending.html
 ├── config/
 │   ├── evento.js          datos del evento (se edita una vez)
 │   ├── partida.js         set actual (se edita entre partidas)

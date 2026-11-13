@@ -44,16 +44,257 @@
       var conPerfil = /^[a-z0-9-]+$/.test(perfil || "") ? cargar("config/perfiles/" + perfil + ".js") : Promise.resolve();
       return conPerfil.then(function () {
         if (window.SH_PERFIL) evento = mezclar(evento, clonar(window.SH_PERFIL));
-        var partida = clonar(window.SH_PARTIDA || {});
-        var bracket = clonar(window.SH_BRACKET || {});
-        aplicarUrl(evento, partida);
-        return { evento: evento, partida: partida, bracket: bracket };
+        var d = {
+          evento: evento,
+          partida: clonar(window.SH_PARTIDA || {}),
+          bracket: clonar(window.SH_BRACKET || {}),
+        };
+        if (!TSH.activo) {
+          aplicarUrl(d.evento, d.partida);
+          return d;
+        }
+        // Modo TSH: los datos de competencia vienen de Tournament Stream Helper.
+        return leerJson(ROOT + TSH.ruta + "?v=" + Date.now())
+          .then(function (estado) {
+            TSH.ultimo = estado;
+            TSH.estado.ok = true;
+            TSH.estado.error = "";
+            TSH.estado.leido = new Date().toISOString();
+          })
+          .catch(function (e) {
+            TSH.estado.ok = false;
+            TSH.estado.error = String((e && e.message) || e);
+          })
+          .then(function () {
+            if (TSH.ultimo) {
+              try {
+                aplicarTsh(TSH.ultimo, d);
+              } catch (e) {
+                TSH.estado.ok = false;
+                TSH.estado.error = String(e.message || e);
+              }
+            }
+            aplicarUrl(d.evento, d.partida);
+            return d;
+          });
       });
     });
   }
 
   function clonar(o) {
     return JSON.parse(JSON.stringify(o));
+  }
+
+  // ------------------------------------------------------------------ Tournament Stream Helper
+  // ?tsh=1 lee el estado que exporta TSH (out/program_state.json) y lo usa para
+  // jugadores, prefijos, personajes, marcador, ronda, formato, comentaristas y Top 8.
+  // Solo lee: no escribe en TSH ni en start.gg. Si el archivo falla, se conserva
+  // el último dato recibido. Estado de la lectura: window.SH_TSH en la consola.
+  //   ?scoreboardNumber=2   otro marcador de TSH (por defecto, el 1)
+  //   ?tshRuta=ruta.json    otra ubicación del archivo (por defecto ../../out/program_state.json,
+  //                         que es la correcta si el paquete está en TSH/layout/<carpeta>/)
+  var Q = new URLSearchParams(location.search);
+  var TSH = {
+    activo: Q.get("tsh") === "1",
+    tablero: Q.get("scoreboardNumber") || "1",
+    ruta: /\.json$/i.test(Q.get("tshRuta") || "") ? Q.get("tshRuta") : "../../out/program_state.json",
+    ultimo: null,
+    estado: { ok: false, error: "sin leer todavía", bracket: false, leido: "" },
+  };
+  window.SH_TSH = TSH.estado;
+
+  /** Lee un JSON por XHR: funciona por http (servidor de TSH) y en archivos locales de OBS. */
+  function leerJson(url) {
+    return new Promise(function (ok, mal) {
+      var x = new XMLHttpRequest();
+      x.open("GET", url, true);
+      x.onload = function () {
+        if (x.status === 200 || (x.status === 0 && x.responseText)) {
+          try {
+            ok(JSON.parse(x.responseText));
+          } catch (e) {
+            mal(new Error("program_state.json no es un JSON válido"));
+          }
+        } else mal(new Error("no se pudo leer " + url + " (HTTP " + x.status + ")"));
+      };
+      x.onerror = function () {
+        mal(new Error("no se pudo leer " + url));
+      };
+      x.send();
+    });
+  }
+
+  function lista(o) {
+    if (!o || typeof o !== "object") return [];
+    return Object.keys(o)
+      .sort(function (a, b) {
+        return Number(a) - Number(b);
+      })
+      .map(function (k) {
+        return o[k];
+      });
+  }
+
+  function nombreTsh(equipo) {
+    if (!equipo) return "";
+    if (equipo.teamName) return equipo.teamName;
+    return lista(equipo.player)
+      .map(function (p) {
+        return p && p.name;
+      })
+      .filter(Boolean)
+      .join(" / ");
+  }
+
+  // Nombres de personajes de TSH → archivos de assets/images/personajes/
+  var ALIAS_PJ = {
+    hero: "dq_hero",
+    piranha_plant: "packun_flower",
+    incineroar: "gaogaen",
+    pyra: "homura",
+    mythra: "homura",
+    pyra_and_mythra: "homura",
+    min_min: "minmin",
+    mii_brawler: "mii_fighter",
+    mii_swordfighter: "mii_fighter",
+    mii_gunner: "mii_fighter",
+    rosalina: "rosalina_and_luma",
+    banjo_kazooie: "banjo_and_kazooie",
+    olimar_alph: "olimar",
+    game_and_watch: "mr_game_and_watch",
+    pokemon_trainer_red: "pokemon_trainer",
+  };
+  function personajeTsh(jugador) {
+    var c = lista(jugador && jugador.character)[0];
+    var n = (c && (c.en_name || c.name)) || "";
+    var k = String(n)
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .replace(/&/g, " and ")
+      .replace(/[.'’]/g, "")
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_|_$/g, "");
+    return ALIAS_PJ[k] || k;
+  }
+
+  function aplicarTsh(estado, d) {
+    var tablero = estado && estado.score && estado.score[String(TSH.tablero)];
+    if (!tablero || !tablero.team) throw new Error("TSH no tiene el marcador " + TSH.tablero);
+    [1, 2].forEach(function (i) {
+      var eq = tablero.team[String(i)] || {};
+      var jugadores = lista(eq.player);
+      var j = (d.partida["jugador" + i] = d.partida["jugador" + i] || {});
+      j.nombre = nombreTsh(eq) || "Por definir";
+      j.equipo = jugadores.length === 1 ? jugadores[0].team || "" : "";
+      j.personaje = jugadores.length === 1 ? personajeTsh(jugadores[0]) : "";
+      var s = Number(eq.score);
+      j.marcador = isFinite(s) && s >= 0 ? s : 0;
+    });
+    var ronda = tablero.match || tablero.phase;
+    if (ronda) d.partida.ronda = ronda;
+    var bo = Number(tablero.best_of) || Number(String(tablero.best_of_text || "").replace(/\D+/g, ""));
+    if (bo) d.partida.formato = "BO" + bo;
+    var com = lista(estado.commentary).filter(function (c) {
+      return c && c.name;
+    });
+    if (com.length) {
+      d.evento.comentaristas = com.slice(0, 2).map(function (c) {
+        return { nombre: c.name, usuario: c.twitter ? "@" + String(c.twitter).replace(/^@/, "") : "" };
+      });
+    }
+    TSH.estado.bracket = bracketTsh(estado.bracket, d);
+    // El set del Top 8 que coincide con el marcador actual (y no terminó) queda «en juego».
+    if (TSH.estado.bracket) {
+      var a = d.partida.jugador1.nombre;
+      var b = d.partida.jugador2.nombre;
+      var g = victorias(d.bracket.formato);
+      d.bracket.enJuego = "";
+      Object.keys(d.bracket.cruces).forEach(function (id) {
+        var x = d.bracket.cruces[id];
+        var mismos = (x.j1 === a && x.j2 === b) || (x.j1 === b && x.j2 === a);
+        if (mismos && !(Number(x.p1) >= g || Number(x.p2) >= g)) d.bracket.enJuego = id;
+      });
+    }
+  }
+
+  /**
+   * Top 8 desde el bracket de TSH. Solo si el final del bracket es el estándar de
+   * doble eliminación: winners [2, 1, 1, 1 (GF, reset)] y losers [2, 2, 1, 1].
+   * Si no coincide, no adivina: se queda con config/bracket.js.
+   */
+  function bracketTsh(fuente, d) {
+    var rondas = fuente && fuente.bracket && fuente.bracket.rounds;
+    var slots = fuente && fuente.players && fuente.players.slot;
+    if (!rondas || !slots) return false;
+    var nums = Object.keys(rondas).map(Number);
+    var sets = function (n) {
+      return lista(rondas[n] && rondas[n].sets);
+    };
+    var w = nums
+      .filter(function (n) {
+        return n > 0;
+      })
+      .sort(function (a, b) {
+        return a - b;
+      })
+      .slice(-4)
+      .map(sets);
+    var l = nums
+      .filter(function (n) {
+        return n < 0;
+      })
+      .sort(function (a, b) {
+        return b - a;
+      })
+      .slice(-4)
+      .map(sets);
+    var forma = function (r, esperado) {
+      return (
+        r.length === esperado.length &&
+        r.every(function (s, i) {
+          return s.length === esperado[i];
+        })
+      );
+    };
+    if (!forma(w, [2, 1, 1, 1]) || !forma(l, [2, 2, 1, 1])) return false;
+    var cruce = function (set) {
+      var ids = lista(set && set.playerId);
+      var pts = lista(set && set.score);
+      var jugado = !!(set && set.completed) || Number(pts[0]) > 0 || Number(pts[1]) > 0;
+      var lado = function (k) {
+        var id = Number(ids[k]);
+        return {
+          j: id >= 0 ? nombreTsh(slots[id]) : "",
+          p: id >= 0 && jugado && pts[k] != null && Number(pts[k]) >= 0 ? Number(pts[k]) : "",
+        };
+      };
+      var a = lado(0);
+      var b = lado(1);
+      return { j1: a.j, p1: a.p, j2: b.j, p2: b.p };
+    };
+    var gf = w[2][0];
+    var gfPts = lista(gf && gf.score);
+    var hayReset =
+      !!(gf && gf.completed) &&
+      Number(gfPts[1]) > Number(gfPts[0]) &&
+      lista(w[3][0] && w[3][0].playerId).every(function (id) {
+        return Number(id) >= 0;
+      });
+    d.bracket.cruces = {
+      WSF1: cruce(w[0][0]),
+      WSF2: cruce(w[0][1]),
+      WF: cruce(w[1][0]),
+      GF: cruce(gf),
+      RESET: hayReset ? cruce(w[3][0]) : { j1: "", p1: "", j2: "", p2: "" },
+      LR1A: cruce(l[0][0]),
+      LR1B: cruce(l[0][1]),
+      LQFA: cruce(l[1][0]),
+      LQFB: cruce(l[1][1]),
+      LSF: cruce(l[2][0]),
+      LF: cruce(l[3][0]),
+    };
+    return true;
   }
 
   /** Mezcla b sobre a: los objetos se combinan; listas y valores se reemplazan. */
@@ -160,6 +401,12 @@
         n.classList.toggle("vacio", !p);
         var c = n.closest("[data-ocultar-vacio]");
         if (c) c.classList.toggle("vacio", !p);
+        // Personaje sin ícono (nombre desconocido): se oculta en lugar de mostrar una imagen rota.
+        n.onerror = function () {
+          n.removeAttribute("src");
+          n.classList.add("vacio");
+          if (c) c.classList.add("vacio");
+        };
         if (p) n.src = ROOT + "assets/images/personajes/" + p + ".svg";
         else n.removeAttribute("src");
       });
@@ -362,7 +609,9 @@
   }
 
   function logoPatrocinador(s, clase) {
-    var caja = el("div", clase + (s.estilo === "blanco" ? " logo-blanco" : ""));
+    // estilo: "blanco" pasa el logo a blanco; "placa" lo pone sobre una placa clara.
+    var extra = { blanco: " logo-blanco", placa: " logo-placa" }[s.estilo] || "";
+    var caja = el("div", clase + extra);
     if (s.logo) caja.append(img(s.logo, s.nombre));
     else caja.append(el("span", "patrocinador-texto", s.nombre || ""));
     return caja;
@@ -426,5 +675,6 @@
   }
 
   ciclo();
-  if (!new URLSearchParams(location.search).has("fijo")) setInterval(ciclo, INTERVALO);
+  // Con TSH se relee más seguido, para que el marcador cambie casi al instante.
+  if (!Q.has("fijo")) setInterval(ciclo, TSH.activo ? 1000 : INTERVALO);
 })();

@@ -1,0 +1,436 @@
+/*
+ * Escenas con cámaras (gameplay-broadcast, commentators-wide) y cierre (ending).
+ * Huecos transparentes, mismas medidas que el pack CENTER-STAGE-OBS-PACK v3:
+ *   gameplay-broadcast: juego 24,140 1536×864 · cámaras 1584,225 y 1584,520, 320×180
+ *   commentators-wide:  cámara 80,140 1280×720
+ * Si se cambian, cambiarlos en la máscara (.perforado-*) y en el HTML (.hueco).
+ */
+
+html,
+body {
+  background: transparent !important;
+}
+
+/* ------------------------------------------------------------------ máscaras */
+.perforado {
+  position: absolute;
+  inset: 0;
+}
+.perforado-broadcast {
+  -webkit-mask:
+    linear-gradient(#000 0 0) 24px 140px / 1536px 864px no-repeat,
+    linear-gradient(#000 0 0) 1584px 225px / 320px 180px no-repeat,
+    linear-gradient(#000 0 0) 1584px 520px / 320px 180px no-repeat,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) 24px 140px / 1536px 864px no-repeat exclude,
+    linear-gradient(#000 0 0) 1584px 225px / 320px 180px no-repeat exclude,
+    linear-gradient(#000 0 0) 1584px 520px / 320px 180px no-repeat exclude,
+    linear-gradient(#000 0 0);
+}
+.perforado-mesa {
+  -webkit-mask:
+    linear-gradient(#000 0 0) 80px 140px / 1280px 720px no-repeat,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) 80px 140px / 1280px 720px no-repeat exclude,
+    linear-gradient(#000 0 0);
+}
+
+/* ------------------------------------------------------------------ marcos de huecos */
+.hueco {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: var(--w);
+  height: var(--h);
+  outline: 2px solid rgba(239, 233, 223, 0.16);
+  pointer-events: none;
+}
+.esq {
+  position: absolute;
+  width: 46px;
+  height: 46px;
+  border: 0 solid var(--c-fuego);
+}
+.esq-1 {
+  left: -10px;
+  top: -10px;
+  border-left-width: 4px;
+  border-top-width: 4px;
+}
+.esq-2 {
+  right: -10px;
+  top: -10px;
+  border-right-width: 4px;
+  border-top-width: 4px;
+  border-color: rgba(239, 233, 223, 0.45);
+}
+.esq-3 {
+  left: -10px;
+  bottom: -10px;
+  border-left-width: 4px;
+  border-bottom-width: 4px;
+  border-color: rgba(239, 233, 223, 0.45);
+}
+.esq-4 {
+  right: -10px;
+  bottom: -10px;
+  border-right-width: 4px;
+  border-bottom-width: 4px;
+}
+
+/* ------------------------------------------------------------------ gameplay-broadcast */
+/* Sin decoraciones sueltas: compiten con el marcador y el logo de la columna */
+.escena-broadcast .rayas {
+  display: none;
+}
+/* Marcador centrado sobre la captura del juego (centro x = 24 + 1536/2 = 792) */
+.marcador-broadcast {
+  left: 792px;
+  top: 18px;
+}
+.pestana-broadcast {
+  left: 792px;
+  top: 80px;
+}
+
+.columna {
+  position: absolute;
+  left: 1584px;
+  top: 0;
+  width: 320px;
+  height: 1080px;
+}
+.marca-columna {
+  position: absolute;
+  left: 0;
+  top: 34px;
+  width: 320px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.marca-columna .logo-club {
+  width: 72px;
+  height: 72px;
+}
+.marca-columna .marca-evento {
+  width: 220px;
+  font-size: 28px;
+  font-weight: 800;
+}
+.marca-columna .etiqueta {
+  font-size: 12px;
+  margin-top: 4px;
+}
+.con-logo-h .marca-columna .logo-evento-h {
+  height: 64px;
+  max-width: 320px;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.cam-jugador {
+  position: absolute;
+  left: 0;
+  top: var(--y);
+  width: 320px;
+}
+.cam-etiqueta {
+  position: absolute;
+  left: 0;
+  top: -34px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--c-hueso);
+}
+.cam-etiqueta i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--c-p1);
+}
+.cam-jugador-2 .cam-etiqueta i {
+  background: var(--c-p2);
+}
+.hueco-cam {
+  position: relative;
+  left: 0;
+  top: 0;
+  width: 320px;
+  height: 180px;
+}
+.hueco-cam .esq {
+  width: 30px;
+  height: 30px;
+}
+.cam-placa {
+  display: flex;
+  align-items: center;
+  height: 54px;
+  background: var(--c-panel);
+  border-left: 5px solid var(--c-p1);
+}
+.cam-jugador-2 .cam-placa {
+  border-left-color: var(--c-p2);
+}
+.cam-nombre {
+  flex: 1;
+  min-width: 0;
+  padding: 0 14px;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 54px;
+}
+.cam-puntos {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  font-size: 34px;
+  background: var(--c-fuego);
+  color: var(--c-sobre-fuego);
+}
+.gana .cam-puntos {
+  background: var(--c-oro);
+  color: var(--c-sobre-oro);
+}
+
+.col-auspicio {
+  position: absolute;
+  left: 0;
+  top: 800px;
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.col-auspicio-logos {
+  position: relative;
+  width: 320px;
+  height: 170px;
+  background: var(--c-panel);
+  border-bottom: 3px solid var(--c-fuego);
+}
+.col-auspicio-logos .patrocinador {
+  position: absolute;
+  inset: 20px 26px;
+  opacity: 0;
+  transition: opacity 0.6s;
+}
+.col-auspicio-logos .patrocinador.activo {
+  opacity: 1;
+}
+
+.pie-broadcast {
+  position: absolute;
+  left: 24px;
+  right: 16px;
+  top: 1022px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.pie-broadcast .etiqueta {
+  font-size: 13px;
+}
+.pie-lema {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--c-fuego);
+  letter-spacing: 0.08em;
+}
+
+/* ------------------------------------------------------------------ commentators-wide */
+.marca-mesa {
+  position: absolute;
+  left: 80px;
+  top: 34px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.marca-mesa .logo-club {
+  width: 80px;
+  height: 80px;
+}
+.marca-mesa .marca-evento {
+  font-size: 34px;
+  font-weight: 800;
+}
+.marca-mesa .etiqueta {
+  margin-top: 4px;
+  font-size: 14px;
+}
+.con-logo-h .marca-mesa .logo-evento-h {
+  height: 72px;
+}
+.chip-mesa {
+  position: absolute;
+  right: 80px;
+  top: 58px;
+}
+
+.mesa {
+  position: absolute;
+  left: 1420px;
+  top: 190px;
+  width: 440px;
+  display: flex;
+  flex-direction: column;
+}
+.mesa-etiqueta {
+  font-size: 13px;
+  color: var(--c-fuego);
+  padding-left: 14px;
+  border-left: 4px solid var(--c-fuego);
+}
+.mesa-titulo {
+  margin: 26px 0 34px;
+  display: flex;
+  flex-direction: column;
+  font-size: 110px;
+  line-height: 0.92;
+}
+.mesa-titulo .linea {
+  display: block;
+  width: 440px;
+  padding-right: 30px;
+  transform: skewX(var(--inclinacion));
+  transform-origin: left bottom;
+}
+.mesa-titulo .linea-acento {
+  color: var(--c-fuego);
+  text-shadow: var(--brillo);
+}
+.caster {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 18px;
+  padding: 16px 22px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--c-fuego) 18%, var(--c-panel)), var(--c-panel) 70%);
+  border-left: 5px solid var(--c-fuego);
+}
+.caster .etiqueta {
+  font-size: 12px;
+}
+.caster .com-nombre {
+  display: block;
+  width: 100%;
+  font-size: 46px;
+  font-weight: 800;
+  line-height: 1.05;
+}
+.caster .com-usuario {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--c-ceniza);
+}
+
+/* Banda de auspiciantes grande (mesa y cierre) */
+.banda {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 184px;
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  padding: 0 80px 0 0;
+  background: linear-gradient(180deg, rgba(10, 8, 7, 0.75), rgba(10, 8, 7, 0.95));
+  border-top: 2px solid var(--c-fuego);
+}
+.banda-etiqueta {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  padding: 0 46px 0 80px;
+  margin-left: -24px;
+  background: var(--c-fuego);
+  color: var(--c-sobre-fuego);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  transform: skewX(var(--inclinacion));
+}
+.banda-etiqueta > span {
+  transform: skewX(calc(var(--inclinacion) * -1));
+}
+.banda-logos {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 30px;
+}
+.banda-logos .patrocinador {
+  width: 290px;
+  height: 112px;
+}
+.banda-sitio {
+  font-size: 28px;
+  font-weight: 800;
+}
+
+/* ------------------------------------------------------------------ ending */
+.escena-cierre {
+  background: var(--c-noche);
+}
+.cierre {
+  position: absolute;
+  left: 110px;
+  top: 230px;
+  width: 900px;
+}
+.cierre .titulo {
+  font-size: 176px;
+}
+.cierre .linea {
+  width: 880px;
+}
+.cierre-lema {
+  margin: 30px 0 34px;
+  font-size: 40px;
+  font-weight: 700;
+  color: var(--c-ceniza);
+  letter-spacing: 0.06em;
+}
+.cierre-lema.vacio {
+  display: none;
+}
+.emblema-cierre {
+  left: auto;
+  right: 110px;
+  top: 150px;
+  width: 640px;
+  height: 640px;
+}
+.emblema-cierre .emblema-luz {
+  width: 820px;
+  height: 820px;
+}
+.emblema-cierre .anillo-1 {
+  width: 540px;
+  height: 540px;
+}
+.emblema-cierre .anillo-2 {
+  width: 620px;
+  height: 620px;
+}
+.emblema-cierre .logo-club,
+.emblema-cierre .logo-evento {
+  width: 460px;
+  height: 460px;
+  object-fit: contain;
+}

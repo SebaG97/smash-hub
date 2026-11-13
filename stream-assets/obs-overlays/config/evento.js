@@ -63,6 +63,10 @@ window.SH_EVENTO = {
     comentarios: "En la cabina",
     patrocinadores: "Gracias a quienes hacen posible este torneo",
     proximoSet: "Próximo set",
+    mesa: ["Mesa de", "análisis"], // commentators-wide
+    cierre: ["Gracias", "por ver"], // ending
+    cierreEtiqueta: "Hasta el próximo torneo", // ending
+    lema: "", // frase corta del evento (pie del gameplay con cámaras y cierre)
   },
 
   // Mensajes de la cinta inferior de «Volvemos enseguida».

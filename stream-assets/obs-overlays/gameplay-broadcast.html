@@ -1,0 +1,105 @@
+<!doctype html>
+<!--
+  GAMEPLAY CON CÁMARAS DE JUGADORES — huecos transparentes para juego y cámaras.
+  OBS (todo DEBAJO de esta fuente, cada fuente recortada a 16:9):
+    Captura del juego: x 24,   y 140, 1536 × 864
+    Cámara jugador 1:  x 1584, y 225, 320 × 180
+    Cámara jugador 2:  x 1584, y 520, 320 × 180
+  Mismas posiciones que el pack CENTER-STAGE-OBS-PACK v3.
+  Textos: config/partida.js (o TSH con ?tsh=1) y config/evento.js.
+-->
+<html lang="es" data-tema="smash-hub">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Gameplay con cámaras · Smash Hub</title>
+    <link rel="stylesheet" href="assets/css/base.css" />
+    <link rel="stylesheet" href="assets/css/gameplay.css" />
+    <link rel="stylesheet" href="assets/css/broadcast.css" />
+    <link rel="stylesheet" href="assets/css/temas/center-stage.css" />
+  </head>
+  <body>
+    <main class="escena escena-broadcast">
+      <div class="perforado perforado-broadcast">
+        <div class="fondo"></div>
+        <div class="rayas"></div>
+        <div class="brasas" data-lista="brasas" data-cantidad="10"></div>
+      </div>
+
+      <!-- Marcos de los huecos -->
+      <div class="hueco" style="--x: 24px; --y: 140px; --w: 1536px; --h: 864px">
+        <i class="esq esq-1"></i><i class="esq esq-2"></i><i class="esq esq-3"></i><i class="esq esq-4"></i>
+      </div>
+
+      <!-- Marcador (mismo diseño que gameplay.html, centrado sobre el juego) -->
+      <section class="marcador marcador-broadcast entra" aria-label="Marcador">
+        <div class="lado lado-1" data-jugador="1">
+          <div class="placa">
+            <span class="placa-texto" data-ajustar="0.55">
+              <span class="equipo" data-campo="partida.jugador1.equipo"></span>
+              <span class="nombre" data-campo="partida.jugador1.nombre"></span>
+            </span>
+          </div>
+          <div class="puntos"><span data-campo="partida.jugador1.marcador"></span></div>
+        </div>
+        <div class="centro">
+          <span class="ronda" data-campo="partida.ronda" data-ajustar="0.6"></span>
+        </div>
+        <div class="lado lado-2" data-jugador="2">
+          <div class="puntos"><span data-campo="partida.jugador2.marcador"></span></div>
+          <div class="placa">
+            <span class="placa-texto" data-ajustar="0.55">
+              <span class="equipo" data-campo="partida.jugador2.equipo"></span>
+              <span class="nombre" data-campo="partida.jugador2.nombre"></span>
+            </span>
+          </div>
+        </div>
+      </section>
+      <div class="pestana pestana-broadcast entra" style="--retraso: 0.15s">
+        <span class="formato" data-campo="partida.formato"></span>
+        <i></i>
+        <span class="pestana-evento" data-campo="evento.evento" data-ajustar="0.7"></span>
+      </div>
+
+      <!-- Columna derecha -->
+      <aside class="columna">
+        <header class="marca marca-columna entra-der">
+          <img class="logo-club" data-src="evento.logoClub" alt="" width="72" height="72" />
+          <img class="logo-evento-h" data-src="evento.logoEventoHorizontal" alt="" height="64" />
+          <div class="marca-texto">
+            <div class="marca-evento display" data-campo="evento.evento" data-ajustar="0.6"></div>
+            <div class="etiqueta" data-campo="evento.organizacion"></div>
+          </div>
+        </header>
+
+        <div class="cam-jugador entra-der" style="--retraso: 0.1s; --y: 225px" data-jugador="1">
+          <span class="cam-etiqueta etiqueta"><i></i>Jugador 1</span>
+          <div class="hueco hueco-cam"><i class="esq esq-1"></i><i class="esq esq-4"></i></div>
+          <div class="cam-placa">
+            <span class="cam-nombre display" data-campo="partida.jugador1.nombre" data-ajustar="0.55"></span>
+            <span class="cam-puntos display" data-campo="partida.jugador1.marcador"></span>
+          </div>
+        </div>
+        <div class="cam-jugador cam-jugador-2 entra-der" style="--retraso: 0.15s; --y: 520px" data-jugador="2">
+          <span class="cam-etiqueta etiqueta"><i></i>Jugador 2</span>
+          <div class="hueco hueco-cam"><i class="esq esq-1"></i><i class="esq esq-4"></i></div>
+          <div class="cam-placa">
+            <span class="cam-nombre display" data-campo="partida.jugador2.nombre" data-ajustar="0.55"></span>
+            <span class="cam-puntos display" data-campo="partida.jugador2.marcador"></span>
+          </div>
+        </div>
+
+        <div class="col-auspicio entra-der" style="--retraso: 0.25s">
+          <span class="etiqueta">Con el apoyo de</span>
+          <div class="col-auspicio-logos" data-lista="todos" data-rotar="8"></div>
+        </div>
+      </aside>
+
+      <footer class="pie-broadcast entra" style="--retraso: 0.3s">
+        <span class="etiqueta">Super Smash Bros. Ultimate · <span data-campo="evento.lugar"></span></span>
+        <span class="pie-lema display" data-campo="evento.textos.lema"></span>
+      </footer>
+    </main>
+    <script src="assets/js/overlay.js"></script>
+  </body>
+</html>

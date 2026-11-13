@@ -1,0 +1,99 @@
+<!doctype html>
+<!--
+  SOLO VISTA PREVIA. No usar en OBS.
+  Pone juego y cámaras simulados debajo de gameplay-broadcast.html o commentators-wide.html.
+  ?vista=gameplay-broadcast | commentators-wide (más los parámetros normales del overlay)
+-->
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Vista previa · escenas con cámaras</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #000;
+        font: 700 16px Verdana, sans-serif;
+        color: rgba(255, 255, 255, 0.85);
+        letter-spacing: 0.2em;
+      }
+      .r {
+        position: absolute;
+        display: grid;
+        place-items: start center;
+        padding-top: 18px;
+        box-sizing: border-box;
+      }
+      .juego {
+        background:
+          radial-gradient(700px 300px at 70% 30%, rgba(255, 214, 150, 0.35), transparent 70%),
+          linear-gradient(180deg, #2b4f7d 0%, #6a86b0 45%, #d9a27a 75%, #6e4a3a 100%);
+      }
+      .juego::after {
+        content: "";
+        position: absolute;
+        left: 20%;
+        right: 20%;
+        top: 58%;
+        height: 50px;
+        background: linear-gradient(180deg, #d8d2c4, #8f8676);
+        border-radius: 6px;
+      }
+      .cam {
+        background:
+          radial-gradient(18% 34% at 50% 52%, #6d5c52 0 98%, transparent 100%),
+          radial-gradient(30% 40% at 50% 108%, #3c4a5c 0 98%, transparent 100%),
+          linear-gradient(180deg, #59606b, #2b2f36);
+        font-size: 12px;
+        padding-top: 10px;
+      }
+      .mesa {
+        background:
+          radial-gradient(9% 18% at 32% 50%, #6d5c52 0 98%, transparent 100%),
+          radial-gradient(9% 18% at 68% 50%, #6d5c52 0 98%, transparent 100%),
+          radial-gradient(16% 22% at 32% 92%, #3c4a5c 0 98%, transparent 100%),
+          radial-gradient(16% 22% at 68% 92%, #4c3c5c 0 98%, transparent 100%),
+          linear-gradient(180deg, #59606b, #2b2f36);
+      }
+      iframe {
+        position: absolute;
+        inset: 0;
+        width: 1920px;
+        height: 1080px;
+        border: 0;
+        background: transparent;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="fuentes"></div>
+    <iframe id="overlay" title="Overlay"></iframe>
+    <script>
+      var q = new URLSearchParams(location.search);
+      var vista = q.get("vista") === "commentators-wide" ? "commentators-wide" : "gameplay-broadcast";
+      q.delete("vista");
+      var rects =
+        vista === "commentators-wide"
+          ? [["mesa", 80, 140, 1280, 720, "CÁMARA GENERAL · SIMULADA"]]
+          : [
+              ["juego", 24, 140, 1536, 864, "GAMEPLAY SIMULADO"],
+              ["cam", 1584, 225, 320, 180, "CÁMARA 1 · SIMULADA"],
+              ["cam", 1584, 520, 320, 180, "CÁMARA 2 · SIMULADA"],
+            ];
+      rects.forEach(function (r) {
+        var d = document.createElement("div");
+        d.className = "r " + r[0];
+        d.style.cssText = "left:" + r[1] + "px;top:" + r[2] + "px;width:" + r[3] + "px;height:" + r[4] + "px";
+        d.textContent = r[5];
+        document.getElementById("fuentes").append(d);
+      });
+      document.getElementById("overlay").src = "../" + vista + ".html?" + q.toString();
+      window.addEventListener("message", function (e) {
+        if (e.data === "sh-listo") document.documentElement.classList.add("listo");
+      });
+    </script>
+  </body>
+</html>

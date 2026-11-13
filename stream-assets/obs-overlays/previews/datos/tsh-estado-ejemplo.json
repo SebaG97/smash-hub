@@ -1,0 +1,326 @@
+{
+ "score": {
+  "1": {
+   "phase": "Top 8",
+   "match": "Losers Semi-Final",
+   "best_of": 5,
+   "best_of_text": "Best of 5",
+   "team": {
+    "1": {
+     "score": 1,
+     "player": {
+      "1": {
+       "name": "Karai Guasu",
+       "team": "",
+       "character": {
+        "1": {
+         "name": "Pyra & Mythra",
+         "en_name": "Pyra & Mythra"
+        }
+       }
+      }
+     }
+    },
+    "2": {
+     "score": 1,
+     "player": {
+      "1": {
+       "name": "Mbarete",
+       "team": "SCP",
+       "character": {
+        "1": {
+         "name": "Mr. Game & Watch"
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "commentary": {
+  "1": {
+   "name": "Caster Uno",
+   "twitter": "caster_uno"
+  },
+  "2": {
+   "name": "Caster Dos",
+   "twitter": "@caster_dos"
+  }
+ },
+ "bracket": {
+  "bracket": {
+   "rounds": {
+    "1": {
+     "sets": {
+      "1": {
+       "playerId": {
+        "1": 0,
+        "2": 7
+       },
+       "score": {
+        "1": 3,
+        "2": 0
+       },
+       "completed": true
+      },
+      "2": {
+       "playerId": {
+        "1": 1,
+        "2": 6
+       },
+       "score": {
+        "1": 3,
+        "2": 1
+       },
+       "completed": true
+      },
+      "3": {
+       "playerId": {
+        "1": 2,
+        "2": 5
+       },
+       "score": {
+        "1": 3,
+        "2": 2
+       },
+       "completed": true
+      },
+      "4": {
+       "playerId": {
+        "1": 3,
+        "2": 4
+       },
+       "score": {
+        "1": 3,
+        "2": 0
+       },
+       "completed": true
+      }
+     }
+    },
+    "2": {
+     "sets": {
+      "1": {
+       "playerId": {
+        "1": 0,
+        "2": 1
+       },
+       "score": {
+        "1": 3,
+        "2": 1
+       },
+       "completed": true
+      },
+      "2": {
+       "playerId": {
+        "1": 2,
+        "2": 3
+       },
+       "score": {
+        "1": 2,
+        "2": 3
+       },
+       "completed": true
+      }
+     }
+    },
+    "3": {
+     "sets": {
+      "1": {
+       "playerId": {
+        "1": 0,
+        "2": 3
+       },
+       "score": {
+        "1": 3,
+        "2": 2
+       },
+       "completed": true
+      }
+     }
+    },
+    "4": {
+     "sets": {
+      "1": {
+       "playerId": {
+        "1": 0,
+        "2": -1
+       },
+       "score": {
+        "1": 0,
+        "2": 0
+       },
+       "completed": false
+      }
+     }
+    },
+    "5": {
+     "sets": {
+      "1": {
+       "playerId": {
+        "1": -1,
+        "2": -1
+       },
+       "score": {
+        "1": 0,
+        "2": 0
+       },
+       "completed": false
+      }
+     }
+    },
+    "-1": {
+     "sets": {
+      "1": {
+       "playerId": {
+        "1": 7,
+        "2": 6
+       },
+       "score": {
+        "1": 0,
+        "2": 3
+       },
+       "completed": true
+      },
+      "2": {
+       "playerId": {
+        "1": 5,
+        "2": 4
+       },
+       "score": {
+        "1": 3,
+        "2": 1
+       },
+       "completed": true
+      }
+     }
+    },
+    "-2": {
+     "sets": {
+      "1": {
+       "playerId": {
+        "1": 2,
+        "2": 6
+       },
+       "score": {
+        "1": 3,
+        "2": 1
+       },
+       "completed": true
+      },
+      "2": {
+       "playerId": {
+        "1": 1,
+        "2": 5
+       },
+       "score": {
+        "1": 3,
+        "2": 2
+       },
+       "completed": true
+      }
+     }
+    },
+    "-3": {
+     "sets": {
+      "1": {
+       "playerId": {
+        "1": 2,
+        "2": 1
+       },
+       "score": {
+        "1": 1,
+        "2": 1
+       },
+       "completed": false
+      }
+     }
+    },
+    "-4": {
+     "sets": {
+      "1": {
+       "playerId": {
+        "1": 3,
+        "2": -1
+       },
+       "score": {
+        "1": 0,
+        "2": 0
+       },
+       "completed": false
+      }
+     }
+    }
+   }
+  },
+  "players": {
+   "slot": {
+    "0": {
+     "player": {
+      "1": {
+       "name": "Ñandutí",
+       "team": "SCP"
+      }
+     }
+    },
+    "1": {
+     "player": {
+      "1": {
+       "name": "Mbarete",
+       "team": ""
+      }
+     }
+    },
+    "2": {
+     "player": {
+      "1": {
+       "name": "Karai Guasu",
+       "team": ""
+      }
+     }
+    },
+    "3": {
+     "player": {
+      "1": {
+       "name": "Yvoty",
+       "team": ""
+      }
+     }
+    },
+    "4": {
+     "player": {
+      "1": {
+       "name": "Tatu",
+       "team": ""
+      }
+     }
+    },
+    "5": {
+     "player": {
+      "1": {
+       "name": "Jaguarete",
+       "team": ""
+      }
+     }
+    },
+    "6": {
+     "player": {
+      "1": {
+       "name": "Kuarahy",
+       "team": ""
+      }
+     }
+    },
+    "7": {
+     "player": {
+      "1": {
+       "name": "Pytã",
+       "team": ""
+      }
+     }
+    }
+   }
+  }
+ }
+}
