@@ -1,0 +1,56 @@
+<!doctype html>
+<!--
+  PATROCINADORES — escena completa (opaca), para pausas publicitarias.
+  OBS: Fuente de navegador, archivo local, 1920 × 1080.
+  Logos: config/evento.js («patrocinadores»). Hasta 4 secundarios en la grilla.
+-->
+<html lang="es" data-tema="smash-hub">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Patrocinadores · Smash Hub</title>
+    <link rel="stylesheet" href="assets/css/base.css" />
+    <link rel="stylesheet" href="assets/css/temas/center-stage.css" />
+    <link rel="stylesheet" href="assets/css/sponsors.css" />
+  </head>
+  <body>
+    <main class="escena">
+      <div class="fondo"></div>
+      <div class="rayas"></div>
+      <div class="losa" style="left: 900px; top: -140px; width: 1300px; height: 1360px"></div>
+      <div class="luz"></div>
+      <div class="brasas" data-lista="brasas" data-cantidad="20"></div>
+
+      <header class="marca entra-izq">
+        <img class="logo-club" data-src="evento.logoClub" alt="" width="96" height="96" />
+        <img class="logo-evento" data-src="evento.logoEvento" alt="" width="96" height="96" />
+        <div>
+          <div class="marca-org display" data-campo="evento.organizacion"></div>
+          <div class="etiqueta" data-campo="evento.evento"></div>
+        </div>
+      </header>
+
+      <section class="gracias entra-izq" style="--retraso: 0.1s">
+        <span class="chip"><span>Patrocinadores</span></span>
+        <h1 class="gracias-titulo display" data-campo="evento.textos.patrocinadores"></h1>
+        <div class="gracias-linea"></div>
+      </section>
+
+      <section class="principal entra-der" style="--retraso: 0.2s">
+        <span class="principal-etiqueta etiqueta">Patrocinador principal</span>
+        <div class="principal-logo" data-lista="principal"></div>
+      </section>
+
+      <section class="secundarios entra" style="--retraso: 0.35s">
+        <span class="etiqueta">También nos acompañan</span>
+        <div class="secundarios-grilla" data-lista="secundarios" data-max="4"></div>
+      </section>
+
+      <footer class="barra-inf entra" style="--retraso: 0.45s">
+        <ul class="redes" data-lista="redes"></ul>
+        <span class="barra-sitio display" data-campo="evento.sitio"></span>
+      </footer>
+    </main>
+    <script src="assets/js/overlay.js"></script>
+  </body>
+</html>

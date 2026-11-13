@@ -1,0 +1,296 @@
+/*
+ * Gameplay. Fondo transparente: solo se dibujan marcador, marca y auspicio.
+ *
+ * Zonas reservadas para el HUD de Smash Ultimate (1920 × 1080, 1 vs 1):
+ *   - franja inferior central, x 480–1440, y > 880: porcentajes y stocks;
+ *   - esquina superior derecha, x > 1620, y < 120: temporizador.
+ * El marcador ocupa x 391–1529, y 22–118. Marca y auspicio, las esquinas inferiores.
+ */
+
+html,
+body {
+  background: transparent !important;
+}
+
+/* ------------------------------------------------------------------ marcador */
+.marcador {
+  position: absolute;
+  top: 22px;
+  left: 50%;
+  translate: -50% 0;
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  height: 62px;
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.55));
+}
+.lado {
+  display: flex;
+  gap: 6px;
+}
+.placa,
+.puntos,
+.centro {
+  transform: skewX(var(--inclinacion));
+  display: flex;
+  align-items: center;
+}
+.placa > *,
+.puntos > *,
+.centro > * {
+  transform: skewX(calc(var(--inclinacion) * -1));
+}
+
+.placa {
+  position: relative;
+  width: 360px;
+  padding: 0 24px;
+  background:
+    linear-gradient(180deg, rgba(239, 233, 223, 0.07), transparent 45%),
+    var(--c-panel);
+  border-top: 1px solid var(--c-panel-borde);
+}
+/* Franja de color de cada lado, en el borde exterior */
+.placa::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 7px;
+}
+.lado-1 .placa::before {
+  left: 0;
+  background: var(--c-p1);
+}
+.lado-2 .placa::before {
+  right: 0;
+  background: var(--c-p2);
+}
+.lado-1 .placa {
+  justify-content: flex-end;
+}
+.lado-2 .placa {
+  justify-content: flex-start;
+}
+.placa-texto {
+  display: block;
+  width: 100%;
+  font-family: var(--f-display);
+  font-size: 40px;
+  line-height: 62px;
+  text-transform: uppercase;
+}
+.lado-1 .placa-texto {
+  text-align: right;
+}
+.equipo {
+  font-weight: 700;
+  font-size: 0.68em;
+  color: var(--c-ceniza);
+  margin-right: 0.3em;
+  letter-spacing: 0.02em;
+}
+.equipo.vacio {
+  display: none;
+}
+.nombre {
+  font-weight: 800;
+  letter-spacing: 0.015em;
+}
+
+.puntos {
+  width: 72px;
+  justify-content: center;
+  background: var(--c-fuego);
+  color: var(--c-sobre-fuego);
+  font-family: var(--f-display);
+  font-weight: 900;
+  font-size: 52px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  transition:
+    background 0.3s,
+    box-shadow 0.3s;
+}
+.puntos span {
+  translate: 0 2px;
+}
+/* Quien gana el set se marca en oro (como el líder en el sitio). */
+.gana .puntos {
+  background: var(--c-oro);
+  box-shadow: 0 0 26px rgba(243, 168, 31, 0.55);
+}
+
+.centro {
+  width: 250px;
+  justify-content: center;
+  padding: 0 18px;
+  background: rgba(10, 8, 7, 0.94);
+  border-top: 1px solid var(--c-panel-borde);
+}
+.ronda {
+  display: block;
+  width: 100%;
+  text-align: center;
+  font-family: var(--f-display);
+  font-weight: 800;
+  font-size: 30px;
+  line-height: 62px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Pestaña bajo el marcador: formato y evento */
+.pestana {
+  position: absolute;
+  top: 84px;
+  left: 50%;
+  translate: -50% 0;
+  width: 360px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 0 34px;
+  background: rgba(18, 15, 13, 0.86);
+  clip-path: polygon(0 0, 100% 0, 93% 100%, 7% 100%);
+  font-family: var(--f-texto);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.pestana::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--c-fuego), transparent);
+}
+.formato {
+  color: var(--c-fuego);
+}
+.pestana i {
+  width: 5px;
+  height: 5px;
+  background: var(--c-ceniza);
+  transform: rotate(45deg);
+  flex: none;
+}
+.pestana-evento {
+  color: var(--c-ceniza);
+  max-width: 220px;
+}
+
+/* ------------------------------------------------------------------ marca */
+.bug {
+  position: absolute;
+  left: 40px;
+  bottom: 38px;
+  width: 430px;
+  height: 92px;
+  display: flex;
+  align-items: center;
+}
+.sin-marca .bug {
+  display: none;
+}
+.bug .logo-club,
+.bug .logo-evento {
+  position: relative;
+  z-index: 1;
+  width: 92px;
+  height: 92px;
+  flex: none;
+}
+.con-logo-evento .bug .logo-club {
+  display: none;
+}
+.bug-panel {
+  margin-left: -34px;
+  flex: 1;
+  min-width: 0;
+  height: 62px;
+  padding: 0 24px 0 50px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  background:
+    linear-gradient(90deg, rgba(229, 84, 27, 0.2), transparent 60%),
+    var(--c-panel);
+  border-top: 1px solid var(--c-panel-borde);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 13px) 100%, 0 100%);
+}
+.bug-evento {
+  display: block;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1;
+}
+.bug-sub {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--c-ceniza);
+}
+
+/* ------------------------------------------------------------------ patrocinadores */
+.auspicio {
+  position: absolute;
+  right: 40px;
+  bottom: 38px;
+  width: 300px;
+  height: 92px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.sin-patrocinadores .auspicio {
+  display: none;
+}
+.auspicio-etiqueta {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--c-ceniza);
+  padding-right: 8px;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+}
+.auspicio-logos {
+  position: relative;
+  width: 280px;
+  height: 64px;
+  background: var(--c-panel);
+  border-top: 1px solid var(--c-panel-borde);
+  clip-path: polygon(13px 0, 100% 0, 100% 100%, 0 100%);
+}
+.auspicio-logos::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--c-fuego);
+}
+.auspicio-logos .patrocinador {
+  position: absolute;
+  inset: 8px 22px 8px 30px;
+  opacity: 0;
+  transition: opacity 0.6s;
+}
+.auspicio-logos .patrocinador.activo {
+  opacity: 1;
+}
+.auspicio-logos .patrocinador-texto {
+  font-size: 26px;
+}

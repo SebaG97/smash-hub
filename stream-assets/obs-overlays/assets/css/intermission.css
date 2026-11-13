@@ -1,0 +1,244 @@
+/* Volvemos enseguida. Mensaje a la izquierda, próximo set a la derecha, cinta abajo. */
+
+/* Franja diagonal que cruza la escena detrás del mensaje */
+.franja {
+  position: absolute;
+  left: -200px;
+  top: 384px;
+  width: 1500px;
+  height: 392px;
+  -webkit-mask-image: linear-gradient(90deg, #000 45%, transparent 92%);
+  mask-image: linear-gradient(90deg, #000 45%, transparent 92%);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--c-fuego) 22%, transparent), transparent 85%);
+  transform: skewX(var(--inclinacion));
+  border-top: 1px solid color-mix(in srgb, var(--c-fuego) 40%, transparent);
+  border-bottom: 1px solid rgba(239, 233, 223, 0.06);
+}
+
+/* ------------------------------------------------------------------ marca */
+.marca {
+  position: absolute;
+  left: 96px;
+  top: 64px;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+.marca img {
+  width: 96px;
+  height: 96px;
+}
+.con-logo-evento .marca .logo-club {
+  display: none;
+}
+.marca-evento {
+  font-size: 40px;
+  font-weight: 800;
+}
+.marca .etiqueta {
+  margin-top: 6px;
+  font-size: 15px;
+}
+
+/* ------------------------------------------------------------------ mensaje */
+.mensaje {
+  position: absolute;
+  left: 110px;
+  top: 300px;
+  width: 1000px;
+}
+.pausa {
+  display: flex;
+  gap: 18px;
+  height: 64px;
+  margin: 0 0 30px 14px;
+}
+.pausa i {
+  width: 22px;
+  background: var(--c-fuego);
+  transform: skewX(var(--inclinacion));
+  box-shadow: var(--brillo);
+}
+.titulo {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  font-size: 196px;
+  line-height: 0.92;
+}
+.linea {
+  display: block;
+  width: 1000px;
+  padding: 0 40px 0 0.04em;
+  transform: skewX(var(--inclinacion));
+  transform-origin: left bottom;
+}
+.linea-contorno {
+  color: transparent;
+  -webkit-text-stroke: 3px var(--c-fuego);
+  text-shadow: none;
+  filter: drop-shadow(0 0 18px color-mix(in srgb, var(--c-fuego) 45%, transparent));
+}
+.mensaje-sub {
+  margin: 34px 0 0 14px;
+  max-width: 920px;
+  font-size: 28px;
+  line-height: 1.4;
+  color: var(--c-ceniza);
+}
+
+/* ------------------------------------------------------------------ tarjeta */
+.tarjeta {
+  position: absolute;
+  right: 96px;
+  top: 170px;
+  width: 620px;
+  height: 700px;
+  display: flex;
+  flex-direction: column;
+  background:
+    linear-gradient(180deg, rgba(239, 233, 223, 0.05), transparent 30%),
+    rgba(10, 8, 7, 0.78);
+  border: 1px solid rgba(239, 233, 223, 0.09);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 46px), calc(100% - 46px) 100%, 0 100%);
+  box-shadow: 0 40px 120px rgba(0, 0, 0, 0.5);
+}
+.tarjeta::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  height: 5px;
+  background: linear-gradient(90deg, var(--c-fuego), var(--c-oro));
+}
+.tarjeta-cabeza {
+  padding: 40px 44px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tarjeta-cabeza .etiqueta {
+  color: var(--c-fuego);
+}
+.tarjeta-ronda {
+  font-size: 54px;
+  font-weight: 800;
+  width: 100%;
+}
+.cruce {
+  margin: 28px 44px 0;
+  padding: 26px 0;
+  border-top: 1px solid rgba(239, 233, 223, 0.1);
+  border-bottom: 1px solid rgba(239, 233, 223, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cruce-jugador {
+  font-size: 72px;
+  line-height: 1.05;
+  width: 100%;
+  transform: skewX(var(--inclinacion));
+  padding-left: 0.1em;
+}
+.cruce-vs {
+  font-size: 30px;
+  color: var(--c-oro);
+  letter-spacing: 0.1em;
+  padding-left: 0.2em;
+}
+.tarjeta-apoyo {
+  margin-top: auto;
+  padding: 0 44px 52px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.tarjeta-principal .patrocinador {
+  height: 96px;
+  justify-content: flex-start;
+}
+.tarjeta-principal .patrocinador img {
+  max-width: 300px;
+}
+.tarjeta-grilla {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+.tarjeta-grilla .patrocinador {
+  height: 56px;
+}
+
+/* ------------------------------------------------------------------ cinta */
+.cinta-caja {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 56px;
+  height: 76px;
+  display: flex;
+  align-items: stretch;
+  background: rgba(8, 6, 5, 0.85);
+  border-top: 1px solid rgba(239, 233, 223, 0.07);
+  border-bottom: 1px solid rgba(239, 233, 223, 0.07);
+}
+.cinta-etiqueta {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  padding: 0 46px 0 96px;
+  margin-left: -30px;
+  background: var(--c-fuego);
+  color: var(--c-sobre-fuego);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  transform: skewX(var(--inclinacion));
+}
+.cinta-etiqueta > span {
+  transform: skewX(calc(var(--inclinacion) * -1));
+}
+.cinta {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
+}
+.cinta-pista {
+  display: flex;
+  width: max-content;
+  animation: cinta 46s linear infinite;
+}
+.cinta-grupo {
+  display: flex;
+}
+.cinta-item {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  font-family: var(--f-display);
+  font-weight: 700;
+  font-size: 32px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0 34px;
+}
+.cinta-item::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  margin-left: 68px;
+  background: var(--c-fuego);
+  transform: rotate(45deg);
+}
+@keyframes cinta {
+  to {
+    transform: translateX(-50%);
+  }
+}

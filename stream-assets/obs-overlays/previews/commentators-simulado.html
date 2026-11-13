@@ -1,0 +1,58 @@
+<!doctype html>
+<!--
+  SOLO VISTA PREVIA. No usar en OBS.
+  Pone dos «cámaras» simuladas debajo de commentators.html para ver cómo queda
+  con video en los huecos transparentes.
+-->
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Vista previa · comentaristas</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #000;
+      }
+      .cam {
+        position: absolute;
+        top: 250px;
+        width: 860px;
+        height: 484px;
+        background:
+          radial-gradient(140px 170px at 50% 52%, #6d5c52 0 98%, transparent 100%),
+          radial-gradient(240px 200px at 50% 105%, #3c4a5c 0 98%, transparent 100%),
+          linear-gradient(180deg, #59606b, #2b2f36);
+        display: grid;
+        place-items: start center;
+        color: rgba(255, 255, 255, 0.8);
+        font: 700 16px Verdana, sans-serif;
+        letter-spacing: 0.2em;
+        padding-top: 24px;
+        box-sizing: border-box;
+      }
+      iframe {
+        position: absolute;
+        inset: 0;
+        width: 1920px;
+        height: 1080px;
+        border: 0;
+        background: transparent;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="cam" style="left: 70px">CÁMARA 1 · SIMULADA</div>
+    <div class="cam" style="left: 990px">CÁMARA 2 · SIMULADA</div>
+    <iframe id="overlay" title="Overlay"></iframe>
+    <script>
+      document.getElementById("overlay").src = "../commentators.html" + location.search;
+      window.addEventListener("message", function (e) {
+        if (e.data === "sh-listo") document.documentElement.classList.add("listo");
+      });
+    </script>
+  </body>
+</html>

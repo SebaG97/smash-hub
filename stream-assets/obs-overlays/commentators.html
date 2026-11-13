@@ -1,0 +1,68 @@
+<!doctype html>
+<!--
+  COMENTARISTAS — escena con DOS HUECOS TRANSPARENTES para cámaras.
+  OBS: poné las dos cámaras DEBAJO de esta fuente de navegador, en:
+    Cámara 1: x 70,  y 250, 860 × 484
+    Cámara 2: x 990, y 250, 860 × 484
+  Textos: config/evento.js («comentaristas», patrocinadores, sitio).
+-->
+<html lang="es" data-tema="smash-hub">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Comentaristas · Smash Hub</title>
+    <link rel="stylesheet" href="assets/css/base.css" />
+    <link rel="stylesheet" href="assets/css/temas/center-stage.css" />
+    <link rel="stylesheet" href="assets/css/commentators.css" />
+  </head>
+  <body>
+    <main class="escena">
+      <!-- Todo el fondo lleva la máscara con los dos huecos -->
+      <div class="perforado">
+        <div class="fondo"></div>
+        <div class="rayas"></div>
+        <div class="fantasma" style="left: -40px; bottom: 90px; font-size: 300px">Comentarios</div>
+        <div class="brasas" data-lista="brasas" data-cantidad="16"></div>
+      </div>
+
+      <header class="cabecera">
+        <div class="marca entra-izq">
+          <img class="logo-club" data-src="evento.logoClub" alt="" width="92" height="92" />
+          <img class="logo-evento" data-src="evento.logoEvento" alt="" width="92" height="92" />
+          <div>
+            <div class="marca-evento display" data-campo="evento.evento"></div>
+            <div class="etiqueta" data-campo="evento.organizacion"></div>
+          </div>
+        </div>
+        <div class="titulo entra-der">
+          <span class="chip"><span class="punto"></span><span>En vivo</span></span>
+          <span class="titulo-texto display" data-campo="evento.textos.comentarios"></span>
+        </div>
+      </header>
+
+      <section class="cabina" data-lista="comentaristas">
+        <div class="camara camara-1" data-comentarista="0">
+          <i class="esq esq-1"></i><i class="esq esq-2"></i><i class="esq esq-3"></i><i class="esq esq-4"></i>
+          <div class="placa entra-izq" style="--retraso: 0.2s">
+            <span class="com-nombre display" data-ajustar="0.5"></span>
+            <span class="com-usuario"></span>
+          </div>
+        </div>
+        <div class="camara camara-2" data-comentarista="1">
+          <i class="esq esq-1"></i><i class="esq esq-2"></i><i class="esq esq-3"></i><i class="esq esq-4"></i>
+          <div class="placa entra-der" style="--retraso: 0.3s">
+            <span class="com-nombre display" data-ajustar="0.5"></span>
+            <span class="com-usuario"></span>
+          </div>
+        </div>
+      </section>
+
+      <footer class="barra-inf entra" style="--retraso: 0.4s">
+        <span class="etiqueta">Patrocinan</span>
+        <div class="tira" data-lista="todos"></div>
+        <span class="barra-sitio display" data-campo="evento.sitio"></span>
+      </footer>
+    </main>
+    <script src="assets/js/overlay.js"></script>
+  </body>
+</html>

@@ -1,0 +1,167 @@
+/*
+ * Comentaristas. Los huecos de cámara son transparentes de verdad:
+ * el fondo completo lleva una máscara que los recorta.
+ * Si se cambian posición o tamaño, cambiarlos acá Y en .camara-1 / .camara-2.
+ *   Cámara 1: x 70,  y 250, 860 × 484 (16:9)
+ *   Cámara 2: x 990, y 250, 860 × 484 (16:9)
+ */
+
+html,
+body {
+  background: transparent !important;
+}
+
+.perforado {
+  position: absolute;
+  inset: 0;
+  -webkit-mask:
+    linear-gradient(#000 0 0) 70px 250px / 860px 484px no-repeat,
+    linear-gradient(#000 0 0) 990px 250px / 860px 484px no-repeat,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) 70px 250px / 860px 484px no-repeat exclude,
+    linear-gradient(#000 0 0) 990px 250px / 860px 484px no-repeat exclude,
+    linear-gradient(#000 0 0);
+}
+
+/* ------------------------------------------------------------------ cabecera */
+.cabecera {
+  position: absolute;
+  left: 70px;
+  right: 70px;
+  top: 70px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.marca {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+.marca img {
+  width: 92px;
+  height: 92px;
+}
+.con-logo-evento .marca .logo-club {
+  display: none;
+}
+.marca-evento {
+  font-size: 40px;
+  font-weight: 800;
+}
+.marca .etiqueta {
+  margin-top: 6px;
+  font-size: 15px;
+}
+.titulo {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+}
+.titulo-texto {
+  font-size: 80px;
+  transform: skewX(var(--inclinacion));
+}
+
+/* ------------------------------------------------------------------ cámaras */
+.camara {
+  position: absolute;
+  top: 250px;
+  width: 860px;
+  height: 484px;
+  /* Borde fino alrededor del hueco, por fuera */
+  outline: 2px solid rgba(239, 233, 223, 0.14);
+  outline-offset: 0;
+}
+.camara-1 {
+  left: 70px;
+}
+.camara-2 {
+  left: 990px;
+}
+.esq {
+  position: absolute;
+  width: 54px;
+  height: 54px;
+  border: 0 solid var(--c-fuego);
+}
+.esq-1 {
+  left: -12px;
+  top: -12px;
+  border-left-width: 5px;
+  border-top-width: 5px;
+}
+.esq-2 {
+  right: -12px;
+  top: -12px;
+  border-right-width: 5px;
+  border-top-width: 5px;
+  border-color: rgba(239, 233, 223, 0.5);
+}
+.esq-3 {
+  left: -12px;
+  bottom: -12px;
+  border-left-width: 5px;
+  border-bottom-width: 5px;
+  border-color: rgba(239, 233, 223, 0.5);
+}
+.esq-4 {
+  right: -12px;
+  bottom: -12px;
+  border-right-width: 5px;
+  border-bottom-width: 5px;
+}
+
+/* Placa de nombre: pisa 34 px el borde inferior de la cámara */
+.placa {
+  position: absolute;
+  bottom: -84px;
+  left: 30px;
+  width: 560px;
+  height: 104px;
+  padding: 0 40px 0 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--c-fuego) 26%, transparent), transparent 70%),
+    rgba(10, 8, 7, 0.96);
+  border-left: 6px solid var(--c-fuego);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 22px) 100%, 0 100%);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+}
+.camara-2 .placa {
+  left: auto;
+  right: 30px;
+  border-left: 0;
+  border-right: 6px solid var(--c-p2);
+  padding: 0 44px 0 40px;
+  text-align: right;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 22px 100%);
+  background:
+    linear-gradient(270deg, color-mix(in srgb, var(--c-p2) 14%, transparent), transparent 70%),
+    rgba(10, 8, 7, 0.96);
+}
+.com-nombre {
+  display: block;
+  font-size: 54px;
+  font-weight: 800;
+  line-height: 1.05;
+}
+.com-usuario {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--c-ceniza);
+}
+
+/* ------------------------------------------------------------------ pie */
+.barra-sitio {
+  margin-left: auto;
+  font-size: 30px;
+  font-weight: 800;
+}

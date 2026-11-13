@@ -1,0 +1,73 @@
+<!doctype html>
+<!--
+  GAMEPLAY — overlay principal, FONDO TRANSPARENTE.
+  OBS: Fuente de navegador, archivo local, 1920 × 1080, encima de la captura.
+  Textos: config/partida.js (jugadores, marcador, ronda) y config/evento.js.
+  Zonas libres a propósito: franja inferior central (porcentajes y stocks)
+  y esquina superior derecha (temporizador).
+-->
+<html lang="es" data-tema="smash-hub">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Gameplay · Smash Hub</title>
+    <link rel="stylesheet" href="assets/css/base.css" />
+    <link rel="stylesheet" href="assets/css/temas/center-stage.css" />
+    <link rel="stylesheet" href="assets/css/gameplay.css" />
+  </head>
+  <body>
+    <main class="escena">
+      <!-- Marcador -->
+      <section class="marcador entra" aria-label="Marcador">
+        <div class="lado lado-1" data-jugador="1">
+          <div class="placa">
+            <span class="placa-texto" data-ajustar="0.55">
+              <span class="equipo" data-campo="partida.jugador1.equipo"></span>
+              <span class="nombre" data-campo="partida.jugador1.nombre"></span>
+            </span>
+          </div>
+          <div class="puntos"><span data-campo="partida.jugador1.marcador"></span></div>
+        </div>
+
+        <div class="centro">
+          <span class="ronda" data-campo="partida.ronda" data-ajustar="0.6"></span>
+        </div>
+
+        <div class="lado lado-2" data-jugador="2">
+          <div class="puntos"><span data-campo="partida.jugador2.marcador"></span></div>
+          <div class="placa">
+            <span class="placa-texto" data-ajustar="0.55">
+              <span class="equipo" data-campo="partida.jugador2.equipo"></span>
+              <span class="nombre" data-campo="partida.jugador2.nombre"></span>
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <div class="pestana entra" style="--retraso: 0.15s">
+        <span class="formato" data-campo="partida.formato"></span>
+        <i></i>
+        <span class="pestana-evento" data-campo="evento.evento" data-ajustar="0.7"></span>
+      </div>
+
+      <!-- Marca (abajo a la izquierda) -->
+      <section class="bug entra-izq" style="--retraso: 0.3s" aria-label="Evento">
+        <img class="logo-club" data-src="evento.logoClub" alt="" width="92" height="92" />
+        <img class="logo-evento" data-src="evento.logoEvento" alt="" width="92" height="92" />
+        <div class="bug-panel">
+          <span class="bug-evento display" data-campo="evento.evento" data-ajustar="0.6"></span>
+          <span class="bug-sub" data-ajustar="0.7"
+            ><span data-campo="evento.organizacion"></span> · <span data-campo="evento.sitio"></span
+          ></span>
+        </div>
+      </section>
+
+      <!-- Patrocinadores (abajo a la derecha), rotan cada 8 s -->
+      <section class="auspicio entra-der" style="--retraso: 0.4s" aria-label="Patrocinadores">
+        <span class="auspicio-etiqueta">Con el apoyo de</span>
+        <div class="auspicio-logos" data-lista="todos" data-rotar="8"></div>
+      </section>
+    </main>
+    <script src="assets/js/overlay.js"></script>
+  </body>
+</html>

@@ -1,0 +1,214 @@
+<!doctype html>
+<!--
+  SOLO VISTA PREVIA. No usar en OBS.
+  Dibuja un escenario genérico y un HUD simulado de Smash Ultimate (posiciones
+  aproximadas de una partida 1 vs 1 a 1920 × 1080) y pone gameplay.html encima,
+  para comprobar que el overlay no tapa porcentajes, stocks ni temporizador.
+  ?guias=1 marca las zonas reservadas del HUD.
+-->
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Vista previa · gameplay simulado</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #000;
+        font-family: Verdana, sans-serif;
+      }
+      .juego {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(900px 400px at 70% 30%, rgba(255, 214, 150, 0.35), transparent 70%),
+          linear-gradient(180deg, #2b4f7d 0%, #6a86b0 45%, #d9a27a 75%, #6e4a3a 100%);
+      }
+      .monte {
+        position: absolute;
+        bottom: 260px;
+        width: 900px;
+        height: 380px;
+        background: #3b4f6e;
+        clip-path: polygon(0 100%, 30% 25%, 45% 55%, 62% 10%, 100% 100%);
+        opacity: 0.8;
+      }
+      .monte.b {
+        left: 900px;
+        width: 1100px;
+        background: #2f3f5a;
+        clip-path: polygon(0 100%, 22% 40%, 48% 5%, 70% 45%, 100% 100%);
+      }
+      .plataforma {
+        position: absolute;
+        left: 420px;
+        top: 640px;
+        width: 1080px;
+        height: 70px;
+        background: linear-gradient(180deg, #d8d2c4, #8f8676);
+        border-radius: 6px 6px 0 0;
+      }
+      .plataforma::after {
+        content: "";
+        position: absolute;
+        left: 60px;
+        right: 60px;
+        top: 70px;
+        height: 260px;
+        background: linear-gradient(180deg, #6b6255, #2c2721);
+        clip-path: polygon(0 0, 100% 0, 78% 100%, 22% 100%);
+      }
+      .flotante {
+        position: absolute;
+        top: 470px;
+        width: 300px;
+        height: 22px;
+        background: linear-gradient(180deg, #e9e3d6, #a19887);
+        border-radius: 11px;
+      }
+      .luchador {
+        position: absolute;
+        top: 520px;
+        width: 70px;
+        height: 120px;
+        border-radius: 34px 34px 10px 10px;
+        box-shadow: 0 0 30px rgba(255, 255, 255, 0.4);
+      }
+      /* HUD simulado */
+      .hud {
+        position: absolute;
+        top: 936px;
+        width: 300px;
+        height: 112px;
+      }
+      .hud .retrato {
+        position: absolute;
+        left: 0;
+        top: 4px;
+        width: 108px;
+        height: 108px;
+        border-radius: 50%;
+        background: rgba(0, 0, 0, 0.35) center/88% no-repeat;
+      }
+      .hud .pct {
+        position: absolute;
+        left: 112px;
+        top: 6px;
+        font: italic 900 80px/1 Impact, "Arial Narrow", sans-serif;
+        color: #fff;
+        -webkit-text-stroke: 3px #000;
+      }
+      .hud .pct small {
+        font-size: 40px;
+      }
+      .hud .tag {
+        position: absolute;
+        left: 116px;
+        top: 86px;
+        font: 700 18px/1 Verdana, sans-serif;
+        color: #fff;
+        text-shadow: 0 2px 2px #000;
+      }
+      .hud .stocks {
+        position: absolute;
+        left: 8px;
+        top: -24px;
+        display: flex;
+        gap: 6px;
+      }
+      .hud .stocks i {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: currentColor;
+        border: 2px solid #000;
+      }
+      .timer {
+        position: absolute;
+        right: 44px;
+        top: 34px;
+        font: 900 62px/1 Impact, "Arial Narrow", sans-serif;
+        color: #fff;
+        -webkit-text-stroke: 2px #000;
+      }
+      .timer small {
+        font-size: 34px;
+      }
+      .zona {
+        position: absolute;
+        border: 3px dashed #ff3b3b;
+        background: rgba(255, 59, 59, 0.12);
+        color: #fff;
+        font: 700 16px Verdana, sans-serif;
+        padding: 6px 10px;
+        display: none;
+      }
+      .guias .zona {
+        display: block;
+      }
+      .sello {
+        position: absolute;
+        left: 50%;
+        top: 520px;
+        translate: -50% 0;
+        padding: 6px 14px;
+        background: rgba(0, 0, 0, 0.55);
+        color: #fff;
+        font: 700 14px Verdana, sans-serif;
+        letter-spacing: 0.2em;
+      }
+      iframe {
+        position: absolute;
+        inset: 0;
+        width: 1920px;
+        height: 1080px;
+        border: 0;
+        background: transparent;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="juego">
+      <div class="monte" style="left: -80px"></div>
+      <div class="monte b"></div>
+      <div class="flotante" style="left: 520px"></div>
+      <div class="flotante" style="left: 1100px"></div>
+      <div class="plataforma"></div>
+      <div class="luchador" style="left: 760px; background: #c33"></div>
+      <div class="luchador" style="left: 1110px; background: #36c"></div>
+
+      <div class="hud" style="left: 560px; color: #e33">
+        <div class="retrato" style="background-image: url(../assets/images/personajes/cloud.svg)"></div>
+        <div class="stocks"><i></i><i></i><i></i></div>
+        <div class="pct">47<small>.3%</small></div>
+        <div class="tag">ÑANDUTÍ</div>
+      </div>
+      <div class="hud" style="left: 1060px; color: #39f">
+        <div class="retrato" style="background-image: url(../assets/images/personajes/pikachu.svg)"></div>
+        <div class="stocks"><i></i><i></i></div>
+        <div class="pct">112<small>.8%</small></div>
+        <div class="tag">KARAI GUASU</div>
+      </div>
+      <div class="timer">6:42<small>.18</small></div>
+      <div class="sello">GAMEPLAY SIMULADO · VISTA PREVIA</div>
+    </div>
+
+    <div class="zona" style="left: 480px; top: 880px; width: 960px; height: 200px">HUD: porcentajes y stocks</div>
+    <div class="zona" style="left: 1620px; top: 0; width: 300px; height: 120px">HUD: temporizador</div>
+
+    <iframe id="overlay" title="Overlay"></iframe>
+    <script>
+      var q = new URLSearchParams(location.search);
+      if (q.get("guias")) document.body.classList.add("guias");
+      q.delete("guias");
+      document.getElementById("overlay").src = "../gameplay.html?" + q.toString();
+      // La captura espera a que el overlay esté listo.
+      window.addEventListener("message", function (e) {
+        if (e.data === "sh-listo") document.documentElement.classList.add("listo");
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,283 @@
+/* Versus / próximo set. Escena completa, dividida por una costura diagonal. */
+
+/* ------------------------------------------------------------------ mitades */
+.mitad {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+/* La costura va de x 1075 (arriba) a x 845 (abajo): la misma inclinación de 12°. */
+.mitad-1 {
+  clip-path: polygon(0 0, 1075px 0, 845px 100%, 0 100%);
+  background:
+    linear-gradient(105deg, color-mix(in srgb, var(--c-p1) 38%, transparent) 0%, transparent 62%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.45));
+}
+.mitad-2 {
+  clip-path: polygon(1075px 0, 100% 0, 100% 100%, 845px 100%);
+  background:
+    linear-gradient(255deg, color-mix(in srgb, var(--c-p2) 16%, transparent) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.55));
+}
+/* Personaje gigante de fondo, apagado */
+.fantasma-pj {
+  position: absolute;
+  top: 120px;
+  width: 980px;
+  height: 980px;
+  opacity: 0.1;
+  filter: grayscale(1) contrast(1.2);
+}
+.mitad-1 .fantasma-pj {
+  left: -170px;
+}
+.mitad-2 .fantasma-pj {
+  right: -170px;
+  transform: scaleX(-1);
+}
+/* Sin personaje: inicial gigante en contorno */
+.fantasma-inicial {
+  position: absolute;
+  top: 60px;
+  font-family: var(--f-display);
+  font-weight: 900;
+  font-size: 1100px;
+  line-height: 1;
+  color: transparent;
+  -webkit-text-stroke: 3px rgba(239, 233, 223, 0.07);
+  transform: skewX(var(--inclinacion));
+}
+.mitad-1 .fantasma-inicial {
+  left: 40px;
+}
+.mitad-2 .fantasma-inicial {
+  right: 60px;
+}
+.fantasma-pj:not(.vacio) ~ .fantasma-inicial {
+  display: none;
+}
+
+.costura {
+  position: absolute;
+  left: 957px;
+  top: -20px;
+  width: 6px;
+  height: 1120px;
+  background: linear-gradient(
+    180deg,
+    transparent 18%,
+    var(--c-fuego) 34%,
+    var(--c-oro) 50%,
+    var(--c-fuego) 78%,
+    transparent 96%
+  );
+  transform: skewX(var(--inclinacion));
+  box-shadow:
+    0 0 24px 4px color-mix(in srgb, var(--c-fuego) 70%, transparent),
+    0 0 90px 20px color-mix(in srgb, var(--c-fuego) 25%, transparent);
+}
+
+/* ------------------------------------------------------------------ encabezado */
+.cabecera {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 260px;
+}
+.marca {
+  position: absolute;
+  left: 72px;
+  top: 56px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.marca-org {
+  font-size: 34px;
+  font-weight: 800;
+}
+.marca .etiqueta {
+  margin-top: 6px;
+  font-size: 15px;
+}
+.titulo {
+  position: absolute;
+  left: 50%;
+  top: 46px;
+  width: 760px;
+  translate: -50% 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.titulo-ronda {
+  width: 100%;
+  margin-top: 18px;
+  font-size: 92px;
+  text-shadow: 0 6px 30px rgba(0, 0, 0, 0.7);
+}
+.titulo-formato {
+  margin-top: 10px;
+  color: var(--c-hueso);
+  letter-spacing: 0.4em;
+}
+.evento-logo {
+  position: absolute;
+  right: 72px;
+  top: 40px;
+}
+.evento-logo img {
+  width: 150px;
+  height: 150px;
+}
+.fecha {
+  position: absolute;
+  right: 72px;
+  top: 64px;
+  text-align: right;
+}
+/* Si hay logo de evento, la fecha baja debajo de él. */
+.con-logo-evento .fecha {
+  top: 206px;
+}
+.fecha-dia {
+  font-size: 34px;
+  font-weight: 800;
+}
+.fecha .etiqueta {
+  margin-top: 6px;
+  font-size: 15px;
+}
+
+/* ------------------------------------------------------------------ jugadores */
+/* Anclado abajo: el nombre queda a la misma altura con o sin personaje. */
+.jugador {
+  position: absolute;
+  bottom: 300px;
+  width: 700px;
+  display: flex;
+  flex-direction: column;
+}
+.jugador-1 {
+  left: 96px;
+  align-items: flex-start;
+}
+.jugador-2 {
+  right: 96px;
+  align-items: flex-end;
+  text-align: right;
+}
+.marco-pj {
+  width: 230px;
+  height: 230px;
+  margin-bottom: 26px;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(closest-side, rgba(255, 255, 255, 0.07), transparent),
+    rgba(10, 8, 7, 0.6);
+  border: 2px solid rgba(239, 233, 223, 0.12);
+  transform: skewX(var(--inclinacion));
+  position: relative;
+}
+.marco-pj::after {
+  content: "";
+  position: absolute;
+  inset: auto -2px -2px -2px;
+  height: 6px;
+}
+.jugador-1 .marco-pj::after {
+  background: var(--c-p1);
+}
+.jugador-2 .marco-pj::after {
+  background: var(--c-p2);
+}
+.marco-pj img {
+  width: 190px;
+  height: 190px;
+  transform: skewX(calc(var(--inclinacion) * -1));
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.6));
+}
+.jugador-2 .marco-pj img {
+  transform: skewX(calc(var(--inclinacion) * -1)) scaleX(-1);
+}
+
+.jugador-equipo {
+  font-size: 46px;
+  font-weight: 800;
+  color: var(--c-fuego);
+  letter-spacing: 0.04em;
+}
+/* Ocupa su lugar aunque esté vacío, para que ambos lados queden alineados. */
+.jugador-equipo {
+  height: 56px;
+  line-height: 56px;
+  overflow: hidden;
+}
+.jugador-nombre {
+  width: 100%;
+  font-size: 170px;
+  /* Altura fija: si el nombre se achica para entrar, no mueve el resto. */
+  height: 196px;
+  line-height: 200px;
+  padding: 0 0.08em;
+  margin-bottom: -16px;
+  transform: skewX(var(--inclinacion));
+  text-shadow: 0 10px 40px rgba(0, 0, 0, 0.65);
+}
+.jugador-linea {
+  margin-top: 18px;
+  width: 360px;
+  height: 6px;
+  transform: skewX(var(--inclinacion));
+}
+.jugador-1 .jugador-linea {
+  background: linear-gradient(90deg, var(--c-p1), transparent);
+}
+.jugador-2 .jugador-linea {
+  background: linear-gradient(270deg, var(--c-p2), transparent);
+}
+
+/* ------------------------------------------------------------------ VS */
+.vs {
+  position: absolute;
+  left: 50%;
+  top: 560px;
+  translate: -50% -50%;
+  width: 250px;
+  height: 250px;
+  display: grid;
+  place-items: center;
+}
+.vs::before {
+  content: "";
+  position: absolute;
+  inset: 34px;
+  background: var(--c-noche);
+  border: 3px solid var(--c-fuego);
+  transform: rotate(45deg);
+  box-shadow:
+    0 0 50px color-mix(in srgb, var(--c-fuego) 55%, transparent),
+    inset 0 0 30px color-mix(in srgb, var(--c-fuego) 30%, transparent);
+}
+.vs span {
+  position: relative;
+  font-family: var(--f-display);
+  font-weight: 900;
+  font-size: 128px;
+  line-height: 1;
+  transform: skewX(var(--inclinacion));
+  translate: 0 4px;
+  background: linear-gradient(180deg, var(--c-hueso) 30%, var(--c-oro) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ------------------------------------------------------------------ pie */
+.barra-sitio {
+  margin-left: auto;
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--c-hueso);
+}

@@ -1,0 +1,65 @@
+<!doctype html>
+<!--
+  EMPEZAMOS PRONTO — escena completa (opaca).
+  OBS: Fuente de navegador, archivo local, 1920 × 1080.
+  Textos: config/evento.js (evento, fecha, hora, lugar, redes, sitio, inicio).
+  La cuenta regresiva aparece solo si «inicio» tiene una fecha.
+-->
+<html lang="es" data-tema="smash-hub">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Empezamos pronto · Smash Hub</title>
+    <link rel="stylesheet" href="assets/css/base.css" />
+    <link rel="stylesheet" href="assets/css/temas/center-stage.css" />
+    <link rel="stylesheet" href="assets/css/starting-soon.css" />
+  </head>
+  <body>
+    <main class="escena">
+      <div class="fondo"></div>
+      <div class="rayas"></div>
+      <div class="fantasma" style="left: -60px; bottom: 60px; font-size: 420px">Smash Club</div>
+      <div class="losa" style="left: 1010px; top: -120px; width: 1200px; height: 1320px"></div>
+      <div class="brasas" data-lista="brasas" data-cantidad="34"></div>
+
+      <!-- Emblema -->
+      <section class="emblema entra">
+        <div class="emblema-luz"></div>
+        <div class="anillo anillo-1"></div>
+        <div class="anillo anillo-2"></div>
+        <img class="logo-club" data-src="evento.logoClub" alt="" width="500" height="500" />
+        <img class="logo-evento" data-src="evento.logoEvento" alt="" width="460" height="460" />
+      </section>
+
+      <!-- Título -->
+      <section class="bloque">
+        <span class="chip entra-der"><span class="punto"></span><span>La transmisión arranca en breve</span></span>
+        <h1 class="titulo display">
+          <span class="linea entra-der" style="--retraso: 0.1s" data-campo="evento.textos.empezamos.0" data-ajustar="0.6"></span>
+          <span class="linea linea-acento entra-der" style="--retraso: 0.2s" data-campo="evento.textos.empezamos.1" data-ajustar="0.6"></span>
+        </h1>
+        <div class="evento entra-der" style="--retraso: 0.3s">
+          <div class="evento-nombre display" data-campo="evento.evento" data-ajustar="0.6"></div>
+          <div class="evento-datos">
+            <span data-campo="evento.fecha"></span>
+            <i></i>
+            <span data-campo="evento.hora"></span>
+            <i></i>
+            <span data-campo="evento.lugar"></span>
+          </div>
+        </div>
+        <div class="cuenta entra-der" style="--retraso: 0.4s" data-ocultar-vacio>
+          <span class="etiqueta">Faltan</span>
+          <span class="cuenta-valor display" data-cuenta></span>
+        </div>
+      </section>
+
+      <footer class="barra-inf entra" style="--retraso: 0.5s">
+        <ul class="redes" data-lista="redes"></ul>
+        <span class="barra-sitio display" data-campo="evento.sitio"></span>
+        <div class="tira" data-lista="todos"></div>
+      </footer>
+    </main>
+    <script src="assets/js/overlay.js"></script>
+  </body>
+</html>

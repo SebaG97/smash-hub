@@ -1,0 +1,72 @@
+<!doctype html>
+<!--
+  VOLVEMOS ENSEGUIDA — escena completa (opaca), para pausas.
+  OBS: Fuente de navegador, archivo local, 1920 × 1080.
+  Textos: config/partida.js («siguiente») y config/evento.js («mensajes»).
+-->
+<html lang="es" data-tema="smash-hub">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Volvemos enseguida · Smash Hub</title>
+    <link rel="stylesheet" href="assets/css/base.css" />
+    <link rel="stylesheet" href="assets/css/temas/center-stage.css" />
+    <link rel="stylesheet" href="assets/css/intermission.css" />
+  </head>
+  <body>
+    <main class="escena">
+      <div class="fondo"></div>
+      <div class="rayas"></div>
+      <div class="franja"></div>
+      <div class="fantasma" style="right: -40px; top: -40px; font-size: 360px">Pausa</div>
+      <div class="brasas" data-lista="brasas" data-cantidad="18"></div>
+
+      <!-- Marca -->
+      <header class="marca entra-izq">
+        <img class="logo-club" data-src="evento.logoClub" alt="" width="96" height="96" />
+        <img class="logo-evento" data-src="evento.logoEvento" alt="" width="96" height="96" />
+        <div>
+          <div class="marca-evento display" data-campo="evento.evento"></div>
+          <div class="etiqueta" data-campo="evento.organizacion"></div>
+        </div>
+      </header>
+
+      <!-- Mensaje -->
+      <section class="mensaje">
+        <div class="pausa entra-izq"><i></i><i></i></div>
+        <h1 class="titulo display">
+          <span class="linea entra-izq" style="--retraso: 0.1s" data-campo="evento.textos.volvemos.0" data-ajustar="0.6"></span>
+          <span class="linea linea-contorno entra-izq" style="--retraso: 0.2s" data-campo="evento.textos.volvemos.1" data-ajustar="0.6"></span>
+        </h1>
+        <p class="mensaje-sub entra-izq" style="--retraso: 0.3s">
+          Quedate cerca: en unos minutos seguimos con el torneo.
+        </p>
+      </section>
+
+      <!-- Próximo set y patrocinadores -->
+      <aside class="tarjeta entra-der" style="--retraso: 0.25s">
+        <div class="tarjeta-cabeza">
+          <span class="etiqueta">A continuación</span>
+          <span class="tarjeta-ronda display" data-campo="partida.siguiente.ronda" data-ajustar="0.6"></span>
+        </div>
+        <div class="cruce">
+          <div class="cruce-jugador display" data-campo="partida.siguiente.jugador1" data-ajustar="0.5"></div>
+          <div class="cruce-vs display">VS</div>
+          <div class="cruce-jugador display" data-campo="partida.siguiente.jugador2" data-ajustar="0.5"></div>
+        </div>
+        <div class="tarjeta-apoyo">
+          <span class="etiqueta">Con el apoyo de</span>
+          <div class="tarjeta-principal" data-lista="principal"></div>
+          <div class="tarjeta-grilla" data-lista="secundarios" data-max="4"></div>
+        </div>
+      </aside>
+
+      <!-- Cinta -->
+      <footer class="cinta-caja entra" style="--retraso: 0.4s">
+        <span class="cinta-etiqueta"><span>Mientras tanto</span></span>
+        <div class="cinta"><div class="cinta-pista" data-lista="mensajes"></div></div>
+      </footer>
+    </main>
+    <script src="assets/js/overlay.js"></script>
+  </body>
+</html>

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">
+  <!-- PLACEHOLDER: no es el logo oficial de Center Stage. Reemplazar por logo.png (fondo transparente). -->
+  <circle cx="300" cy="300" r="290" fill="none" stroke="#efe9df" stroke-opacity=".45" stroke-width="6" stroke-dasharray="22 16"/>
+  <text x="300" y="268" text-anchor="middle" font-family="Arial Narrow, Arial, sans-serif" font-weight="700" font-size="92" fill="#efe9df" fill-opacity=".85">CENTER</text>
+  <text x="300" y="360" text-anchor="middle" font-family="Arial Narrow, Arial, sans-serif" font-weight="700" font-size="92" fill="#efe9df" fill-opacity=".85">STAGE</text>
+  <text x="300" y="420" text-anchor="middle" font-family="Verdana, sans-serif" font-weight="700" font-size="22" letter-spacing="3" fill="#a2988d">LOGO OFICIAL PENDIENTE</text>
+</svg>

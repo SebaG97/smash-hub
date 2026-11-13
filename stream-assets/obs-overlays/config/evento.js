@@ -1,0 +1,68 @@
+/*
+ * DATOS DEL EVENTO — se editan una vez por transmisión.
+ *
+ * Cómo editar: cambiá solo lo que está entre comillas y guardá el archivo.
+ * Los overlays abiertos en OBS releen este archivo cada 2 segundos.
+ * Todo lo marcado con «REEMPLAZAR» es un ejemplo o un placeholder.
+ */
+window.SH_EVENTO = {
+  // Tema visual: "smash-hub" (por defecto) o "center-stage" (colores provisionales).
+  tema: "smash-hub",
+
+  organizacion: "Smash Club Paraguay",
+  evento: "Torneo semanal", // REEMPLAZAR: nombre del torneo
+  fecha: "Sábado 14 de noviembre", // REEMPLAZAR
+  hora: "15:00", // REEMPLAZAR
+  lugar: "Asunción, Paraguay", // REEMPLAZAR
+
+  // Cuenta regresiva de «Empezamos pronto». Vacío = no se muestra.
+  // Formato: "2026-11-14T15:00:00-03:00"
+  inicio: "",
+
+  sitio: "tu-sitio.com.py", // REEMPLAZAR: sitio web
+  redes: [
+    // REEMPLAZAR: hasta 3 redes. Se muestran como «Red · usuario».
+    { red: "Instagram", usuario: "@tu_cuenta" },
+    { red: "Discord", usuario: "tu-servidor" },
+    { red: "start.gg", usuario: "tu-organizacion" },
+  ],
+
+  // Logos. Rutas relativas a la carpeta obs-overlays/.
+  logoClub: "assets/images/marca/smash-club-paraguay-circular.png",
+  // Logo del torneo. Vacío = no se muestra. Para Center Stage, ver README.
+  logoEvento: "",
+
+  patrocinadores: {
+    // REEMPLAZAR: logos con fondo transparente (PNG o SVG).
+    principal: {
+      nombre: "Patrocinador principal",
+      logo: "assets/images/patrocinadores/placeholder-principal.svg",
+    },
+    secundarios: [
+      { nombre: "Patrocinador 1", logo: "assets/images/patrocinadores/placeholder-1.svg" },
+      { nombre: "Patrocinador 2", logo: "assets/images/patrocinadores/placeholder-2.svg" },
+      { nombre: "Patrocinador 3", logo: "assets/images/patrocinadores/placeholder-3.svg" },
+      { nombre: "Patrocinador 4", logo: "assets/images/patrocinadores/placeholder-4.svg" },
+    ],
+  },
+
+  comentaristas: [
+    { nombre: "Comentarista 1", usuario: "@usuario" }, // REEMPLAZAR
+    { nombre: "Comentarista 2", usuario: "@usuario" }, // REEMPLAZAR
+  ],
+
+  textos: {
+    empezamos: ["Empezamos", "pronto"],
+    volvemos: ["Volvemos", "enseguida"],
+    comentarios: "En la cabina",
+    patrocinadores: "Gracias a quienes hacen posible este torneo",
+    proximoSet: "Próximo set",
+  },
+
+  // Mensajes de la cinta inferior de «Volvemos enseguida».
+  mensajes: [
+    "Resultados, rankings y brackets en el sitio del club", // REEMPLAZAR
+    "Seguinos en redes para enterarte del próximo torneo",
+    "¿Querés jugar? Inscribite en start.gg",
+  ],
+};

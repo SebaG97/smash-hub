@@ -1,0 +1,129 @@
+/* Patrocinadores. Agradecimiento a la izquierda; principal y secundarios sobre la losa. */
+
+.luz {
+  position: absolute;
+  left: 1000px;
+  top: 60px;
+  width: 1000px;
+  height: 640px;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--c-fuego) 22%, transparent), transparent);
+}
+
+/* ------------------------------------------------------------------ marca */
+.marca {
+  position: absolute;
+  left: 96px;
+  top: 70px;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+.marca img {
+  width: 96px;
+  height: 96px;
+}
+.con-logo-evento .marca .logo-club {
+  display: none;
+}
+.marca-org {
+  font-size: 36px;
+  font-weight: 800;
+}
+.marca .etiqueta {
+  margin-top: 6px;
+  font-size: 15px;
+}
+
+/* ------------------------------------------------------------------ agradecimiento */
+.gracias {
+  position: absolute;
+  left: 110px;
+  top: 300px;
+  width: 720px;
+}
+.gracias-titulo {
+  margin: 34px 0 0;
+  font-size: 104px;
+  line-height: 0.95;
+  text-wrap: balance;
+  transform: skewX(var(--inclinacion));
+  transform-origin: left bottom;
+}
+.gracias-linea {
+  margin-top: 40px;
+  width: 300px;
+  height: 6px;
+  background: linear-gradient(90deg, var(--c-fuego), transparent);
+  transform: skewX(var(--inclinacion));
+}
+
+/* ------------------------------------------------------------------ principal */
+.principal {
+  position: absolute;
+  left: 960px;
+  top: 150px;
+  width: 860px;
+  height: 430px;
+  display: flex;
+  flex-direction: column;
+  background:
+    linear-gradient(180deg, rgba(239, 233, 223, 0.06), transparent 40%),
+    rgba(10, 8, 7, 0.75);
+  border: 1px solid rgba(239, 233, 223, 0.1);
+  clip-path: polygon(0 0, calc(100% - 50px) 0, 100% 50px, 100% 100%, 50px 100%, 0 calc(100% - 50px));
+  box-shadow: 0 40px 120px rgba(0, 0, 0, 0.5);
+}
+.principal::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  background: linear-gradient(180deg, var(--c-fuego), var(--c-oro));
+}
+.principal-etiqueta {
+  padding: 34px 0 0 50px;
+  color: var(--c-fuego);
+}
+.principal-logo {
+  flex: 1;
+  display: flex;
+  padding: 24px 80px 50px;
+}
+.principal-logo .patrocinador {
+  flex: 1;
+}
+.principal-logo .patrocinador-texto {
+  font-size: 80px;
+}
+
+/* ------------------------------------------------------------------ secundarios */
+.secundarios {
+  position: absolute;
+  left: 960px;
+  top: 630px;
+  width: 860px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.secundarios-grilla {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+}
+.secundarios-grilla .patrocinador {
+  height: 150px;
+  padding: 22px;
+  background: rgba(10, 8, 7, 0.7);
+  border: 1px solid rgba(239, 233, 223, 0.08);
+  border-bottom: 3px solid color-mix(in srgb, var(--c-fuego) 70%, transparent);
+}
+
+/* ------------------------------------------------------------------ pie */
+.barra-inf .barra-sitio {
+  margin-left: auto;
+  font-size: 30px;
+  font-weight: 800;
+}

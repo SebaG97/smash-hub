@@ -16,3 +16,6 @@ coverage/
 *.key
 artifacts/
 *.tsbuildinfo
+
+# Paquete ZIP de overlays (se genera, no se versiona)
+stream-assets/dist/

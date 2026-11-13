@@ -1,0 +1,82 @@
+<!doctype html>
+<!--
+  VERSUS / PRÓXIMO SET — escena completa (opaca).
+  OBS: Fuente de navegador, archivo local, 1920 × 1080.
+  Textos: config/partida.js (jugadores, personajes, ronda) y config/evento.js.
+-->
+<html lang="es" data-tema="smash-hub">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Versus · Smash Hub</title>
+    <link rel="stylesheet" href="assets/css/base.css" />
+    <link rel="stylesheet" href="assets/css/temas/center-stage.css" />
+    <link rel="stylesheet" href="assets/css/versus.css" />
+  </head>
+  <body>
+    <main class="escena">
+      <div class="fondo"></div>
+      <div class="rayas"></div>
+
+      <!-- Mitades -->
+      <div class="mitad mitad-1" data-jugador="1">
+        <img class="fantasma-pj" data-personaje="1" alt="" />
+        <span class="fantasma-inicial" data-inicial="1"></span>
+      </div>
+      <div class="mitad mitad-2" data-jugador="2">
+        <img class="fantasma-pj" data-personaje="2" alt="" />
+        <span class="fantasma-inicial" data-inicial="2"></span>
+      </div>
+      <div class="costura"></div>
+      <div class="brasas" data-lista="brasas" data-cantidad="22"></div>
+
+      <!-- Encabezado -->
+      <header class="cabecera">
+        <div class="marca entra-izq">
+          <img class="logo-club" data-src="evento.logoClub" alt="" width="104" height="104" />
+          <div>
+            <div class="marca-org display" data-campo="evento.organizacion"></div>
+            <div class="etiqueta" data-campo="evento.evento"></div>
+          </div>
+        </div>
+        <div class="titulo entra">
+          <span class="chip"><span data-campo="evento.textos.proximoSet"></span></span>
+          <div class="titulo-ronda display" data-campo="partida.ronda" data-ajustar="0.6"></div>
+          <div class="etiqueta titulo-formato"><span data-campo="partida.formato"></span></div>
+        </div>
+        <div class="evento-logo entra-der" data-ocultar-vacio>
+          <img class="logo-evento" data-src="evento.logoEvento" alt="" width="150" height="150" />
+        </div>
+        <div class="fecha entra-der" style="--retraso: 0.1s">
+          <div class="display fecha-dia" data-campo="evento.fecha"></div>
+          <div class="etiqueta" data-campo="evento.lugar"></div>
+        </div>
+      </header>
+
+      <!-- Jugadores -->
+      <section class="jugador jugador-1 entra-izq" style="--retraso: 0.15s" data-jugador="1">
+        <div class="marco-pj" data-ocultar-vacio><img data-personaje="1" alt="" /></div>
+        <div class="jugador-equipo display" data-campo="partida.jugador1.equipo"></div>
+        <div class="jugador-nombre display" data-campo="partida.jugador1.nombre" data-ajustar="0.45"></div>
+        <div class="jugador-linea"></div>
+      </section>
+
+      <div class="vs entra" style="--retraso: 0.35s"><span>VS</span></div>
+
+      <section class="jugador jugador-2 entra-der" style="--retraso: 0.15s" data-jugador="2">
+        <div class="marco-pj" data-ocultar-vacio><img data-personaje="2" alt="" /></div>
+        <div class="jugador-equipo display" data-campo="partida.jugador2.equipo"></div>
+        <div class="jugador-nombre display" data-campo="partida.jugador2.nombre" data-ajustar="0.45"></div>
+        <div class="jugador-linea"></div>
+      </section>
+
+      <!-- Patrocinadores -->
+      <footer class="barra-inf entra" style="--retraso: 0.5s">
+        <span class="etiqueta">Patrocinan</span>
+        <div class="tira" data-lista="todos"></div>
+        <span class="barra-sitio display" data-campo="evento.sitio"></span>
+      </footer>
+    </main>
+    <script src="assets/js/overlay.js"></script>
+  </body>
+</html>
