@@ -57,6 +57,16 @@
   transform: skewX(var(--inclinacion));
 }
 
+/* Logo del evento debajo del agradecimiento (solo si hay logoEvento) */
+.gracias-logo {
+  margin-top: 56px;
+  width: 340px;
+  height: 300px;
+  object-fit: contain;
+  object-position: left center;
+  filter: drop-shadow(0 18px 40px rgba(0, 0, 0, 0.6));
+}
+
 /* ------------------------------------------------------------------ principal */
 .principal {
   position: absolute;
@@ -119,6 +129,21 @@
   background: rgba(10, 8, 7, 0.7);
   border: 1px solid rgba(239, 233, 223, 0.08);
   border-bottom: 3px solid color-mix(in srgb, var(--c-fuego) 70%, transparent);
+}
+
+/* Sin principal (todos con el mismo peso): la grilla ocupa todo el lado derecho. */
+.sin-principal .principal {
+  display: none;
+}
+.sin-principal .secundarios {
+  top: 170px;
+}
+.sin-principal .secundarios > .etiqueta {
+  display: none;
+}
+.secundarios-grilla.muchos .patrocinador {
+  height: 196px;
+  padding: 30px;
 }
 
 /* ------------------------------------------------------------------ pie */

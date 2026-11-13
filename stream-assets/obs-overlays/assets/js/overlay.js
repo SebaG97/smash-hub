@@ -7,6 +7,7 @@
  *   ?p1=Nombre&p2=Nombre&s1=1&s2=0&e1=Equipo&e2=Equipo&c1=mario&c2=fox
  *   &ronda=Grand%20Final&formato=BO5&tema=center-stage&evento=Center%20Stage
  *   &logoEvento=assets/images/eventos/center-stage/logo.png&inicio=2026-11-14T15:00:00-03:00
+ *   &perfil=center-stage&bracket=previews/datos/bracket-ejemplo.js
  */
 (function () {
   "use strict";
@@ -30,16 +31,40 @@
   }
 
   function leerDatos() {
-    return Promise.all([cargar("config/evento.js"), cargar("config/partida.js")]).then(function () {
+    // ?bracket=ruta/otro.js carga otro archivo de bracket (lo usan las capturas de ejemplo).
+    var qb = new URLSearchParams(location.search).get("bracket") || "";
+    var rutaBracket = /^[\w\/-]+\.js$/.test(qb) ? qb : "config/bracket.js";
+    var archivos = [cargar("config/evento.js"), cargar("config/partida.js"), cargar(rutaBracket)];
+    return Promise.all(archivos).then(function () {
       var evento = clonar(window.SH_EVENTO || {});
-      var partida = clonar(window.SH_PARTIDA || {});
-      aplicarUrl(evento, partida);
-      return { evento: evento, partida: partida };
+      // Perfil: config/perfiles/<perfil>.js pisa los datos de evento.js (logos, colores, auspiciantes…).
+      var q = new URLSearchParams(location.search);
+      var perfil = q.has("perfil") ? q.get("perfil") : evento.perfil;
+      window.SH_PERFIL = null;
+      var conPerfil = /^[a-z0-9-]+$/.test(perfil || "") ? cargar("config/perfiles/" + perfil + ".js") : Promise.resolve();
+      return conPerfil.then(function () {
+        if (window.SH_PERFIL) evento = mezclar(evento, clonar(window.SH_PERFIL));
+        var partida = clonar(window.SH_PARTIDA || {});
+        var bracket = clonar(window.SH_BRACKET || {});
+        aplicarUrl(evento, partida);
+        return { evento: evento, partida: partida, bracket: bracket };
+      });
     });
   }
 
   function clonar(o) {
     return JSON.parse(JSON.stringify(o));
+  }
+
+  /** Mezcla b sobre a: los objetos se combinan; listas y valores se reemplazan. */
+  function mezclar(a, b) {
+    Object.keys(b).forEach(function (k) {
+      var obj = function (x) {
+        return x && typeof x === "object" && !Array.isArray(x);
+      };
+      a[k] = obj(a[k]) && obj(b[k]) ? mezclar(a[k], b[k]) : b[k];
+    });
+    return a;
   }
 
   function aplicarUrl(evento, partida) {
@@ -147,6 +172,8 @@
     html.classList.toggle("sin-marca", m.marca === false);
     html.classList.toggle("sin-patrocinadores", m.patrocinadores === false);
     html.classList.toggle("con-logo-evento", !!d.evento.logoEvento);
+    html.classList.toggle("con-logo-h", !!d.evento.logoEventoHorizontal);
+    html.classList.toggle("sin-principal", !(d.evento.patrocinadores || {}).principal);
 
     $$("[data-lista]").forEach(function (n) {
       (listas[n.dataset.lista] || function () {})(n, d);
@@ -183,10 +210,13 @@
     secundarios: function (n, d) {
       n.replaceChildren();
       var p = d.evento.patrocinadores || {};
-      var max = Number(n.dataset.max || 8);
-      (p.secundarios || []).slice(0, max).forEach(function (s) {
+      var max = Number(n.dataset.max || 12);
+      var lista = (p.secundarios || []).slice(0, max);
+      lista.forEach(function (s) {
         n.append(logoPatrocinador(s, "patrocinador"));
       });
+      n.classList.toggle("muchos", lista.length > 4);
+      n.dataset.cantidad = lista.length;
     },
     todos: function (n, d) {
       // principal + secundarios, para tiras y rotación.
@@ -232,6 +262,9 @@
         n.append(grupo);
       }
     },
+    bracket: function (n, d) {
+      renderBracket(n, d);
+    },
     brasas: function (n) {
       if (n.childElementCount) return; // no reiniciar la animación
       var cant = Number(n.dataset.cantidad || 26);
@@ -252,8 +285,84 @@
     },
   };
 
+  // ------------------------------------------------------------------ bracket
+  var VACIO = "Por definir";
+
+  function renderBracket(n, d) {
+    var b = d.bracket || {};
+    var c = b.cruces || {};
+    var g = victorias(b.formato);
+    $$("[data-cruce]", n).forEach(function (card) {
+      var id = card.dataset.cruce;
+      var x = c[id] || {};
+      var gf = id === "RESET" ? g : Number(id === "GF" && b.formatoFinal ? victorias(b.formatoFinal) : g);
+      var w = Number(x.p1) >= gf ? 1 : Number(x.p2) >= gf ? 2 : 0;
+      [1, 2].forEach(function (i) {
+        var fila = card.querySelector("[data-fila='" + i + "']");
+        var nombre = String(x["j" + i] || "").trim();
+        var p = x["p" + i];
+        fila.querySelector(".br-nombre").textContent = nombre || VACIO;
+        fila.querySelector(".br-puntos").textContent = p === "" || p == null ? "" : String(p);
+        fila.classList.toggle("pendiente", !nombre);
+        fila.classList.toggle("ganador", w === i);
+        fila.classList.toggle("perdedor", !!w && w !== i);
+      });
+      card.classList.toggle("terminado", !!w);
+      card.classList.toggle("en-juego", !!b.enJuego && b.enJuego === id);
+    });
+    var r = c.RESET || {};
+    n.classList.toggle("con-reset", b.reset === true || !!(r.j1 || r.j2 || r.p1 || r.p2));
+    requestAnimationFrame(function () {
+      lineas(n);
+    });
+  }
+
+  function victorias(formato) {
+    return { BO3: 2, BO5: 3, BO7: 4 }[String(formato || "BO5").toUpperCase()] || 3;
+  }
+
+  /** Dibuja las conexiones entre cruces (data-hacia) en el SVG del bracket. */
+  function lineas(n) {
+    var svg = n.querySelector(".br-lineas");
+    if (!svg) return;
+    var NS = "http://www.w3.org/2000/svg";
+    svg.replaceChildren();
+    var caja = function (card) {
+      var k = card.querySelector(".br-caja");
+      return {
+        x: card.offsetLeft + k.offsetLeft,
+        y: card.offsetTop + k.offsetTop,
+        w: k.offsetWidth,
+        h: k.offsetHeight,
+      };
+    };
+    $$("[data-hacia]", n).forEach(function (src) {
+      var dst = n.querySelector("[data-cruce='" + src.dataset.hacia + "']");
+      if (!dst || dst.offsetParent === null || src.offsetParent === null) return;
+      var a = caja(src);
+      var z = caja(dst);
+      var dPath;
+      if (src.dataset.hacia === "RESET") {
+        // Grand Final → reset, que está debajo: línea vertical
+        var cx = a.x + a.w / 2;
+        dPath = "M" + cx + " " + (a.y + a.h) + " V" + z.y;
+      } else {
+        var x1 = a.x + a.w;
+        var y1 = a.y + a.h / 2;
+        var x2 = z.x;
+        var y2 = z.y + z.h / 2;
+        var xm = Math.round((x1 + x2) / 2);
+        dPath = "M" + x1 + " " + y1 + " H" + xm + " V" + y2 + " H" + x2;
+      }
+      var p = document.createElementNS(NS, "path");
+      p.setAttribute("d", dPath);
+      p.setAttribute("class", "br-linea" + (src.classList.contains("terminado") ? " activa" : ""));
+      svg.append(p);
+    });
+  }
+
   function logoPatrocinador(s, clase) {
-    var caja = el("div", clase);
+    var caja = el("div", clase + (s.estilo === "blanco" ? " logo-blanco" : ""));
     if (s.logo) caja.append(img(s.logo, s.nombre));
     else caja.append(el("span", "patrocinador-texto", s.nombre || ""));
     return caja;
@@ -286,15 +395,18 @@
   }
 
   // ------------------------------------------------------------------ rotación
-  // Los contenedores [data-rotar="6"] muestran un hijo por vez, cada 6 segundos.
+  // [data-rotar="6"] muestra un hijo por vez y cambia cada 6 segundos.
+  // Con data-pagina="5" muestra tandas de 5 (para listas largas de auspiciantes).
   var paso = 0;
   function rotar() {
     $$("[data-rotar]").forEach(function (n) {
       var hijos = n.children;
       if (!hijos.length) return;
       var cada = Number(n.dataset.rotar || 6);
-      var k = Math.floor(paso / cada) % hijos.length;
-      for (var i = 0; i < hijos.length; i++) hijos[i].classList.toggle("activo", i === k);
+      var tam = Number(n.dataset.pagina || 1);
+      var paginas = Math.ceil(hijos.length / tam);
+      var k = Math.floor(paso / cada) % paginas;
+      for (var i = 0; i < hijos.length; i++) hijos[i].classList.toggle("activo", Math.floor(i / tam) === k);
     });
   }
   setInterval(function () {

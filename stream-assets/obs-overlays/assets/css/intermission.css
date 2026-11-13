@@ -170,6 +170,16 @@
 .tarjeta-grilla .patrocinador {
   height: 56px;
 }
+/* Sin principal: la grilla pasa a dos filas grandes que rotan por tandas. */
+.sin-principal .tarjeta-principal {
+  display: none;
+}
+.sin-principal .tarjeta-grilla {
+  gap: 22px 18px;
+}
+.sin-principal .tarjeta-grilla .patrocinador {
+  height: 78px;
+}
 
 /* ------------------------------------------------------------------ cinta */
 .cinta-caja {

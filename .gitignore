@@ -19,3 +19,4 @@ artifacts/
 
 # Paquete ZIP de overlays (se genera, no se versiona)
 stream-assets/dist/
+stream-assets/obs-overlays/*.zip

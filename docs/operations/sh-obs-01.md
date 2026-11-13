@@ -1,6 +1,6 @@
 # SH-OBS-01 — Overlays profesionales para OBS
 
-Fecha: 13/11/2026. Paquete: [stream-assets/obs-overlays/](../../stream-assets/obs-overlays/README.md). Primera versión para revisión estética; no se hizo push ni despliegue.
+Fecha: 13/11/2026. Paquete: [stream-assets/obs-overlays/](../../stream-assets/obs-overlays/README.md). Primera versión para revisión estética; no se hizo push ni despliegue. La ampliación con bracket y la identidad oficial de Center Stage está en la [sección 10](#10-ampliación-bracket-y-center-stage-con-identidad-oficial).
 
 ## 1. Qué se entregó
 
@@ -59,6 +59,8 @@ Las escenas releen estos archivos **cada 2 segundos** (los vuelven a cargar como
 Los nombres largos se achican solos hasta entrar en su caja (mínimo entre el 45 % y el 70 % del tamaño, según el lugar). Probado con «Supercalifragilístico» y «Mbarete Guasu Paraguay» (`previews/01-gameplay-nombres-largos.png`).
 
 ## 5. Center Stage
+
+> **Actualizado:** los colores provisionales y el placeholder de esta sección se reemplazaron por la identidad oficial; ver la [sección 10](#10-ampliación-bracket-y-center-stage-con-identidad-oficial).
 
 - `assets/css/temas/center-stage.css` redefine las variables de color. Se activa con `tema: "center-stage"` en `evento.js`.
 - **Los colores que trae son provisionales** (un turquesa), solo para comprobar que la variante funciona. No son la identidad del torneo.
@@ -145,3 +147,53 @@ Las vistas previas `*-simulado` son solo para revisar: no son overlays y no se c
 2. Cargar las seis escenas en OBS 31+ con una captura real de la consola y ajustar las zonas del HUD si hace falta.
 3. Recibir logos y colores oficiales de Center Stage y de sus patrocinadores, y reemplazar placeholders.
 4. Completar redes, sitio y comentaristas reales en `config/evento.js`.
+
+## 10. Ampliación: bracket y Center Stage con identidad oficial
+
+Pedido del 13/11/2026: agregar el bracket y mejorar la variante Center Stage con el pack oficial `CENTER-STAGE-OBS-PACK.zip` (logos, 11 auspiciantes, 3 videos de referencia y una versión anterior de overlays con panel y servidor local).
+
+### 10.1 Qué se tomó del pack y qué no
+
+| Del pack | Uso |
+| --- | --- |
+| `center-stage.jpg`, `center-stage-horizontal.jpg` | Se quitó solo el fondo negro (transparencia según el brillo de cada píxel; el dibujo no cambia) → `logo.png` y `logo-horizontal.png`. Los JPEG originales quedan en `eventos/center-stage/originales/` |
+| `sponsors/1–11.png` | Copiados a `patrocinadores/center-stage/`, reducidos a 800 × 400 como máximo (el 9 medía 3583 px) |
+| Paleta del LEEME: fucsia `#E32C64`, violeta `#30244A`, negro `#08070C`, blanco `#F8F5FB` | Variables de `temas/center-stage.css`; reemplazan los colores provisionales |
+| Videos `inicio`, `pausa`, `top-8` | Referencia visual: cuadrícula fucsia sobre negro, cruces «X» y triángulos, palabra rellena en fucsia + palabra en contorno blanco, rótulos en caja fucsia, banda «Auspician» |
+| Panel `panel.html`, `servidor.py`, `INICIAR-PANEL.bat` | **No se usaron**: la consigna de SH-OBS-01 excluye paneles y servidores |
+| Videos MP4 | No se incluyen en el paquete (no hacen falta para los HTML) |
+
+El ZIP del pack quedó en `stream-assets/obs-overlays/` y se agregó `stream-assets/obs-overlays/*.zip` a `.gitignore` para no versionarlo.
+
+### 10.2 Perfil Center Stage
+
+- `perfil: "center-stage"` en `config/evento.js` activa `config/perfiles/center-stage.js`, que se mezcla sobre `evento.js`: tema, logos, 11 auspiciantes y textos («Empieza pronto», «Ya volvemos», «Auspician»). Fecha, lugar, redes, sitio y comentaristas siguen saliendo de `evento.js`.
+- Logo horizontal (`logoEventoHorizontal`) en los encabezados y en la marca del gameplay; logo vertical en «Empieza pronto», patrocinadores y bracket.
+- **Auspiciantes:** sin principal (los 11 con el mismo peso). Las tiras rotan tandas de 5 o 6 cada 8 s; el gameplay rota de a uno; la pantalla de patrocinadores los muestra a todos.
+- **Santa Bárbara** es azul oscuro y no se lee sobre fondo oscuro: se muestra en blanco (`estilo: "blanco"`), igual que en el video del evento. Es la única alteración de color de un logo de terceros y se puede desactivar.
+- Los nombres de los auspiciantes del perfil se leyeron de los propios logos.
+
+### 10.3 Bracket Top 8 (`bracket.html` + `config/bracket.js`)
+
+- Doble eliminación de 8: Winners Semifinal ×2, Winners Final, Losers Round 1 ×2, Losers Quarterfinal ×2, Losers Semifinal, Losers Final, Grand Final y reset opcional.
+- Las líneas entre sets se calculan a partir de la posición de cada set (SVG). La línea del ganador se enciende cuando el set termina.
+- Ganador resaltado y perdedor atenuado según el formato (BO3/BO5/BO7). Set «en juego» marcado. «Por definir» atenuado.
+- No avanza ganadores solo (sin lógica de bracket ni start.gg, como pide la consigna).
+- Mejora sobre el bracket del pack: aquel tenía los 10 sets en columnas sin conexiones y mezclaba winners con losers; acá winners va arriba, losers abajo y la Grand Final a la derecha, con el recorrido dibujado.
+
+### 10.4 Correcciones encontradas en esta revisión
+
+- La luz animada de «Empezamos pronto» se pintaba **encima** del logo (los elementos con transformaciones se pintan sobre los que no tienen posición); en Smash Hub se notaba poco, en Center Stage lavaba el logo. El logo ahora tiene su propia capa.
+- La línea de Winners Final caía en vertical en lugar de ir a la Grand Final.
+- La pantalla de patrocinadores tenía un tope de 4 secundarios.
+- Los nombres de los auspiciantes 7 a 11 estaban asignados a archivos equivocados; se corrigió comparando cada archivo con su imagen.
+
+### 10.5 Capturas nuevas
+
+`08-bracket.png` (Top 8 a mitad de torneo, con datos de ejemplo de `previews/datos/bracket-ejemplo.js`), `08-bracket-vacio.png` y las siete escenas de Center Stage: `07-center-stage-{gameplay,versus,starting-soon,intermission,commentators,sponsors,bracket}.png`. Todas sin errores y sin pedidos a recursos externos.
+
+### 10.6 Pendientes
+
+- Redes, sitio y comentaristas reales de Center Stage (siguen los de ejemplo en `evento.js`).
+- Confirmar con la organización si hay un auspiciante principal y si está bien mostrar Santa Bárbara en blanco.
+- Probar en OBS 31+ con captura real, como en la sección 8.

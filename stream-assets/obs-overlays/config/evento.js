@@ -6,7 +6,11 @@
  * Todo lo marcado con «REEMPLAZAR» es un ejemplo o un placeholder.
  */
 window.SH_EVENTO = {
-  // Tema visual: "smash-hub" (por defecto) o "center-stage" (colores provisionales).
+  // Perfil de evento: "" = Smash Hub, "center-stage" = Center Stage completo
+  // (colores, logos, auspiciantes y textos de config/perfiles/center-stage.js).
+  perfil: "",
+
+  // Tema visual si no hay perfil: "smash-hub" o "center-stage".
   tema: "smash-hub",
 
   organizacion: "Smash Club Paraguay",
@@ -29,8 +33,10 @@ window.SH_EVENTO = {
 
   // Logos. Rutas relativas a la carpeta obs-overlays/.
   logoClub: "assets/images/marca/smash-club-paraguay-circular.png",
-  // Logo del torneo. Vacío = no se muestra. Para Center Stage, ver README.
+  // Logo del torneo. Vacío = no se muestra.
   logoEvento: "",
+  // Versión horizontal del logo del torneo, para encabezados. Vacío = no se usa.
+  logoEventoHorizontal: "",
 
   patrocinadores: {
     // REEMPLAZAR: logos con fondo transparente (PNG o SVG).

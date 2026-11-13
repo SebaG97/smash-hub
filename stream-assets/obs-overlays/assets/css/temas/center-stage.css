@@ -1,38 +1,189 @@
 /*
- * TEMA CENTER STAGE — variante del paquete.
+ * TEMA CENTER STAGE
  *
- * Se activa con  tema: "center-stage"  en config/evento.js
- * (o con ?tema=center-stage en la URL de la fuente de navegador).
+ * Se activa con el perfil  perfil: "center-stage"  en config/evento.js
+ * (o con ?perfil=center-stage en la URL de la fuente de navegador).
  *
- * COLORES PROVISIONALES: no son los oficiales del torneo. Están para probar
- * que la variante funciona. Cuando haya identidad oficial, reemplazar solo
- * los valores de esta lista; el resto del paquete los toma de acá.
+ * Identidad tomada del pack oficial CENTER-STAGE-OBS-PACK (logos y videos):
+ *   fucsia  #E32C64 · violeta #30244A · negro #08070C · blanco #F8F5FB
+ * Recursos del video: fondo negro con cuadrícula fucsia, cruces «X» y
+ * triángulos sueltos, títulos con una palabra rellena en fucsia y otra
+ * en contorno blanco, rótulos en cajas fucsia con texto blanco.
  */
 [data-tema="center-stage"] {
-  --c-noche: #0d0f14; /* PROVISIONAL */
-  --c-concreto: #1b1f27; /* PROVISIONAL */
-  --c-losa: #252a34; /* PROVISIONAL */
-  --c-linea: #333a47; /* PROVISIONAL */
-  --c-hueso: #eef1f6; /* PROVISIONAL */
-  --c-ceniza: #98a1b2; /* PROVISIONAL */
-  --c-fuego: #2fb6c9; /* PROVISIONAL: acento principal */
-  --c-fuego-osc: #1f8b9b; /* PROVISIONAL */
-  --c-oro: #f3c74a; /* PROVISIONAL: destacado */
-  --c-sobre-fuego: #071417; /* PROVISIONAL: texto sobre el acento */
-  --c-p1: var(--c-fuego);
-  --c-p2: var(--c-hueso);
-  --c-panel: rgba(13, 15, 20, 0.9);
-  --brillo: 0 0 28px rgba(47, 182, 201, 0.45);
+  --c-noche: #08070c;
+  --c-concreto: #120e1c;
+  --c-losa: #30244a;
+  --c-linea: #3e3160;
+  --c-hueso: #f8f5fb;
+  --c-ceniza: #b3a8c8;
+  --c-fuego: #e32c64; /* fucsia: acento principal */
+  --c-fuego-osc: #b81f4f;
+  --c-oro: #f8f5fb; /* destacado: blanco (ganador del set, en juego) */
+  --c-sobre-fuego: #f8f5fb; /* texto blanco sobre fucsia, como en los rótulos del evento */
+  --c-sobre-oro: #1d1430;
+  --c-p1: #e32c64;
+  --c-p2: #f8f5fb;
+  --c-panel: rgba(28, 20, 46, 0.94);
+  --c-panel-borde: rgba(248, 245, 251, 0.1);
+  --brillo: 0 0 30px rgba(227, 44, 100, 0.55);
 }
 
-/* La luz cálida del fondo pasa a tomar el acento del tema. */
+/* ------------------------------------------------------------------ fondo: cuadrícula */
 [data-tema="center-stage"] .fondo {
   background:
-    radial-gradient(1100px 620px at 12% 108%, rgba(47, 182, 201, 0.24), transparent 70%),
-    radial-gradient(900px 520px at 92% -10%, rgba(243, 199, 74, 0.08), transparent 70%),
-    linear-gradient(180deg, #12151c 0%, var(--c-noche) 100%);
+    radial-gradient(1100px 640px at 12% 110%, rgba(227, 44, 100, 0.3), transparent 70%),
+    radial-gradient(900px 560px at 96% -12%, rgba(110, 70, 190, 0.22), transparent 70%),
+    linear-gradient(rgba(227, 44, 100, 0.17) 1px, transparent 1px) 0 0 / 80px 80px,
+    linear-gradient(90deg, rgba(227, 44, 100, 0.17) 1px, transparent 1px) 0 0 / 80px 80px,
+    #08070c;
+}
+[data-tema="center-stage"] .fondo::before {
+  opacity: 0.22;
+}
+[data-tema="center-stage"] .fondo::after {
+  background: radial-gradient(120% 95% at 50% 45%, transparent 50%, rgba(0, 0, 0, 0.7) 100%);
+}
+
+/* Las rayas de velocidad pasan a ser las cruces y triángulos del video */
+[data-tema="center-stage"] .rayas {
+  inset: 0;
+  opacity: 1;
+  -webkit-mask-image: none;
+  mask-image: none;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='1920' height='1080'><g fill='none' stroke-linecap='square'><g stroke='%2330244a' stroke-width='16'><path d='M1688 40l52 52M1740 40l-52 52'/><path d='M160 860l40 40M200 860l-40 40'/><path d='M1500 900l34 34M1534 900l-34 34'/></g><g stroke='%23e32c64' stroke-opacity='.55' stroke-width='10'><path d='M880 132l28 28M908 132l-28 28'/><path d='M60 420l24 24M84 420l-24 24'/></g><g stroke='%23f8f5fb' stroke-opacity='.5' stroke-width='3'><path d='M1800 600l26 15-26 15z'/><path d='M40 64l-22 13 22 13z'/></g><g fill='%2330244a'><path d='M1270 70l-30 18 30 18z'/><path d='M640 980l30 18-30 18z'/></g></g></svg>")
+    0 0 / 1920px 1080px no-repeat;
+  animation: flota 9s ease-in-out infinite;
+}
+@keyframes flota {
+  50% {
+    transform: translateY(-8px);
+  }
+}
+/* Sin textos fantasma ni losas cálidas: el fondo ya tiene la cuadrícula */
+[data-tema="center-stage"] .fantasma {
+  -webkit-text-stroke-color: rgba(227, 44, 100, 0.07);
+}
+[data-tema="center-stage"] .losa {
+  background: linear-gradient(180deg, rgba(48, 36, 74, 0.6), rgba(20, 14, 32, 0.25));
 }
 [data-tema="center-stage"] .brasa {
-  background: #a5eef8;
-  box-shadow: 0 0 10px 2px rgba(47, 182, 201, 0.8);
+  background: #ff8db0;
+  box-shadow: 0 0 10px 2px rgba(227, 44, 100, 0.8);
+}
+
+/* ------------------------------------------------------------------ rótulos */
+[data-tema="center-stage"] .chip .punto {
+  background: var(--c-hueso);
+}
+[data-tema="center-stage"] .etiqueta {
+  color: var(--c-ceniza);
+}
+[data-tema="center-stage"] .red-nombre {
+  color: var(--c-fuego);
+}
+[data-tema="center-stage"] .barra-inf {
+  background: linear-gradient(180deg, rgba(8, 7, 12, 0.7), rgba(8, 7, 12, 0.95));
+  border-top: 2px solid var(--c-fuego);
+}
+[data-tema="center-stage"] .barra-inf::before {
+  display: none;
+}
+
+/* ------------------------------------------------------------------ títulos: relleno + contorno */
+/* Empezamos pronto: «EMPIEZA» fucsia rellena, «PRONTO» contorno blanco */
+[data-tema="center-stage"] .titulo .linea:first-child {
+  color: var(--c-fuego);
+  text-shadow: var(--brillo);
+}
+[data-tema="center-stage"] .linea-acento,
+[data-tema="center-stage"] .linea-contorno {
+  color: transparent;
+  -webkit-text-stroke: 3px var(--c-hueso);
+  text-shadow: none;
+  filter: drop-shadow(0 0 14px rgba(248, 245, 251, 0.25));
+}
+
+/* ------------------------------------------------------------------ gameplay */
+[data-tema="center-stage"] .puntos {
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.18);
+}
+[data-tema="center-stage"] .centro {
+  background: rgba(8, 7, 12, 0.95);
+}
+[data-tema="center-stage"] .pestana {
+  background: rgba(28, 20, 46, 0.92);
+}
+
+/* ------------------------------------------------------------------ versus */
+[data-tema="center-stage"] .mitad-1 {
+  background:
+    linear-gradient(105deg, rgba(227, 44, 100, 0.42) 0%, transparent 62%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.5));
+}
+[data-tema="center-stage"] .mitad-2 {
+  background:
+    linear-gradient(255deg, rgba(96, 72, 150, 0.5) 0%, transparent 62%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.55));
+}
+[data-tema="center-stage"] .costura {
+  background: linear-gradient(180deg, transparent 18%, #e32c64 34%, #f8f5fb 50%, #e32c64 78%, transparent 96%);
+}
+[data-tema="center-stage"] .vs span {
+  background: linear-gradient(180deg, #f8f5fb 35%, #ff8db0 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+[data-tema="center-stage"] .marco-pj {
+  background:
+    radial-gradient(closest-side, rgba(227, 44, 100, 0.18), transparent),
+    rgba(20, 14, 32, 0.75);
+  border-color: rgba(227, 44, 100, 0.35);
+}
+
+/* ------------------------------------------------------------------ bracket */
+[data-tema="center-stage"] .br-ronda {
+  background: var(--c-fuego);
+  color: var(--c-sobre-fuego);
+}
+[data-tema="center-stage"] .br-fila {
+  background: rgba(48, 36, 74, 0.82);
+  border-left-color: rgba(248, 245, 251, 0.18);
+}
+[data-tema="center-stage"] .br-puntos {
+  background: rgba(248, 245, 251, 0.92);
+  color: #1d1430;
+}
+/* Sin resultado todavía: el cuadro de puntos queda apagado, no blanco. */
+[data-tema="center-stage"] .br-puntos:empty {
+  background: rgba(248, 245, 251, 0.1);
+}
+[data-tema="center-stage"] .br-fila.ganador {
+  background: linear-gradient(90deg, rgba(227, 44, 100, 0.55), rgba(48, 36, 74, 0.9) 75%);
+  border-left-color: var(--c-hueso);
+}
+[data-tema="center-stage"] .br-fila.ganador .br-puntos {
+  background: var(--c-fuego);
+  color: var(--c-hueso);
+}
+[data-tema="center-stage"] .br-final .br-fila.ganador .br-puntos {
+  background: var(--c-hueso);
+  color: #1d1430;
+}
+[data-tema="center-stage"] .br-linea {
+  stroke: rgba(179, 168, 200, 0.3);
+}
+
+/* ------------------------------------------------------------------ tarjetas y paneles */
+[data-tema="center-stage"] .tarjeta,
+[data-tema="center-stage"] .principal,
+[data-tema="center-stage"] .secundarios-grilla .patrocinador {
+  background: rgba(20, 14, 32, 0.82);
+}
+[data-tema="center-stage"] .tarjeta::before {
+  background: linear-gradient(90deg, var(--c-fuego), #8a5cff);
+}
+[data-tema="center-stage"] .cinta-caja {
+  background: rgba(8, 7, 12, 0.9);
+  border-color: rgba(227, 44, 100, 0.4);
 }

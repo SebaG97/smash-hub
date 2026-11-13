@@ -118,6 +118,7 @@ body {
 /* Quien gana el set se marca en oro (como el líder en el sitio). */
 .gana .puntos {
   background: var(--c-oro);
+  color: var(--c-sobre-oro);
   box-shadow: 0 0 26px rgba(243, 168, 31, 0.55);
 }
 
@@ -208,6 +209,26 @@ body {
 }
 .con-logo-evento .bug .logo-club {
   display: none;
+}
+/* Con logo horizontal del evento, el panel muestra ese logo en lugar del nombre. */
+.con-logo-h .bug .logo-club,
+.con-logo-h .bug .logo-evento,
+.con-logo-h .bug .bug-evento {
+  display: none;
+}
+.con-logo-h .bug-panel {
+  margin-left: 0;
+  padding-left: 22px;
+  height: 84px;
+  gap: 6px;
+}
+.con-logo-h .bug .bug-logo-h {
+  display: block;
+  height: 44px;
+  width: auto;
+  max-width: 360px;
+  object-fit: contain;
+  object-position: left center;
 }
 .bug-panel {
   margin-left: -34px;

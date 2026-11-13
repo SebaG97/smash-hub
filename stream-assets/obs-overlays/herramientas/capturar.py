@@ -34,11 +34,8 @@ EJEMPLO = {
     "fijo": "1",
 }
 
-CENTER_STAGE = {
-    "tema": "center-stage",
-    "evento": "Center Stage",
-    "logoEvento": "assets/images/eventos/center-stage/logo-placeholder.svg",
-}
+CENTER_STAGE = {"perfil": "center-stage"}
+BRACKET = {"bracket": "previews/datos/bracket-ejemplo.js"}
 
 # (archivo de salida, página, parámetros extra, fondo transparente)
 CAPTURAS = [
@@ -55,11 +52,15 @@ CAPTURAS = [
     ("05-commentators.png", "commentators.html", {}, True),
     ("05-commentators-simulado.png", "previews/commentators-simulado.html", {}, False),
     ("06-sponsors.png", "sponsors.html", {}, False),
+    ("08-bracket.png", "bracket.html", BRACKET, False),
+    ("08-bracket-vacio.png", "bracket.html", {}, False),
+    ("07-center-stage-gameplay.png", "previews/gameplay-simulado.html", CENTER_STAGE, False),
     ("07-center-stage-versus.png", "versus.html", CENTER_STAGE, False),
-    ("07-center-stage-gameplay.png", "previews/gameplay-simulado.html",
-     CENTER_STAGE, False),
-    ("07-center-stage-starting-soon.png", "starting-soon.html",
-     CENTER_STAGE, False),
+    ("07-center-stage-starting-soon.png", "starting-soon.html", {**CENTER_STAGE, "inicio": "+872"}, False),
+    ("07-center-stage-intermission.png", "intermission.html", CENTER_STAGE, False),
+    ("07-center-stage-commentators.png", "previews/commentators-simulado.html", CENTER_STAGE, False),
+    ("07-center-stage-sponsors.png", "sponsors.html", CENTER_STAGE, False),
+    ("07-center-stage-bracket.png", "bracket.html", {**CENTER_STAGE, **BRACKET}, False),
 ]
 
 

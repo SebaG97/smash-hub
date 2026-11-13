@@ -43,6 +43,7 @@
   --c-fuego-osc: #c4440f;
   --c-oro: #f3a81f;
   --c-sobre-fuego: #1c1210;
+  --c-sobre-oro: #1c1210; /* texto sobre el destacado */
   /* Un color por lado del set */
   --c-p1: var(--c-fuego);
   --c-p2: var(--c-hueso);
@@ -380,4 +381,38 @@ html:not(.listo) .escena {
     opacity: 0;
     transform: translateX(80px);
   }
+}
+
+/* ------------------------------------------------------------------ auspiciantes por tandas */
+/* .tira con data-pagina muestra una tanda por vez (ver rotar() en overlay.js). */
+[data-pagina] > .patrocinador:not(.activo) {
+  display: none;
+}
+[data-pagina] > .activo {
+  animation: aparece 0.6s ease both;
+}
+@keyframes aparece {
+  from {
+    opacity: 0;
+  }
+}
+/* Logo pasado a blanco (estilo: "blanco" en la configuración) */
+.logo-blanco img {
+  filter: brightness(0) invert(1);
+}
+/* Logo horizontal del evento (logoEventoHorizontal): en los encabezados
+   reemplaza al logo redondo y al nombre del evento. */
+.logo-evento-h {
+  display: none;
+  width: auto;
+}
+.con-logo-h .marca .logo-evento-h {
+  display: block;
+  height: 80px;
+  width: auto;
+}
+.con-logo-h .marca > .logo-club,
+.con-logo-h .marca > .logo-evento,
+.con-logo-h .marca .marca-texto {
+  display: none;
 }

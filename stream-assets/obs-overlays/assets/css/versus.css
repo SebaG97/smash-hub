@@ -140,6 +140,13 @@
 .con-logo-evento .fecha {
   top: 206px;
 }
+/* Con logo horizontal, el logo del evento ya está arriba a la izquierda. */
+.con-logo-h .evento-logo {
+  display: none;
+}
+.con-logo-h .fecha {
+  top: 64px;
+}
 .fecha-dia {
   font-size: 34px;
   font-weight: 800;

@@ -1,6 +1,6 @@
 # Overlays de Smash Hub para OBS
 
-Seis escenas para transmitir torneos de Smash Ultimate. Son archivos locales (HTML, CSS e imágenes): no necesitan internet, ni instalar nada, ni un servidor.
+Siete escenas para transmitir torneos de Smash Ultimate, con dos identidades: Smash Hub (por defecto) y Center Stage. Son archivos locales (HTML, CSS e imágenes): no necesitan internet, ni instalar nada, ni un servidor.
 
 | Escena | Archivo | Fondo |
 | --- | --- | --- |
@@ -10,6 +10,7 @@ Seis escenas para transmitir torneos de Smash Ultimate. Son archivos locales (HT
 | Volvemos enseguida | `intermission.html` | Opaco |
 | Comentaristas | `commentators.html` | Opaco, con **dos huecos transparentes** para cámaras |
 | Patrocinadores | `sponsors.html` | Opaco |
+| Bracket Top 8 | `bracket.html` | Opaco |
 
 Las capturas de cada una están en [`previews/`](previews/).
 
@@ -38,7 +39,7 @@ En OBS: clic derecho en la cámara → **Transformar → Editar transformación*
 
 ## Cambiar textos, marcadores y patrocinadores
 
-Todo se edita en dos archivos de la carpeta `config/`, con cualquier editor de texto (Bloc de notas sirve). Cambiá solo lo que está entre comillas y guardá: **las escenas abiertas en OBS se actualizan solas en 2 segundos**, sin refrescar.
+Todo se edita en los archivos de la carpeta `config/`, con cualquier editor de texto (Bloc de notas sirve). Cambiá solo lo que está entre comillas y guardá: **las escenas abiertas en OBS se actualizan solas en 2 segundos**, sin refrescar.
 
 ### `config/partida.js` — durante el torneo
 
@@ -65,6 +66,15 @@ Nombre del torneo, fecha, hora, lugar, sitio web, redes (hasta 3), comentaristas
 - **Patrocinadores**: copiá los logos a `assets/images/patrocinadores/` (PNG o SVG **con fondo transparente**, idealmente claros o blancos) y escribí la ruta en `logo`. Si un patrocinador no tiene logo, borrá la línea `logo` y se muestra su nombre en texto. Los que vienen son **placeholders** marcados como tales.
 - El gameplay rota todos los patrocinadores (principal y secundarios) cada 8 segundos.
 
+### `config/bracket.js` — durante el Top 8
+
+Un bloque por set (`WSF1`, `WSF2`, `WF`, `LR1A`, `LR1B`, `LQFA`, `LQFB`, `LSF`, `LF`, `GF`, `RESET`) con `j1`, `p1`, `j2`, `p2` (jugadores y sets ganados).
+
+- Nombre vacío = «Por definir». Cuando alguien llega a las victorias del formato (3 en BO5), el set queda terminado: el ganador se resalta y su línea hacia el siguiente set se enciende.
+- **No avanza solo**: escribí el ganador en el set siguiente.
+- `enJuego: "LSF"` marca el set que se está jugando.
+- El reset de Grand Final aparece si tiene datos o con `reset: true`.
+
 ### Cambios rápidos desde la URL (opcional)
 
 Para una escena puntual, los datos también se pueden pasar en la URL de la fuente (desmarcá «Archivo local» y usá la ruta `file:///…`). Tienen prioridad sobre `config/`:
@@ -73,30 +83,36 @@ Para una escena puntual, los datos también se pueden pasar en la URL de la fuen
 file:///C:/ruta/obs-overlays/gameplay.html?p1=Nombre&p2=Nombre&s1=1&s2=0&ronda=Grand%20Final
 ```
 
-Parámetros: `p1`, `p2`, `s1`, `s2`, `e1`, `e2` (equipos), `c1`, `c2` (personajes), `ronda`, `formato`, `evento`, `tema`, `logoEvento`, `inicio`.
+Parámetros: `p1`, `p2`, `s1`, `s2`, `e1`, `e2` (equipos), `c1`, `c2` (personajes), `ronda`, `formato`, `evento`, `tema`, `perfil`, `logoEvento`, `inicio`, `bracket` (otro archivo de bracket).
 
-## Variante Center Stage
+## Center Stage
 
-1. Copiá el logo oficial a `assets/images/eventos/center-stage/logo.png` (fondo transparente).
-2. En `config/evento.js`:
-   ```js
-   tema: "center-stage",
-   evento: "Center Stage",
-   logoEvento: "assets/images/eventos/center-stage/logo.png",
-   ```
-3. Cuando estén los colores oficiales, reemplazá los valores de `assets/css/temas/center-stage.css`. **Los que trae son provisionales** (un turquesa para probar que la variante funciona), no la identidad del torneo.
+En `config/evento.js`, cambiá una sola línea:
 
-Con `logoEvento`, el logo del torneo reemplaza al del club en el gameplay, «Empezamos pronto», «Volvemos enseguida», comentaristas y patrocinadores; el versus muestra los dos.
+```js
+perfil: "center-stage",
+```
+
+Eso activa todo lo de `config/perfiles/center-stage.js`: paleta oficial (fucsia `#E32C64`, violeta `#30244A`, negro `#08070C`, blanco `#F8F5FB`), logos oficiales vertical y horizontal, los 11 auspiciantes y los textos del evento («Empieza pronto», «Ya volvemos», «Auspician»). Lo que el perfil no define (fecha, hora, lugar, redes, sitio, comentaristas) se sigue tomando de `evento.js`. Para volver a Smash Hub: `perfil: ""`.
+
+- Los logos vienen del pack oficial `CENTER-STAGE-OBS-PACK`; se les quitó solo el fondo negro (los JPEG originales están en `assets/images/eventos/center-stage/originales/`).
+- Con 11 auspiciantes, las tiras muestran tandas de 5 o 6 que cambian cada 8 segundos; la pantalla de patrocinadores los muestra a todos.
+- Santa Bárbara (azul oscuro) se muestra en blanco para que se lea sobre el fondo oscuro, como en el video del evento. Se cambia con `estilo: "blanco"` en el perfil.
+- Para destacar un auspiciante como principal, completá `principal` en el perfil.
+
+Para otro evento con identidad propia: copiá `config/perfiles/center-stage.js` y `assets/css/temas/center-stage.css` con otro nombre.
 
 ## Estructura
 
 ```
 obs-overlays/
 ├── gameplay.html, versus.html, starting-soon.html,
-│   intermission.html, commentators.html, sponsors.html
+│   intermission.html, commentators.html, sponsors.html, bracket.html
 ├── config/
 │   ├── evento.js          datos del evento (se edita una vez)
-│   └── partida.js         set actual (se edita entre partidas)
+│   ├── partida.js         set actual (se edita entre partidas)
+│   ├── bracket.js         Top 8 (se edita durante el Top 8)
+│   └── perfiles/center-stage.js   identidad completa de Center Stage
 ├── assets/
 │   ├── css/               base.css (identidad compartida) + una hoja por escena
 │   │   └── temas/         center-stage.css
@@ -106,7 +122,8 @@ obs-overlays/
 │       ├── marca/         logo de Smash Club Paraguay (original y recorte circular)
 │       ├── personajes/    íconos de personajes (los mismos del sitio)
 │       ├── patrocinadores/ placeholders
-│       └── eventos/center-stage/ placeholder del logo
+│       ├── patrocinadores/center-stage/ los 11 auspiciantes
+│       └── eventos/center-stage/ logos oficiales (y originales/)
 ├── previews/              capturas PNG y dos vistas previas con gameplay y cámaras simuladas
 └── herramientas/capturar.py  regenera las capturas (solo para mantenimiento)
 ```
