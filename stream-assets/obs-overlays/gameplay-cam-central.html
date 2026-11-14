@@ -1,0 +1,76 @@
+<!doctype html>
+<!--
+  GAMEPLAY CON UNA CÁMARA CENTRAL — fondo transparente, juego a pantalla completa.
+  Para el setup con UNA sola cámara para los dos jugadores.
+  OBS: el juego a pantalla completa y la cámara DEBAJO de esta fuente:
+    Cámara (16:9): x 824, y 912, 272 × 153   (abajo al centro, entre los dos HUD)
+  La cámara queda en el hueco entre el panel de porcentajes del jugador 1
+  (hasta x ≈ 820) y el retrato del jugador 2 (desde x ≈ 1131), medido sobre una
+  captura real de Smash Ultimate 1 vs 1. Auspiciantes en las esquinas inferiores.
+  Textos: config/partida.js (o TSH) y config/evento.js.
+-->
+<html lang="es" data-tema="smash-hub">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Gameplay con cámara central · Smash Hub</title>
+    <link rel="stylesheet" href="assets/css/base.css" />
+    <link rel="stylesheet" href="assets/css/temas/center-stage.css" />
+    <link rel="stylesheet" href="assets/css/gameplay.css" />
+    <link rel="stylesheet" href="assets/css/broadcast.css" />
+  </head>
+  <body>
+    <main class="escena escena-gameplay escena-cam-central">
+      <!-- Marcador -->
+      <section class="marcador entra" aria-label="Marcador">
+        <div class="lado lado-1" data-jugador="1">
+          <div class="placa">
+            <span class="placa-texto" data-ajustar="0.55">
+              <img class="bandera" data-bandera="1" alt="" />
+              <span class="equipo" data-campo="partida.jugador1.equipo"></span>
+              <span class="nombre" data-campo="partida.jugador1.nombre"></span>
+            </span>
+          </div>
+          <div class="puntos"><span data-campo="partida.jugador1.marcador"></span></div>
+        </div>
+
+        <div class="centro">
+          <span class="ronda" data-campo="partida.ronda" data-ajustar="0.6"></span>
+        </div>
+
+        <div class="lado lado-2" data-jugador="2">
+          <div class="puntos"><span data-campo="partida.jugador2.marcador"></span></div>
+          <div class="placa">
+            <span class="placa-texto" data-ajustar="0.55">
+              <img class="bandera" data-bandera="2" alt="" />
+              <span class="equipo" data-campo="partida.jugador2.equipo"></span>
+              <span class="nombre" data-campo="partida.jugador2.nombre"></span>
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <div class="pestana entra" style="--retraso: 0.15s">
+        <span class="formato" data-campo="partida.formato"></span>
+        <i></i>
+        <span class="pestana-evento" data-campo="evento.evento" data-ajustar="0.7"></span>
+      </div>
+
+      <!-- Cámara central -->
+      <div class="hueco hueco-central entra" style="--retraso: 0.3s">
+        <i class="esq esq-1"></i><i class="esq esq-2"></i><i class="esq esq-3"></i><i class="esq esq-4"></i>
+      </div>
+
+      <!-- Auspiciantes en las esquinas inferiores: cada lado empieza en una mitad distinta de la lista -->
+      <section class="auspicio-lado auspicio-lado-izq entra-izq" style="--retraso: 0.35s" aria-label="Auspiciantes">
+        <span class="auspicio-lado-etiqueta">Auspician</span>
+        <div class="auspicio-lado-logos" data-lista="todos" data-rotar="8"></div>
+      </section>
+      <section class="auspicio-lado auspicio-lado-der entra-der" style="--retraso: 0.35s" aria-label="Auspiciantes">
+        <span class="auspicio-lado-etiqueta">Auspician</span>
+        <div class="auspicio-lado-logos" data-lista="todos" data-rotar="8" data-desfase="mitad"></div>
+      </section>
+    </main>
+    <script src="assets/js/overlay.js"></script>
+  </body>
+</html>

@@ -160,6 +160,13 @@
         font: 700 14px Verdana, sans-serif;
         letter-spacing: 0.2em;
       }
+      .cam-sim-central {
+        left: 824px !important;
+        top: 912px !important;
+        width: 272px !important;
+        height: 153px !important;
+        font-size: 10px !important;
+      }
       .cam-sim {
         position: absolute;
         top: 836px;
@@ -196,13 +203,13 @@
       <div class="luchador" style="left: 760px; background: #c33"></div>
       <div class="luchador" style="left: 1110px; background: #36c"></div>
 
-      <div class="hud" style="left: 560px; color: #e33">
+      <div class="hud" style="left: 447px; color: #e33">
         <div class="retrato" style="background-image: url(../assets/images/personajes/cloud.svg)"></div>
         <div class="stocks"><i></i><i></i><i></i></div>
         <div class="pct">47<small>.3%</small></div>
         <div class="tag">ÑANDUTÍ</div>
       </div>
-      <div class="hud" style="left: 1060px; color: #39f">
+      <div class="hud" style="left: 1131px; color: #39f">
         <div class="retrato" style="background-image: url(../assets/images/personajes/pikachu.svg)"></div>
         <div class="stocks"><i></i><i></i></div>
         <div class="pct">112<small>.8%</small></div>
@@ -212,12 +219,22 @@
       <div class="sello">GAMEPLAY SIMULADO · VISTA PREVIA</div>
     </div>
 
-    <div class="zona" style="left: 480px; top: 880px; width: 960px; height: 200px">HUD: porcentajes y stocks</div>
+    <div class="zona" style="left: 440px; top: 880px; width: 380px; height: 200px">HUD jugador 1</div>
+    <div class="zona" style="left: 1124px; top: 880px; width: 330px; height: 200px">HUD jugador 2</div>
     <div class="zona" style="left: 1620px; top: 0; width: 300px; height: 120px">HUD: temporizador</div>
 
     <iframe id="overlay" title="Overlay"></iframe>
     <script>
       var q = new URLSearchParams(location.search);
+      if (q.get("camaraCentral")) {
+        var cc = document.createElement("div");
+        cc.className = "cam-sim cam-sim-central";
+        cc.textContent = "CÁMARA · SIMULADA";
+        document.querySelector(".juego").append(cc);
+      }
+      var pagina = q.get("pagina") === "gameplay-cam-central" ? "gameplay-cam-central" : "gameplay";
+      q.delete("camaraCentral");
+      q.delete("pagina");
       if (q.get("camaras")) {
         [24, 1576].forEach(function (x, i) {
           var c = document.createElement("div");
@@ -230,7 +247,7 @@
       q.delete("camaras");
       if (q.get("guias")) document.body.classList.add("guias");
       q.delete("guias");
-      document.getElementById("overlay").src = "../gameplay.html?" + q.toString();
+      document.getElementById("overlay").src = "../" + pagina + ".html?" + q.toString();
       // La captura espera a que el overlay esté listo.
       window.addEventListener("message", function (e) {
         if (e.data === "sh-listo") document.documentElement.classList.add("listo");

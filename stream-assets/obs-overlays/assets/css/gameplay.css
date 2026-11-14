@@ -381,3 +381,60 @@ body {
 .cam-esquina .esq-4 {
   display: none;
 }
+
+/* ------------------------------------------------------------------ gameplay con cámara central */
+/* gameplay-cam-central.html: una cámara para los dos jugadores, abajo al centro, en el
+   hueco entre los dos paneles del HUD; auspiciantes en las esquinas inferiores. */
+.escena-cam-central .hueco-central {
+  position: absolute;
+  left: 824px;
+  top: 912px;
+  width: 272px;
+  height: 153px;
+}
+.escena-cam-central .hueco-central .esq {
+  width: 26px;
+  height: 26px;
+}
+.auspicio-lado {
+  position: absolute;
+  bottom: 24px;
+  width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.auspicio-lado-izq {
+  left: 24px;
+  align-items: flex-start;
+}
+.auspicio-lado-der {
+  right: 24px;
+  align-items: flex-end;
+}
+.auspicio-lado-etiqueta {
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--c-hueso);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+}
+.auspicio-lado-logos {
+  position: relative;
+  width: 360px;
+  height: 100px;
+  background: var(--c-panel);
+  border-bottom: 3px solid var(--c-fuego);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+}
+.auspicio-lado-logos .patrocinador {
+  position: absolute;
+  inset: 14px 26px;
+  opacity: 0;
+  transition: opacity 0.6s;
+}
+.auspicio-lado-logos .patrocinador.activo {
+  opacity: 1;
+}

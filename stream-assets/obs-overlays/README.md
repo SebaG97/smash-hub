@@ -53,6 +53,7 @@ Mismas posiciones que el pack oficial de Center Stage (v3), así que una escena 
 | `gameplay.html` (con `gameplay.camaras`, activado en Center Stage) | Cámara jugador 1 | 24 | 836 | 320 × 180 |
 | | Cámara jugador 2 | 1576 | 836 | 320 × 180 |
 | `commentators-wide.html` con `auspiciantesArriba` (Center Stage) | Cámara general | 80 | 230 | 1280 × 720 |
+| `gameplay-cam-central.html` (una cámara para los dos jugadores) | Cámara | 824 | 912 | 272 × 153 |
 
 La cámara 1 corresponde al jugador de la izquierda del marcador. Si cambiás los lados, revisá qué cámara física es de cada jugador.
 

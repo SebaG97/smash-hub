@@ -346,3 +346,13 @@ Reporte del 13/11/2026, con capturas reales de OBS.
 - **`commentators-wide.html` (Center Stage):** con la barra de auspiciantes arriba, la cámara quedaba pegada a la barra y sobraba la franja inferior. Ahora, con `auspiciantesArriba`, la cámara general baja a **x 80, y 230, 1280 × 720**, centrada en el espacio libre (124–1080). La columna de logo, título y comentaristas se centra verticalmente a la altura de la cámara; si TSH no tiene comentaristas, quedan logo y título centrados. Smash Hub sigue en y 140.
 - **`gameplay.html`:** las cámaras de 416 × 234 tapaban personajes y stocks (en la captura real, los retratos del HUD empiezan cerca de x 447). Ahora miden **320 × 180**, en **x 24 y x 1576, y 836**, con placas de 40 px.
 - LEEME del ZIP y README actualizados con las posiciones nuevas. ZIP regenerado.
+
+## 18. Gameplay con una cámara central
+
+Pedido del 13/11/2026: un setup con una sola cámara para los dos jugadores.
+
+- **Escena nueva `gameplay-cam-central.html`** (transparente): el mismo marcador que el gameplay; una cámara 16:9 abajo al centro en **x 824, y 912, 272 × 153**; auspiciantes rotando en las esquinas inferiores, 360 × 100.
+- **Los dos rotadores no repiten logo:** el derecho empieza en la mitad de la lista (`data-desfase="mitad"`).
+- **La cámara entra en el hueco entre los dos paneles del HUD,** medido sobre la captura real de OBS: el panel del jugador 1 llega hasta x ≈ 820 y el retrato del jugador 2 empieza en x ≈ 1131. Los auspiciantes quedan fuera de los paneles (x < 384 y x > 1536).
+- **HUD simulado de `previews/gameplay-simulado.html`** ajustado a esas posiciones reales; también se pueden ver las zonas por jugador.
+- **Prueba:** dentro del ZIP, con TSH simulado y como archivo local, lee nombres de TSH y muestra un logo distinto en cada esquina, sin errores.

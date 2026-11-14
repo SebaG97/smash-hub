@@ -56,6 +56,8 @@ se carga a mano en config/bracket.js (punto 5).
 starting-soon.html        Empieza pronto (con cuenta regresiva opcional)
 gameplay.html             Marcador + una cámara por jugador abajo en cada esquina
                           (juego a pantalla completa; transparente)
+gameplay-cam-central.html Marcador + UNA cámara para los dos jugadores abajo al centro
+                          y auspiciantes en las esquinas (juego a pantalla completa)
 gameplay-broadcast.html   Marcador + juego + dos cámaras de jugadores (sin logos ni auspiciantes)
 versus.html               Próximo set: jugador contra jugador
 commentators.html         Dos cámaras de comentaristas
@@ -72,6 +74,9 @@ gameplay.html  (el juego a pantalla completa, 1920 × 1080, también debajo)
    Cámara jugador 1    x 24    y 836   320 × 180   (abajo a la izquierda)
    Cámara jugador 2    x 1576  y 836   320 × 180   (abajo a la derecha)
    La cámara 1 es la del jugador de la izquierda del marcador.
+
+gameplay-cam-central.html  (setup de una sola cámara; el juego a pantalla completa debajo)
+   Cámara              x 824   y 912   272 × 153   (abajo al centro, entre los dos HUD)
 
 gameplay-broadcast.html
    Captura del juego   x 24    y 140   1536 × 864

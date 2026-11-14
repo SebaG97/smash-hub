@@ -800,7 +800,9 @@
       var cada = Number(n.dataset.rotar || 6);
       var tam = Number(n.dataset.pagina || 1);
       var paginas = Math.ceil(hijos.length / tam);
-      var k = Math.floor(paso / cada) % paginas;
+      // data-desfase="mitad": empieza en la mitad de la lista (dos rotadores sin repetirse)
+      var desfase = n.dataset.desfase === "mitad" ? Math.floor(paginas / 2) : 0;
+      var k = (Math.floor(paso / cada) + desfase) % paginas;
       for (var i = 0; i < hijos.length; i++) hijos[i].classList.toggle("activo", Math.floor(i / tam) === k);
     });
   }
