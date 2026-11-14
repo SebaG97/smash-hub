@@ -24,6 +24,13 @@ window.SH_PERFIL = {
   // camaras: en gameplay.html, una cámara por jugador en las esquinas inferiores.
   gameplay: { marca: false, patrocinadores: false, camaras: true },
 
+  // Redes del evento (se muestran en «Empieza pronto», auspiciantes y cierre).
+  redes: [
+    { red: "Instagram", usuario: "@centerstagepy" },
+    { red: "start.gg", usuario: "start.gg/CSPY" },
+  ],
+  sitio: "",
+
   patrocinadores: {
     // Sin principal: los once se muestran con el mismo peso. Para destacar uno,
     // poné aquí { nombre: "...", logo: "..." } y sacalo de la lista.

@@ -93,7 +93,9 @@ En OBS: clic derecho en la cámara > Transformar > Editar transformación.
 Abrí config/evento.js con el Bloc de notas.
 La fecha ya dice «14 y 15 de noviembre». Lo marcado COMPLETAR es opcional:
 si queda vacío, no se muestra (no aparecen textos de ejemplo).
-   hora, lugar (sede), sitio y redes (hasta 3).
+   hora y lugar (sede).
+Las redes (Instagram @centerstagepy y start.gg/CSPY) están en
+config/perfiles/center-stage.js, junto con los auspiciantes.
 Cuenta regresiva de «Empieza pronto»:
    inicio: "2026-11-14T15:00:00-03:00"     (vacío = no se muestra)
 Guardá: las escenas abiertas en OBS se actualizan solas.

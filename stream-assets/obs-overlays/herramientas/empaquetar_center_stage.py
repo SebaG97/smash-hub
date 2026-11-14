@@ -5,7 +5,7 @@ Resultado: stream-assets/dist/CENTER-STAGE-OVERLAYS.zip (carpeta center-stage-ov
 
 Qué cambia respecto del paquete completo:
 - config/evento.js con perfil "center-stage", TSH activado, fecha del evento
-  y sin textos de ejemplo (sitio, redes y comentaristas vacíos: no se muestran).
+  sin textos de ejemplo (comentaristas vacíos) y redes de Center Stage desde el perfil.
 - Sin herramientas, sin capturas de Smash Hub y sin placeholders de patrocinadores.
 - LEEME.txt de herramientas/paquete-center-stage/.
 """
@@ -35,11 +35,12 @@ def evento_center_stage(texto: str) -> str:
     t = re.sub(r'  fecha: "[^"]*",[^\n]*', f'  fecha: "{FECHA}",', t, count=1)
     t = re.sub(r'  hora: "[^"]*",[^\n]*', '  hora: "", // COMPLETAR, por ejemplo "15:00" (vacío = no se muestra)', t, count=1)
     t = re.sub(r'  lugar: "[^"]*",[^\n]*', '  lugar: "Paraguay", // COMPLETAR con la sede si se quiere mostrar', t, count=1)
-    t = re.sub(r'  sitio: "[^"]*",[^\n]*', '  sitio: "", // COMPLETAR: sitio web (vacío = no se muestra)', t, count=1)
+    # Redes y sitio vienen del perfil (si quedaran aquí, el perfil los pisaría y editar
+    # evento.js no tendría efecto): se quitan y se indica dónde están.
+    t = re.sub(r'  sitio: "[^"]*",[^\n]*\n', "", t, count=1)
     t = re.sub(
         r"  redes: \[.*?\n  \],\n",
-        "  redes: [\n    // COMPLETAR (hasta 3). Vacío = no se muestran. Ejemplo:\n"
-        '    // { red: "Instagram", usuario: "@cuenta" },\n  ],\n',
+        "  // Redes y sitio de Center Stage: en config/perfiles/center-stage.js.\n",
         t,
         count=1,
         flags=re.S,

@@ -317,3 +317,15 @@ Reporte del 13/11/2026, con capturas.
 - **Logo descentrado en «Empieza pronto»:** el logo del evento se forzaba a un cuadrado de 460 × 460, pero el de Center Stage mide 1271 × 1175. Se deformaba y no quedaba centrado dentro de los anillos. Ahora usa `object-fit: contain` (440 px) y el emblema queda alineado con el bloque de título (centro y ≈ 560). En el cierre ya estaba bien.
 - **Una cámara por jugador en `gameplay.html`:** opción `gameplay.camaras` (activada en el perfil de Center Stage). Son dos cámaras de 416 × 234 (16:9) abajo a la izquierda (x 32, y 790) y abajo a la derecha (x 1472, y 790), fuera de la franja del HUD de porcentajes y stocks (x 480–1440). Cada una tiene una placa con bandera, nombre y marcador del jugador. Las cámaras van debajo de la fuente. Con la opción activada, se ocultan la marca y el auspiciante de las esquinas. Sin la opción (Smash Hub), el gameplay no cambia.
 - **Prueba:** ZIP regenerado y abierto dentro de una carpeta TSH simulada: las 10 escenas leen TSH, el gameplay muestra las dos cámaras con nombres y banderas de TSH y no hay errores.
+
+## 15. Anillos centrados en su zona y redes de Center Stage
+
+Reporte del 13/11/2026, con un dibujo de la ubicación esperada.
+
+- **El problema real era de la grilla:** el emblema (luz, anillos y logo) se apila en una grilla de una celda. La luz es más grande que el contenedor (900 px en 700), así que la celda se agrandaba y todo el conjunto se corría unos 100 px a la derecha y hacia abajo. Pasaba en «Empieza pronto» y en el cierre, con los dos temas. Ahora la celda mide lo mismo que el contenedor (`grid-template: 100% / 100%`) y la luz desborda pareja hacia los dos lados.
+- **Center Stage, «Empieza pronto»:** conjunto de 640 px centrado en (360, 490), en la franja izquierda debajo de la barra, como en el dibujo. Logo de 400 px y anillos de 540 y 620 px.
+- **Center Stage, cierre:** mismo criterio, centrado en la franja derecha (x ≈ 1455).
+- **Tildes:** los títulos grandes recortaban la tilde de la Ñ («ACOMPAÑARNOS»). Las líneas que se achican solas tienen ahora aire arriba.
+- **Redes de Center Stage:** Instagram `@centerstagepy` y start.gg `start.gg/CSPY`, sin Discord ni sitio, en el perfil. El ZIP quita `redes` y `sitio` de su `evento.js` y deja un comentario que indica dónde están, porque el perfil los pisaría.
+
+ZIP regenerado y probado dentro de la carpeta TSH simulada: las 10 escenas leen TSH, las redes aparecen en «Empieza pronto», auspiciantes y cierre, y no queda ningún texto de ejemplo.

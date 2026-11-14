@@ -475,6 +475,9 @@ body {
 .auspicio-arriba .escena-cierre .cierre {
   top: 300px;
 }
+/* Mismo criterio que «Empieza pronto»: centrado en su zona, la franja derecha
+   entre el texto y el borde (centro x ≈ 1455), alineado con el texto. */
 .auspicio-arriba .escena-cierre .emblema-cierre {
-  top: 210px;
+  top: 230px;
+  right: 145px;
 }

@@ -10,6 +10,13 @@
   display: grid;
   place-items: center;
 }
+/* Una sola celda del tamaño del contenedor: la luz (más grande) desborda hacia
+   los dos lados y todo queda centrado en el contenedor. Sin esto, la celda se
+   agrandaba al tamaño de la luz y el conjunto se corría a la derecha y abajo. */
+.emblema {
+  grid-template-columns: 100%;
+  grid-template-rows: 100%;
+}
 .emblema > * {
   grid-area: 1 / 1;
 }
@@ -173,9 +180,30 @@
 }
 
 /* ------------------------------------------------------------------ auspiciantes arriba */
-/* Emblema alineado con el bloque de título de la derecha (centro y ≈ 560) */
+/* Anillos y logo centrados en su zona: la franja izquierda, entre el borde y el
+   bloque del título, debajo de la barra. Centro en (360, 490), 640 px. */
 .auspicio-arriba .escena-inicio .emblema {
-  top: 210px;
+  left: 40px;
+  top: 170px;
+  width: 640px;
+  height: 640px;
+}
+.auspicio-arriba .escena-inicio .emblema-luz {
+  width: 800px;
+  height: 800px;
+}
+.auspicio-arriba .escena-inicio .anillo-1 {
+  width: 540px;
+  height: 540px;
+}
+.auspicio-arriba .escena-inicio .anillo-2 {
+  width: 620px;
+  height: 620px;
+}
+.auspicio-arriba .escena-inicio .emblema .logo-evento,
+.auspicio-arriba .escena-inicio .emblema .logo-club {
+  width: 400px;
+  height: 400px;
 }
 .auspicio-arriba .escena-inicio .bloque {
   top: 190px;

@@ -525,3 +525,10 @@ html:not(.listo) .escena {
   width: 180px;
   height: 70px;
 }
+
+/* Títulos grandes que se achican solos: el recorte (overflow) cortaba tildes y la Ñ.
+   Se agrega aire arriba sin mover la línea. */
+.linea[data-ajustar] {
+  padding-top: 0.16em;
+  margin-top: -0.16em;
+}
