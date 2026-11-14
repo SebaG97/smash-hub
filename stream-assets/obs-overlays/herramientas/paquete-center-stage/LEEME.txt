@@ -54,7 +54,8 @@ se carga a mano en config/bracket.js (punto 5).
 3. ESCENAS
 ----------
 starting-soon.html        Empieza pronto (con cuenta regresiva opcional)
-gameplay.html             Solo el marcador, sobre el juego a pantalla completa (transparente)
+gameplay.html             Marcador + una cámara por jugador abajo en cada esquina
+                          (juego a pantalla completa; transparente)
 gameplay-broadcast.html   Marcador + juego + dos cámaras de jugadores (sin logos ni auspiciantes)
 versus.html               Próximo set: jugador contra jugador
 commentators.html         Dos cámaras de comentaristas
@@ -67,6 +68,11 @@ ending.html               Cierre
 
 4. CÁMARAS (van DEBAJO de la fuente de navegador, recortadas a 16:9)
 --------------------------------------------------------------------
+gameplay.html  (el juego a pantalla completa, 1920 × 1080, también debajo)
+   Cámara jugador 1    x 32    y 790   416 × 234   (abajo a la izquierda)
+   Cámara jugador 2    x 1472  y 790   416 × 234   (abajo a la derecha)
+   La cámara 1 es la del jugador de la izquierda del marcador.
+
 gameplay-broadcast.html
    Captura del juego   x 24    y 140   1536 × 864
    Cámara jugador 1    x 1584  y 225   320 × 180
@@ -80,7 +86,6 @@ commentators.html
    Cámara 2            x 990   y 250   860 × 484
 
 En OBS: clic derecho en la cámara > Transformar > Editar transformación.
-gameplay.html va ENCIMA de la captura del juego a pantalla completa.
 
 
 5. DATOS QUE NO VIENEN DE TSH

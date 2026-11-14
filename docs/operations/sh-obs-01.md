@@ -309,3 +309,11 @@ El ZIP ahora lo arma `herramientas/empaquetar_center_stage.py`, que además rech
 - Banderas con TSH simulado (países de ejemplo en `previews/datos/`): 4 en el gameplay con cámaras, 18 en el bracket y 2 en el versus.
 - ZIP final descomprimido dentro de una carpeta TSH simulada y abierto como archivo local, como en OBS: las 10 escenas leen TSH y no hay errores ni pedidos externos.
 - 32 capturas regeneradas; las de Smash Hub no cambian.
+
+## 14. Logo de «Empieza pronto» y cámaras en el gameplay
+
+Reporte del 13/11/2026, con capturas.
+
+- **Logo descentrado en «Empieza pronto»:** el logo del evento se forzaba a un cuadrado de 460 × 460, pero el de Center Stage mide 1271 × 1175. Se deformaba y no quedaba centrado dentro de los anillos. Ahora usa `object-fit: contain` (440 px) y el emblema queda alineado con el bloque de título (centro y ≈ 560). En el cierre ya estaba bien.
+- **Una cámara por jugador en `gameplay.html`:** opción `gameplay.camaras` (activada en el perfil de Center Stage). Son dos cámaras de 416 × 234 (16:9) abajo a la izquierda (x 32, y 790) y abajo a la derecha (x 1472, y 790), fuera de la franja del HUD de porcentajes y stocks (x 480–1440). Cada una tiene una placa con bandera, nombre y marcador del jugador. Las cámaras van debajo de la fuente. Con la opción activada, se ocultan la marca y el auspiciante de las esquinas. Sin la opción (Smash Hub), el gameplay no cambia.
+- **Prueba:** ZIP regenerado y abierto dentro de una carpeta TSH simulada: las 10 escenas leen TSH, el gameplay muestra las dos cámaras con nombres y banderas de TSH y no hay errores.

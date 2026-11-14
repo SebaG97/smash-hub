@@ -315,3 +315,63 @@ body {
 .auspicio-logos .patrocinador-texto {
   font-size: 26px;
 }
+
+/* ------------------------------------------------------------------ cámaras de jugadores (opcional) */
+/* evento.gameplay.camaras = true. Esquinas inferiores, fuera de la franja del HUD
+   (porcentajes y stocks entre x 480 y 1440). Las cámaras van debajo de la fuente. */
+.cams-gameplay {
+  display: none;
+}
+.con-camaras .cams-gameplay {
+  display: block;
+}
+.con-camaras .bug,
+.con-camaras .auspicio {
+  display: none;
+}
+.cam-esquina {
+  position: absolute;
+  top: 790px;
+  width: 416px;
+}
+.cam-esquina-1 {
+  left: 32px;
+}
+.cam-esquina-2 {
+  left: 1472px;
+}
+/* Más específico que .hueco de broadcast.css, que se carga después */
+.cam-esquina .hueco-esquina {
+  position: relative;
+  left: 0;
+  top: 0;
+  width: 416px;
+  height: 234px;
+}
+.cam-esquina .cam-placa {
+  height: 46px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+}
+.cam-esquina .cam-nombre {
+  font-size: 28px;
+  line-height: 46px;
+}
+.cam-esquina .cam-puntos {
+  width: 46px;
+  height: 46px;
+  font-size: 30px;
+}
+.cam-esquina-2 .cam-placa {
+  border-left: 0;
+  border-right: 5px solid var(--c-p2);
+  flex-direction: row-reverse;
+  text-align: right;
+}
+.cam-esquina-2 .cam-placa .bandera {
+  margin: 0 12px 0 -4px;
+}
+/* Las esquinas inferiores pisarían la placa del nombre */
+.cam-esquina .esq-3,
+.cam-esquina .esq-4 {
+  display: none;
+}

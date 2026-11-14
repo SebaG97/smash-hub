@@ -66,9 +66,12 @@
   width: 500px;
   height: 500px;
 }
+/* contain: el logo del evento no siempre es cuadrado (el de Center Stage es 1271 × 1175);
+   sin esto se deformaba y quedaba descentrado dentro de los anillos. */
 .emblema .logo-evento {
-  width: 460px;
-  height: 460px;
+  width: 440px;
+  height: 440px;
+  object-fit: contain;
 }
 .con-logo-evento .emblema .logo-club {
   display: none;
@@ -170,8 +173,9 @@
 }
 
 /* ------------------------------------------------------------------ auspiciantes arriba */
+/* Emblema alineado con el bloque de título de la derecha (centro y ≈ 560) */
 .auspicio-arriba .escena-inicio .emblema {
-  top: 200px;
+  top: 210px;
 }
 .auspicio-arriba .escena-inicio .bloque {
   top: 190px;

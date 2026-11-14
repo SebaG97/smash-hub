@@ -21,7 +21,8 @@ window.SH_PERFIL = {
   carrusel: true, // auspiciantes deslizándose
   logoCentrado: true, // logo grande y centrado, no chico en una esquina
   // Gameplay (gameplay.html y gameplay-broadcast.html): solo marcador y cámaras.
-  gameplay: { marca: false, patrocinadores: false },
+  // camaras: en gameplay.html, una cámara por jugador en las esquinas inferiores.
+  gameplay: { marca: false, patrocinadores: false, camaras: true },
 
   patrocinadores: {
     // Sin principal: los once se muestran con el mismo peso. Para destacar uno,

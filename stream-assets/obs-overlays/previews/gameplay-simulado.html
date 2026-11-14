@@ -160,6 +160,22 @@
         font: 700 14px Verdana, sans-serif;
         letter-spacing: 0.2em;
       }
+      .cam-sim {
+        position: absolute;
+        top: 790px;
+        width: 416px;
+        height: 234px;
+        box-sizing: border-box;
+        padding-top: 12px;
+        text-align: center;
+        font: 700 12px Verdana, sans-serif;
+        letter-spacing: 0.2em;
+        color: rgba(255, 255, 255, 0.85);
+        background:
+          radial-gradient(18% 34% at 50% 55%, #6d5c52 0 98%, transparent 100%),
+          radial-gradient(30% 40% at 50% 110%, #3c4a5c 0 98%, transparent 100%),
+          linear-gradient(180deg, #59606b, #2b2f36);
+      }
       iframe {
         position: absolute;
         inset: 0;
@@ -202,6 +218,16 @@
     <iframe id="overlay" title="Overlay"></iframe>
     <script>
       var q = new URLSearchParams(location.search);
+      if (q.get("camaras")) {
+        [32, 1472].forEach(function (x, i) {
+          var c = document.createElement("div");
+          c.className = "cam-sim";
+          c.textContent = "CÁMARA " + (i + 1) + " · SIMULADA";
+          c.style.left = x + "px";
+          document.querySelector(".juego").append(c);
+        });
+      }
+      q.delete("camaras");
       if (q.get("guias")) document.body.classList.add("guias");
       q.delete("guias");
       document.getElementById("overlay").src = "../gameplay.html?" + q.toString();

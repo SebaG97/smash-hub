@@ -521,6 +521,7 @@
     //   auspiciantesArriba: barra de auspiciantes arriba (abajo no se ve en pantallas gigantes)
     //   carrusel: los auspiciantes se deslizan en lugar de cambiar por tandas
     //   logoCentrado: el logo del evento grande y centrado, en lugar de chico en una esquina
+    html.classList.toggle("con-camaras", gp.camaras === true);
     html.classList.toggle("auspicio-arriba", d.evento.auspiciantesArriba === true);
     html.classList.toggle("logo-centrado", d.evento.logoCentrado === true);
     html.classList.toggle("sin-redes", !(d.evento.redes || []).length && !d.evento.sitio);
