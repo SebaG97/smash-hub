@@ -162,9 +162,9 @@
       }
       .cam-sim {
         position: absolute;
-        top: 790px;
-        width: 416px;
-        height: 234px;
+        top: 836px;
+        width: 320px;
+        height: 180px;
         box-sizing: border-box;
         padding-top: 12px;
         text-align: center;
@@ -219,7 +219,7 @@
     <script>
       var q = new URLSearchParams(location.search);
       if (q.get("camaras")) {
-        [32, 1472].forEach(function (x, i) {
+        [24, 1576].forEach(function (x, i) {
           var c = document.createElement("div");
           c.className = "cam-sim";
           c.textContent = "CÁMARA " + (i + 1) + " · SIMULADA";

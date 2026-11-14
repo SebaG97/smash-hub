@@ -75,9 +75,11 @@
       var q = new URLSearchParams(location.search);
       var vista = q.get("vista") === "commentators-wide" ? "commentators-wide" : "gameplay-broadcast";
       q.delete("vista");
+      var camY = q.get("camY");
+      q.delete("camY");
       var rects =
         vista === "commentators-wide"
-          ? [["mesa", 80, 140, 1280, 720, "CÁMARA GENERAL · SIMULADA"]]
+          ? [["mesa", 80, Number(camY || 140), 1280, 720, "CÁMARA GENERAL · SIMULADA"]]
           : [
               ["juego", 24, 140, 1536, 864, "GAMEPLAY SIMULADO"],
               ["cam", 1584, 225, 320, 180, "CÁMARA 1 · SIMULADA"],

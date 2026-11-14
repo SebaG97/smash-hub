@@ -338,3 +338,11 @@ El 13/11/2026 llegó una maqueta hecha en Figma. Medidas tomadas sobre la imagen
 - luz de 1000 px.
 
 El bloque de título no cambia. Se aplica solo con `auspiciantesArriba` (perfil de Center Stage). ZIP regenerado.
+
+## 17. Mesa de análisis centrada y cámaras del gameplay más chicas
+
+Reporte del 13/11/2026, con capturas reales de OBS.
+
+- **`commentators-wide.html` (Center Stage):** con la barra de auspiciantes arriba, la cámara quedaba pegada a la barra y sobraba la franja inferior. Ahora, con `auspiciantesArriba`, la cámara general baja a **x 80, y 230, 1280 × 720**, centrada en el espacio libre (124–1080). La columna de logo, título y comentaristas se centra verticalmente a la altura de la cámara; si TSH no tiene comentaristas, quedan logo y título centrados. Smash Hub sigue en y 140.
+- **`gameplay.html`:** las cámaras de 416 × 234 tapaban personajes y stocks (en la captura real, los retratos del HUD empiezan cerca de x 447). Ahora miden **320 × 180**, en **x 24 y x 1576, y 836**, con placas de 40 px.
+- LEEME del ZIP y README actualizados con las posiciones nuevas. ZIP regenerado.

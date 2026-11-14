@@ -329,37 +329,43 @@ body {
 .con-camaras .auspicio {
   display: none;
 }
+/* 320 × 180, pegadas a las esquinas: con 416 × 234 tapaban personajes y stocks
+   (en el HUD real los retratos empiezan cerca de x 447). */
 .cam-esquina {
   position: absolute;
-  top: 790px;
-  width: 416px;
+  top: 836px;
+  width: 320px;
 }
 .cam-esquina-1 {
-  left: 32px;
+  left: 24px;
 }
 .cam-esquina-2 {
-  left: 1472px;
+  left: 1576px;
 }
 /* Más específico que .hueco de broadcast.css, que se carga después */
 .cam-esquina .hueco-esquina {
   position: relative;
   left: 0;
   top: 0;
-  width: 416px;
-  height: 234px;
+  width: 320px;
+  height: 180px;
 }
 .cam-esquina .cam-placa {
-  height: 46px;
+  height: 40px;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
 }
 .cam-esquina .cam-nombre {
-  font-size: 28px;
-  line-height: 46px;
+  font-size: 24px;
+  line-height: 40px;
 }
 .cam-esquina .cam-puntos {
-  width: 46px;
-  height: 46px;
-  font-size: 30px;
+  width: 40px;
+  height: 40px;
+  font-size: 26px;
+}
+.cam-esquina .esq {
+  width: 28px;
+  height: 28px;
 }
 .cam-esquina-2 .cam-placa {
   border-left: 0;

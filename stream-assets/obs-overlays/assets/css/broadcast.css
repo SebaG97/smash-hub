@@ -456,8 +456,30 @@ body {
 .auspicio-arriba .escena-mesa .chip-mesa {
   display: none;
 }
+/* Con la barra arriba, la cámara baja al centro del espacio libre (124–1080):
+   cámara general en x 80, y 230, 1280 × 720. La columna se centra a su altura. */
+.auspicio-arriba .perforado-mesa {
+  -webkit-mask:
+    linear-gradient(#000 0 0) 80px 230px / 1280px 720px no-repeat,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) 80px 230px / 1280px 720px no-repeat exclude,
+    linear-gradient(#000 0 0);
+}
+.auspicio-arriba .escena-mesa .hueco {
+  top: 230px;
+}
+.auspicio-arriba .escena-mesa .mesa {
+  top: 230px;
+  height: 720px;
+  justify-content: center;
+}
 .logo-centrado .escena-mesa .mesa {
   top: 150px;
+}
+.auspicio-arriba.logo-centrado .escena-mesa .mesa {
+  top: 230px;
 }
 .logo-centrado .escena-mesa .logo-columna {
   width: 440px;
