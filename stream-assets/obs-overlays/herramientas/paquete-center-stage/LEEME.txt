@@ -47,8 +47,31 @@ Para ver el detalle: abrí la escena en Chrome, F12 > Consola, escribí  SH_TSH
 
 Si TSH se cae durante el stream, la escena queda con el último dato recibido.
 
-Si el Top 8 de TSH no es un bracket de doble eliminación estándar, el bracket
-se carga a mano en config/bracket.js (punto 5).
+
+BRACKET (bracket.html) CON TSH
+------------------------------
+TSH solo exporta el bracket si está cargado en su pestaña «Bracket»:
+   1. En TSH, cargá el torneo de start.gg (sirve uno terminado para probar).
+   2. Pestaña Bracket: elegí la FASE y el GRUPO del Top 8 (o el bracket final).
+   3. bracket.html arma el Top 8 solo: winners, losers, Grand Final y reset.
+Si falta algo, el aviso rojo de bracket.html dice qué pasa:
+   «TSH no tiene un bracket cargado»  → falta el paso 2.
+   «no termina como un Top 8 de doble eliminación» → la fase elegida no es
+      doble eliminación (pools, round robin…): elegí la fase final.
+Mientras tanto se muestra lo que haya en config/bracket.js (carga a mano).
+
+Tiempo real: TSH no vuelve a pedir el bracket a start.gg por su cuenta.
+bracket.html se lo pide cada 30 segundos (al servidor web de TSH,
+http://127.0.0.1:5500). Para que funcione, en TSH tiene que estar activo el
+servidor web (viene activado). Se cambia en config/perfiles/center-stage.js,
+actualizarBracket: 30  (0 = no pedir).
+
+PROBAR EL BRACKET SIN TSH (para ver que la escena funciona)
+En OBS, fuente Navegador, DESMARCÁ «Archivo local» y en URL poné la ruta del
+archivo con este agregado al final (cambiá la ruta por la tuya):
+   file:///C:/TSH/layout/center-stage-overlays/bracket.html?tshRuta=prueba/tsh-ejemplo.json
+Tiene que aparecer un Top 8 de ejemplo a mitad de torneo (nombres inventados).
+Si eso se ve y con TSH no, el problema está en TSH (pasos 1 y 2), no en la escena.
 
 
 3. ESCENAS

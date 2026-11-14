@@ -73,6 +73,8 @@ Las escenas pueden tomar los datos de competencia directamente de TSH, que ya se
 
 **Dónde busca los datos, en orden:** la ruta `/program-state` del servidor web de TSH; `out/program_state.json`, dos carpetas más arriba (la ubicación estándar `TSH/layout/<carpeta>/`); y ese mismo archivo una carpeta más arriba o más abajo. Si tu instalación es distinta: `?tshRuta=ruta/al/program_state.json`.
 
+**Bracket:** TSH solo exporta el bracket si en su pestaña «Bracket» está elegida la fase y el grupo. TSH no lo vuelve a pedir a start.gg por su cuenta: con `actualizarBracket: 30` (activado en Center Stage), `bracket.html` le pide al servidor de TSH (`tshServidor`, por defecto `http://127.0.0.1:5500`) que lo actualice cada 30 segundos, con `/update-bracket`. Si el bracket no se puede armar, la escena muestra el motivo en un aviso rojo (`SH_TSH.bracketMotivo`).
+
 **Qué toma de TSH:** nombres (o nombre de equipo en dobles), prefijo, personaje, marcador, ronda, formato (BO3/BO5), los dos primeros comentaristas y el **Top 8 completo**, si el final del bracket es el estándar de doble eliminación (winners 2-1-1 más reset, losers 2-2-1-1). El set del Top 8 que coincide con el marcador se marca solo como «En juego». Si el bracket no tiene esa forma, se usa `config/bracket.js`. Lo que TSH deja vacío queda vacío: no aparecen los ejemplos de `config/`.
 
 **Qué sigue saliendo de `config/`:** evento, fecha, lugar, logos, patrocinadores, redes, textos y perfil.

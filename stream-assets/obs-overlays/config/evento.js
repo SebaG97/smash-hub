@@ -16,6 +16,10 @@ window.SH_EVENTO = {
   tsh: false,
   scoreboard: "1", // número de marcador de TSH
   diagnostico: true, // aviso rojo en pantalla si TSH está activado y no se encuentran datos
+  // Bracket en tiempo real: cada cuántos segundos bracket.html le pide a TSH que vuelva
+  // a traer el bracket de start.gg (0 = nunca; TSH solo lo trae al elegir la fase).
+  actualizarBracket: 0,
+  tshServidor: "http://127.0.0.1:5500", // servidor web de TSH (puerto 5500 por defecto)
 
   // Tema visual si no hay perfil: "smash-hub" o "center-stage".
   tema: "smash-hub",

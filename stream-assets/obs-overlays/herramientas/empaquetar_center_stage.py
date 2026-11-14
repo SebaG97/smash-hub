@@ -83,6 +83,11 @@ def main() -> None:
     evento = obra / "config" / "evento.js"
     evento.write_text(evento_center_stage(evento.read_text(encoding="utf-8")), encoding="utf-8")
     shutil.copy2(RAIZ / "herramientas" / "paquete-center-stage" / "LEEME.txt", obra / "LEEME.txt")
+    # Prueba sin TSH: un estado de TSH de ejemplo (nombres inventados) con su Top 8.
+    prueba = obra / "prueba"
+    prueba.mkdir()
+    shutil.copy2(RAIZ / "previews" / "datos" / "tsh-estado-ejemplo.json", prueba / "tsh-ejemplo.json")
+    shutil.copytree(RAIZ / "previews" / "datos" / "assets", prueba / "assets")
 
     DIST.mkdir(exist_ok=True)
     salida = DIST / "CENTER-STAGE-OVERLAYS.zip"

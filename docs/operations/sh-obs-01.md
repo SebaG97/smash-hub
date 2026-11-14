@@ -356,3 +356,28 @@ Pedido del 13/11/2026: un setup con una sola cámara para los dos jugadores.
 - **La cámara entra en el hueco entre los dos paneles del HUD,** medido sobre la captura real de OBS: el panel del jugador 1 llega hasta x ≈ 820 y el retrato del jugador 2 empieza en x ≈ 1131. Los auspiciantes quedan fuera de los paneles (x < 384 y x > 1536).
 - **HUD simulado de `previews/gameplay-simulado.html`** ajustado a esas posiciones reales; también se pueden ver las zonas por jugador.
 - **Prueba:** dentro del ZIP, con TSH simulado y como archivo local, lee nombres de TSH y muestra un logo distinto en cada esquina, sin errores.
+
+## 19. Bracket desde TSH: diagnóstico, actualización y prueba
+
+Reporte del 14/11/2026: probado con un torneo terminado de start.gg, el bracket no traía datos.
+
+**Qué se verificó en el código de TSH** (`TSHBracketView.py`, `TSHBracket.py`, `TSHBracketWidget.py`, `TSHWebServerActions.py`):
+- TSH exporta el bracket solo si en su pestaña **Bracket** están elegidos la fase y el grupo. Guarda las rondas en `bracket.bracket.rounds` y los jugadores en `bracket.players.slot`.
+- Cada set tiene `playerId` (1, 2… = jugador; −1 = bye; −2 = pendiente), `score`, `playerName` y `completed`.
+- En winners, las dos últimas rondas son la Grand Final y el reset. En losers, las rondas −1 y −2 son de relleno y la más negativa es la Losers Final. Para cualquier bracket de 8 o más, el final es winners 2-1-1-1 y losers 2-2-1-1, la forma que ya esperaba el overlay.
+- **TSH no vuelve a pedir el bracket a start.gg por su cuenta:** lo hace al elegir la fase o cuando se llama a `/update-bracket` en su servidor web.
+
+**Cambios:**
+- Jugadores tomados con `playerId > 0`, con `playerName` como respaldo; se ignoran las rondas vacías.
+- **Motivo cuando no se puede armar el Top 8:** queda en `SH_TSH.bracketMotivo` y en un aviso rojo en `bracket.html` («TSH no tiene un bracket cargado…» o «no termina como un Top 8… (winners x, losers y)»). Mientras tanto se muestra `config/bracket.js`.
+- **Tiempo real:** `actualizarBracket` (segundos; 30 en Center Stage) hace que `bracket.html` llame a `/update-bracket` en el servidor de TSH. Toma el servidor de la fuente de datos, o `tshServidor` (por defecto `http://127.0.0.1:5500`). Es un pedido simple de imagen, así que funciona también con «Archivo local».
+- **Prueba sin TSH en el ZIP:** `prueba/tsh-ejemplo.json`, con la estructura real de TSH. Se abre con `bracket.html?tshRuta=prueba/tsh-ejemplo.json`.
+
+**Pruebas,** con TSH simulado (estructura real: bracket completo de 8, rondas de relleno e ids desde 1):
+- (A) Archivo local, como en OBS: 11 sets correctos, con banderas y LSF «en juego».
+- (B) Sin bracket cargado: aviso con el paso que falta.
+- (C) Otra forma de bracket: aviso con la forma encontrada.
+- (D) Por URL, 65 s abierta: TSH recibió los pedidos a `/update-bracket` cada 30 s, y también desde archivo local.
+- La prueba del ZIP, sin TSH, muestra el Top 8 con 18 banderas.
+
+**Pendiente:** confirmarlo con TSH real y el torneo de start.gg.

@@ -150,11 +150,36 @@
     return intentar();
   }
 
+  /**
+   * Bracket en tiempo real: TSH no vuelve a pedir el bracket a start.gg por su cuenta;
+   * lo hace cuando se llama a /update-bracket en su servidor web. La escena del bracket
+   * lo pide cada evento.actualizarBracket segundos (0 = nunca). Usa el servidor de TSH
+   * desde el que se leen los datos, o evento.tshServidor (por defecto http://127.0.0.1:5500).
+   */
+  var ultimoPedido = 0;
+  function refrescarBracket(d) {
+    var cada = Number(d.evento.actualizarBracket || 0);
+    if (!TSH.estado.activo || !cada || !document.querySelector("[data-lista='bracket']")) return;
+    if (Date.now() - ultimoPedido < cada * 1000) return;
+    ultimoPedido = Date.now();
+    var servidor = /^https?:/.test(TSH.fuente)
+      ? TSH.fuente.replace(/^(https?:\/\/[^\/]+).*$/, "$1")
+      : String(d.evento.tshServidor || "http://127.0.0.1:5500").replace(/\/$/, "");
+    // Pedido simple (imagen): funciona también desde «Archivo local», sin CORS.
+    var ping = new Image();
+    ping.src = servidor + "/update-bracket?v=" + Date.now();
+    TSH.estado.bracketPedido = new Date().toISOString() + " → " + servidor + "/update-bracket";
+  }
+
   /** Aviso en pantalla mientras TSH está activado pero no se pudo leer nada. */
   function avisoTsh(d) {
     var n = document.getElementById("sh-aviso-tsh");
+    var esBracket = !!document.querySelector("[data-lista='bracket']");
+    var sinDatos = !TSH.estado.ok;
+    // En la escena del bracket, también avisa si TSH responde pero el Top 8 no se pudo armar.
+    var sinBracket = esBracket && TSH.estado.ok && !TSH.estado.bracket;
     var mostrar =
-      TSH.estado.activo && !TSH.estado.ok && d.evento.diagnostico !== false && Date.now() - INICIO > 4000;
+      TSH.estado.activo && (sinDatos || sinBracket) && d.evento.diagnostico !== false && Date.now() - INICIO > 4000;
     if (!mostrar) {
       if (n) n.remove();
       return;
@@ -168,10 +193,11 @@
         "box-shadow:0 6px 20px rgba(0,0,0,.5)";
       document.body.append(n);
     }
-    n.textContent =
-      "TSH: no se encuentran los datos. ¿Está abierto TSH? ¿La carpeta está dentro de TSH/layout/? " +
-      "Detalle: " +
-      TSH.estado.error.slice(0, 260);
+    n.textContent = sinDatos
+      ? "TSH: no se encuentran los datos. ¿Está abierto TSH? ¿La carpeta está dentro de TSH/layout/? " +
+        "Detalle: " +
+        TSH.estado.error.slice(0, 260)
+      : "Bracket: " + TSH.estado.bracketMotivo + ". Mientras tanto se muestra config/bracket.js.";
   }
 
   /** Lee un JSON por XHR: funciona por http (servidor de TSH) y en archivos locales de OBS. */
@@ -293,7 +319,9 @@
       .map(function (c) {
         return { nombre: c.name, usuario: c.twitter ? "@" + String(c.twitter).replace(/^@/, "") : "" };
       });
-    TSH.estado.bracket = bracketTsh(estado.bracket, d);
+    var motivo = bracketTsh(estado.bracket, d);
+    TSH.estado.bracket = !motivo;
+    TSH.estado.bracketMotivo = motivo;
     // El set del Top 8 que coincide con el marcador actual (y no terminó) queda «en juego».
     if (TSH.estado.bracket) {
       var a = d.partida.jugador1.nombre;
@@ -309,18 +337,28 @@
   }
 
   /**
-   * Top 8 desde el bracket de TSH. Solo si el final del bracket es el estándar de
-   * doble eliminación: winners [2, 1, 1, 1 (GF, reset)] y losers [2, 2, 1, 1].
-   * Si no coincide, no adivina: se queda con config/bracket.js.
+   * Top 8 desde el bracket de TSH (pestaña «Bracket» de TSH: fase y grupo elegidos).
+   * Esquema confirmado en el código de TSH (TSHBracketView.py, TSHBracket.py):
+   *   bracket.bracket.rounds["<n>"].sets["<i>"] = { playerId: [a, b], score: [x, y],
+   *     playerName: [..], completed }   — winners n > 0 (las dos últimas: GF y reset),
+   *   losers n < 0 (la más negativa es la Losers Final); bracket.players.slot["<id>"].
+   *   playerId: 1, 2, … = jugador; -1 = bye; -2 = pendiente. Las rondas -1 y -2 son de relleno.
+   * Solo si el final del bracket es el estándar (winners 2-1-1-1, losers 2-2-1-1); si no,
+   * no adivina. Devuelve "" si pudo, o el motivo si no (queda en SH_TSH.bracketMotivo).
    */
   function bracketTsh(fuente, d) {
     var rondas = fuente && fuente.bracket && fuente.bracket.rounds;
-    var slots = fuente && fuente.players && fuente.players.slot;
-    if (!rondas || !slots) return false;
-    var nums = Object.keys(rondas).map(Number);
+    if (!rondas || !Object.keys(rondas).length)
+      return "TSH no tiene un bracket cargado: en TSH, pestaña Bracket, elegí la fase y el grupo del Top 8";
+    var slots = (fuente.players && fuente.players.slot) || {};
     var sets = function (n) {
       return lista(rondas[n] && rondas[n].sets);
     };
+    var nums = Object.keys(rondas)
+      .map(Number)
+      .filter(function (n) {
+        return isFinite(n) && sets(n).length > 0;
+      });
     var w = nums
       .filter(function (n) {
         return n > 0;
@@ -339,27 +377,35 @@
       })
       .slice(-4)
       .map(sets);
-    var forma = function (r, esperado) {
-      return (
-        r.length === esperado.length &&
-        r.every(function (s, i) {
-          return s.length === esperado[i];
+    var cuenta = function (r) {
+      return r
+        .map(function (x) {
+          return x.length;
         })
-      );
+        .join("-");
     };
-    if (!forma(w, [2, 1, 1, 1]) || !forma(l, [2, 2, 1, 1])) return false;
+    if (cuenta(w) !== "2-1-1-1" || cuenta(l) !== "2-2-1-1")
+      return (
+        "el bracket de TSH no termina como un Top 8 de doble eliminación (winners " +
+        cuenta(w) +
+        ", losers " +
+        cuenta(l) +
+        "; se esperaba 2-1-1-1 y 2-2-1-1)"
+      );
     var cruce = function (set) {
       var ids = lista(set && set.playerId);
       var pts = lista(set && set.score);
+      var nombres = lista(set && set.playerName);
       var jugado = !!(set && set.completed) || Number(pts[0]) > 0 || Number(pts[1]) > 0;
       var lado = function (k) {
         var id = Number(ids[k]);
-        var eq = id >= 0 ? slots[id] : null;
+        var real = id > 0;
+        var eq = real ? slots[id] || slots[String(id)] : null;
         var js = lista(eq && eq.player);
         return {
           f: js.length === 1 ? banderaTsh(js[0]) : "",
-          j: id >= 0 ? nombreTsh(eq) : "",
-          p: id >= 0 && jugado && pts[k] != null && Number(pts[k]) >= 0 ? Number(pts[k]) : "",
+          j: real ? nombreTsh(eq) || nombres[k] || "" : "",
+          p: real && jugado && pts[k] != null && Number(pts[k]) >= 0 ? Number(pts[k]) : "",
         };
       };
       var a = lado(0);
@@ -372,7 +418,7 @@
       !!(gf && gf.completed) &&
       Number(gfPts[1]) > Number(gfPts[0]) &&
       lista(w[3][0] && w[3][0].playerId).every(function (id) {
-        return Number(id) >= 0;
+        return Number(id) > 0;
       });
     d.bracket.cruces = {
       WSF1: cruce(w[0][0]),
@@ -387,7 +433,7 @@
       LSF: cruce(l[2][0]),
       LF: cruce(l[3][0]),
     };
-    return true;
+    return "";
   }
 
   /** Mezcla b sobre a: los objetos se combinan; listas y valores se reemplazan. */
@@ -815,6 +861,7 @@
   function ciclo() {
     leerDatos().then(function (d) {
       avisoTsh(d);
+      refrescarBracket(d);
       var firma = JSON.stringify(d);
       if (firma !== ultimo) {
         ultimo = firma;

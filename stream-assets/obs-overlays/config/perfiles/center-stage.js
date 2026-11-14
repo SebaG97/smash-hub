@@ -23,6 +23,8 @@ window.SH_PERFIL = {
   // Gameplay (gameplay.html y gameplay-broadcast.html): solo marcador y cámaras.
   // camaras: en gameplay.html, una cámara por jugador en las esquinas inferiores.
   gameplay: { marca: false, patrocinadores: false, camaras: true },
+  // Bracket: pedirle a TSH que actualice desde start.gg cada 30 segundos.
+  actualizarBracket: 30,
 
   // Redes del evento (se muestran en «Empieza pronto», auspiciantes y cierre).
   redes: [
