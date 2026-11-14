@@ -1,0 +1,118 @@
+CENTER STAGE · OVERLAYS PARA OBS (1920 × 1080)
+==============================================
+
+Archivos locales: no necesitan internet, ni instalar nada.
+Ya vienen configurados para Center Stage (logos, colores y los 11 auspiciantes)
+y con Tournament Stream Helper (TSH) activado.
+Las capturas de cada escena están en la carpeta previews/.
+
+
+1. INSTALACIÓN CON TSH (recomendada)
+------------------------------------
+1. Copiá la carpeta center-stage-overlays DENTRO de la carpeta layout de TSH:
+      TSH/layout/center-stage-overlays/gameplay.html
+   (Si quedó una carpeta de más, por ejemplo
+    TSH/layout/CENTER-STAGE-OVERLAYS/center-stage-overlays/, también funciona.)
+2. Abrí TSH y cargá el torneo como siempre.
+3. En OBS: Fuentes > + > Navegador > «Archivo local» > elegí el .html
+   que está dentro de TSH/layout/center-stage-overlays/.
+   Ancho 1920, alto 1080. Dejá vacío «CSS personalizado».
+   Recomendado: «Actualizar navegador cuando la escena se active».
+4. Listo: jugadores, prefijos, banderas, personajes, marcador, ronda, formato,
+   comentaristas y Top 8 se actualizan solos desde TSH cada segundo.
+   Las banderas son las del país de cada jugador en start.gg (las trae TSH).
+
+Alternativa por URL (desmarcá «Archivo local»). El servidor web de TSH usa
+el puerto 5500 por defecto:
+   http://127.0.0.1:5500/layout/center-stage-overlays/gameplay.html
+
+Se necesita OBS 31 o posterior.
+
+
+2. SI APARECE UN AVISO ROJO O NO SE VEN LOS DATOS DE TSH
+--------------------------------------------------------
+El aviso rojo arriba a la izquierda dice que TSH está activado pero la escena
+no encuentra sus datos. Revisá:
+   - ¿TSH está abierto?
+   - ¿La carpeta center-stage-overlays está DENTRO de TSH/layout/?
+     (No sirve si está en el Escritorio o en Descargas.)
+   - En OBS: clic derecho en la fuente > Actualizar.
+El aviso desaparece solo cuando encuentra los datos.
+
+Para ver el detalle: abrí la escena en Chrome, F12 > Consola, escribí  SH_TSH
+   ok: true       = está leyendo TSH
+   fuente         = de dónde lee
+   bracket: true  = reconoció el Top 8
+   error          = por qué no lee
+
+Si TSH se cae durante el stream, la escena queda con el último dato recibido.
+
+Si el Top 8 de TSH no es un bracket de doble eliminación estándar, el bracket
+se carga a mano en config/bracket.js (punto 5).
+
+
+3. ESCENAS
+----------
+starting-soon.html        Empieza pronto (con cuenta regresiva opcional)
+gameplay.html             Solo el marcador, sobre el juego a pantalla completa (transparente)
+gameplay-broadcast.html   Marcador + juego + dos cámaras de jugadores (sin logos ni auspiciantes)
+versus.html               Próximo set: jugador contra jugador
+commentators.html         Dos cámaras de comentaristas
+commentators-wide.html    Una cámara para toda la mesa
+intermission.html         Ya volvemos
+sponsors.html             Auspiciantes
+bracket.html              Top 8 (doble eliminación)
+ending.html               Cierre
+
+
+4. CÁMARAS (van DEBAJO de la fuente de navegador, recortadas a 16:9)
+--------------------------------------------------------------------
+gameplay-broadcast.html
+   Captura del juego   x 24    y 140   1536 × 864
+   Cámara jugador 1    x 1584  y 225   320 × 180
+   Cámara jugador 2    x 1584  y 520   320 × 180
+
+commentators-wide.html
+   Cámara general      x 80    y 140   1280 × 720
+
+commentators.html
+   Cámara 1            x 70    y 250   860 × 484
+   Cámara 2            x 990   y 250   860 × 484
+
+En OBS: clic derecho en la cámara > Transformar > Editar transformación.
+gameplay.html va ENCIMA de la captura del juego a pantalla completa.
+
+
+5. DATOS QUE NO VIENEN DE TSH
+-----------------------------
+Abrí config/evento.js con el Bloc de notas.
+La fecha ya dice «14 y 15 de noviembre». Lo marcado COMPLETAR es opcional:
+si queda vacío, no se muestra (no aparecen textos de ejemplo).
+   hora, lugar (sede), sitio y redes (hasta 3).
+Cuenta regresiva de «Empieza pronto»:
+   inicio: "2026-11-14T15:00:00-03:00"     (vacío = no se muestra)
+Guardá: las escenas abiertas en OBS se actualizan solas.
+
+Sin TSH (todo a mano): en config/evento.js poné  tsh: false  y usá
+   config/partida.js   set actual: ronda, formato, jugadores, prefijo,
+                       personaje y marcador.
+   config/bracket.js   Top 8: j1 / j2 = jugadores, p1 / p2 = sets ganados.
+                       No avanza solo: escribí el ganador en el set siguiente.
+   y los comentaristas en config/evento.js.
+
+
+6. AUSPICIANTES
+---------------
+Están en config/perfiles/center-stage.js (los 11, en el orden 1–11).
+Para quitar uno, borrá su línea. En las escenas van en una barra ARRIBA que se
+desliza (carrusel): la franja de abajo no se ve en la pantalla gigante.
+Santa Bárbara va sobre una placa clara para que se lea sobre el fondo oscuro.
+
+
+7. OTROS PROBLEMAS
+------------------
+- Escena en blanco: revisá que no se haya borrado una coma o comilla en
+  config/*.js (si el archivo tiene un error, la escena no carga).
+- Fondo negro en gameplay o cámaras: borrá el CSS personalizado de la fuente.
+- Otro marcador de TSH: en config/evento.js,  scoreboard: "2".
+- Quitar el aviso rojo (no recomendado):  diagnostico: false.

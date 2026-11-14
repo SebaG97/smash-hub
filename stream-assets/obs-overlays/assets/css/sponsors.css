@@ -146,6 +146,11 @@
   padding: 30px;
 }
 
+/* Sin redes ni sitio, la barra quedaría vacía */
+.sin-redes .escena-auspicio .barra-inf {
+  display: none;
+}
+
 /* ------------------------------------------------------------------ pie */
 .barra-inf .barra-sitio {
   margin-left: auto;

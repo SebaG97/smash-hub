@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="assets/css/temas/center-stage.css" />
   </head>
   <body>
-    <main class="escena">
+    <main class="escena escena-mesa">
       <div class="perforado perforado-mesa">
         <div class="fondo"></div>
         <div class="rayas"></div>
@@ -39,7 +39,8 @@
       <span class="chip chip-mesa entra-der"><span class="punto"></span><span>En vivo</span></span>
 
       <section class="mesa entra-der" style="--retraso: 0.1s" data-lista="comentaristas">
-        <div class="mesa-etiqueta etiqueta"><span data-campo="evento.evento"></span> · en la cabina</div>
+        <img class="logo-columna" data-src="evento.logoEvento" alt="" />
+        <div class="mesa-etiqueta etiqueta"><span data-campo="evento.evento"></span> · en vivo</div>
         <h1 class="mesa-titulo display">
           <span class="linea" data-campo="evento.textos.mesa.0" data-ajustar="0.6"></span>
           <span class="linea linea-acento" data-campo="evento.textos.mesa.1" data-ajustar="0.6"></span>

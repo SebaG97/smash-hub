@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="assets/css/versus.css" />
   </head>
   <body>
-    <main class="escena">
+    <main class="escena escena-versus">
       <div class="fondo"></div>
       <div class="rayas"></div>
 
@@ -31,6 +31,7 @@
       <div class="brasas" data-lista="brasas" data-cantidad="22"></div>
 
       <!-- Encabezado -->
+      <img class="logo-centro entra" data-src="evento.logoEventoHorizontal" alt="" />
       <header class="cabecera">
         <div class="marca entra-izq">
           <img class="logo-club" data-src="evento.logoClub" alt="" width="104" height="104" />
@@ -57,7 +58,10 @@
       <!-- Jugadores -->
       <section class="jugador jugador-1 entra-izq" style="--retraso: 0.15s" data-jugador="1">
         <div class="marco-pj" data-ocultar-vacio><img data-personaje="1" alt="" /></div>
-        <div class="jugador-equipo display" data-campo="partida.jugador1.equipo"></div>
+        <div class="jugador-sup">
+          <img class="bandera" data-bandera="1" alt="" />
+          <span class="jugador-equipo display" data-campo="partida.jugador1.equipo"></span>
+        </div>
         <div class="jugador-nombre display" data-campo="partida.jugador1.nombre" data-ajustar="0.45"></div>
         <div class="jugador-linea"></div>
       </section>
@@ -66,7 +70,10 @@
 
       <section class="jugador jugador-2 entra-der" style="--retraso: 0.15s" data-jugador="2">
         <div class="marco-pj" data-ocultar-vacio><img data-personaje="2" alt="" /></div>
-        <div class="jugador-equipo display" data-campo="partida.jugador2.equipo"></div>
+        <div class="jugador-sup">
+          <img class="bandera" data-bandera="2" alt="" />
+          <span class="jugador-equipo display" data-campo="partida.jugador2.equipo"></span>
+        </div>
         <div class="jugador-nombre display" data-campo="partida.jugador2.nombre" data-ajustar="0.45"></div>
         <div class="jugador-linea"></div>
       </section>

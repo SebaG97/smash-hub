@@ -16,6 +16,13 @@ window.SH_PERFIL = {
   logoEvento: "assets/images/eventos/center-stage/logo.png",
   logoEventoHorizontal: "assets/images/eventos/center-stage/logo-horizontal.png",
 
+  // Composición pensada para la pantalla gigante del evento:
+  auspiciantesArriba: true, // la franja inferior no se ve en la pantalla gigante
+  carrusel: true, // auspiciantes deslizándose
+  logoCentrado: true, // logo grande y centrado, no chico en una esquina
+  // Gameplay (gameplay.html y gameplay-broadcast.html): solo marcador y cámaras.
+  gameplay: { marca: false, patrocinadores: false },
+
   patrocinadores: {
     // Sin principal: los once se muestran con el mismo peso. Para destacar uno,
     // poné aquí { nombre: "...", logo: "..." } y sacalo de la lista.
@@ -40,18 +47,18 @@ window.SH_PERFIL = {
   textos: {
     empezamos: ["Empieza", "pronto"],
     volvemos: ["Ya", "volvemos"],
-    comentarios: "En la cabina",
+    comentarios: "Comentaristas",
     patrocinadores: "Auspician",
     proximoSet: "Próximo set",
     mesa: ["Mesa de", "análisis"],
-    cierre: ["Nos vemos", "en stage"],
-    cierreEtiqueta: "Gracias por ser parte",
-    lema: "El escenario es tuyo",
+    cierre: ["Gracias por", "acompañarnos"],
+    cierreEtiqueta: "Hasta el próximo Center Stage",
+    lema: "",
   },
 
   mensajes: [
     "Center Stage · Super Smash Bros. Ultimate · Paraguay",
-    "El escenario es tuyo",
+    "Resultados y bracket en vivo en start.gg",
     "Gracias a todos los auspiciantes que hacen posible Center Stage",
   ],
 };

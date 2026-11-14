@@ -289,3 +289,23 @@ Con una carpeta TSH simulada (`TSH/out/program_state.json` y el paquete en `TSH/
 | E. TSH activado y archivo inexistente | Aviso rojo con el error HTTP 404; datos manuales intactos |
 
 Sin errores de JavaScript; las 31 capturas se regeneraron sin errores. Sigue pendiente una prueba con TSH real (sección 11.4).
+
+## 13. Ajustes de Center Stage para el evento (14 y 15 de noviembre)
+
+Pedido del 13/11/2026.
+
+| Pedido | Cambio |
+| --- | --- |
+| Fechas 14 y 15 | `fecha: "14 y 15 de noviembre"` en el `evento.js` del ZIP. El perfil no fija la fecha: queda en `evento.js` para que se pueda editar en un solo lugar |
+| Gameplay sin auspiciantes ni logo | Opción `gameplay: { marca: false, patrocinadores: false }` en el perfil. `gameplay.html` queda solo con el marcador; `gameplay-broadcast.html`, con marcador y cámaras (sin logo, auspiciante ni pie) |
+| Banderas de start.gg | Con TSH: `player.country.asset`, la ruta dentro de la carpeta de TSH, mismo criterio que los layouts oficiales. Se muestra en el marcador, las placas de cámara, el versus y las filas del bracket. Se resuelve desde la raíz de TSH (`/program-state` → servidor; `…/out/program_state.json` → carpeta). Si no hay bandera o no carga, no se muestra |
+| Auspiciantes en carrusel y arriba | Opciones `carrusel` y `auspiciantesArriba`. La barra pasa al borde superior y se desliza sin cortes; se reconstruye solo si cambia la lista, así que las actualizaciones de TSH no la reinician. Cada escena reacomoda su contenido para no chocar con la barra |
+| Logo más grande y centrado | Opción `logoCentrado`. Logo horizontal centrado arriba en versus, comentaristas, intermedio y bracket (reemplaza al logo de la esquina; en el bracket, también al emblema lateral y a la fecha). En la mesa de análisis, logo vertical en la columna |
+| Frases poco claras | Cierre: «Gracias por / acompañarnos» y «Hasta el próximo Center Stage», sin lema. Se quitó «El escenario es tuyo» (cierre, pie y cinta) y «En la cabina» pasa a «Comentaristas» |
+
+El ZIP ahora lo arma `herramientas/empaquetar_center_stage.py`, que además rechaza el paquete si quedara algún placeholder en `evento.js`. Su LEEME está versionado en `herramientas/paquete-center-stage/LEEME.txt`.
+
+**Pruebas:**
+- Banderas con TSH simulado (países de ejemplo en `previews/datos/`): 4 en el gameplay con cámaras, 18 en el bracket y 2 en el versus.
+- ZIP final descomprimido dentro de una carpeta TSH simulada y abierto como archivo local, como en OBS: las 10 escenas leen TSH y no hay errores ni pedidos externos.
+- 32 capturas regeneradas; las de Smash Hub no cambian.

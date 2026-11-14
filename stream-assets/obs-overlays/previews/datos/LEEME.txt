@@ -1,0 +1,2 @@
+Datos de ejemplo SOLO para las capturas de previews/ (nombres inventados).
+assets/country_flag/: banderas simplificadas de prueba; con TSH real se usan las de TSH.

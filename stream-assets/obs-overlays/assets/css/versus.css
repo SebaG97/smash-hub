@@ -288,3 +288,45 @@
   font-weight: 800;
   color: var(--c-hueso);
 }
+
+/* ------------------------------------------------------------------ auspiciantes arriba y logo centrado */
+.auspicio-arriba .escena-versus .titulo {
+  top: 140px;
+}
+.auspicio-arriba .escena-versus .fecha {
+  top: 150px;
+}
+.auspicio-arriba .escena-versus .jugador {
+  bottom: 130px;
+}
+.auspicio-arriba .escena-versus .vs {
+  top: 640px;
+}
+.logo-centrado .escena-versus .logo-centro {
+  top: 132px;
+  height: 112px;
+}
+.logo-centrado .escena-versus .titulo {
+  top: 258px;
+}
+.logo-centrado .escena-versus .titulo-ronda {
+  margin-top: 14px;
+  font-size: 76px;
+}
+/* Bandera junto al prefijo */
+.jugador-sup {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 56px;
+}
+.jugador-2 .jugador-sup {
+  flex-direction: row-reverse;
+}
+.jugador-sup .jugador-equipo {
+  display: block;
+}
+.jugador-sup .bandera {
+  height: 36px;
+  margin: 0;
+}

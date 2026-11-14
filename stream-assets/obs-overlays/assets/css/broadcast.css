@@ -409,6 +409,9 @@ body {
 .cierre-lema.vacio {
   display: none;
 }
+.cierre .redes {
+  margin-top: 44px;
+}
 .emblema-cierre {
   left: auto;
   right: 110px;
@@ -433,4 +436,45 @@ body {
   width: 460px;
   height: 460px;
   object-fit: contain;
+}
+
+/* ------------------------------------------------------------------ gameplay-broadcast: solo marcador y cámaras */
+/* partida.mostrar o evento.gameplay con marca / patrocinadores en false */
+.sin-marca .marca-columna,
+.sin-marca .pie-broadcast {
+  display: none;
+}
+.sin-patrocinadores .col-auspicio {
+  display: none;
+}
+.cam-placa .bandera {
+  height: 22px;
+  margin: 0 -4px 0 12px;
+}
+
+/* ------------------------------------------------------------------ mesa: auspiciantes arriba y logo en la columna */
+.auspicio-arriba .escena-mesa .chip-mesa {
+  display: none;
+}
+.logo-centrado .escena-mesa .mesa {
+  top: 150px;
+}
+.logo-centrado .escena-mesa .logo-columna {
+  width: 440px;
+  height: 220px;
+  margin-bottom: 18px;
+  object-fit: contain;
+  filter: drop-shadow(0 14px 34px rgba(0, 0, 0, 0.6));
+}
+.logo-centrado .escena-mesa .mesa-titulo {
+  margin: 18px 0 24px;
+  font-size: 84px;
+}
+
+/* ------------------------------------------------------------------ cierre: auspiciantes arriba */
+.auspicio-arriba .escena-cierre .cierre {
+  top: 300px;
+}
+.auspicio-arriba .escena-cierre .emblema-cierre {
+  top: 210px;
 }

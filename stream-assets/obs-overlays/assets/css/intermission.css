@@ -252,3 +252,9 @@
     transform: translateX(-50%);
   }
 }
+
+/* ------------------------------------------------------------------ logo centrado */
+.logo-centrado .escena-intermedio .logo-centro {
+  top: 56px;
+  height: 124px;
+}

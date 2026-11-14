@@ -235,6 +235,21 @@
     game_and_watch: "mr_game_and_watch",
     pokemon_trainer_red: "pokemon_trainer",
   };
+  /**
+   * Bandera del país del jugador, tal como la exporta TSH (dato de start.gg):
+   * player.country.asset es una ruta dentro de la carpeta de TSH (assets/country_flag/xx.png).
+   * Mismo criterio que los layouts oficiales de TSH (ruta en minúsculas).
+   */
+  function banderaTsh(jugador) {
+    var a = jugador && jugador.country && jugador.country.asset;
+    if (!a) return "";
+    // Raíz de TSH: el servidor web, o la carpeta que contiene out/program_state.json.
+    var raiz = /\/program-state$/.test(TSH.fuente)
+      ? location.origin + "/"
+      : TSH.fuente.replace(/[^\/]*$/, "").replace(/out\/$/, "");
+    return raiz + String(a).replace(/^\.\//, "").toLowerCase();
+  }
+
   function personajeTsh(jugador) {
     var c = lista(jugador && jugador.character)[0];
     var n = (c && (c.en_name || c.name)) || "";
@@ -262,6 +277,7 @@
       j.nombre = nombreTsh(eq) || "Por definir";
       j.equipo = jugadores.length === 1 ? jugadores[0].team || "" : "";
       j.personaje = jugadores.length === 1 ? personajeTsh(jugadores[0]) : "";
+      j.bandera = jugadores.length === 1 ? banderaTsh(jugadores[0]) : "";
       var s = Number(eq.score);
       j.marcador = isFinite(s) && s >= 0 ? s : 0;
     });
@@ -338,14 +354,17 @@
       var jugado = !!(set && set.completed) || Number(pts[0]) > 0 || Number(pts[1]) > 0;
       var lado = function (k) {
         var id = Number(ids[k]);
+        var eq = id >= 0 ? slots[id] : null;
+        var js = lista(eq && eq.player);
         return {
-          j: id >= 0 ? nombreTsh(slots[id]) : "",
+          f: js.length === 1 ? banderaTsh(js[0]) : "",
+          j: id >= 0 ? nombreTsh(eq) : "",
           p: id >= 0 && jugado && pts[k] != null && Number(pts[k]) >= 0 ? Number(pts[k]) : "",
         };
       };
       var a = lado(0);
       var b = lado(1);
-      return { j1: a.j, p1: a.p, j2: b.j, p2: b.p };
+      return { j1: a.j, p1: a.p, j2: b.j, p2: b.p, f1: a.f, f2: b.f };
     };
     var gf = w[2][0];
     var gfPts = lista(gf && gf.score);
@@ -400,6 +419,7 @@
       tema: [evento, "tema"],
       evento: [evento, "evento"],
       inicio: [evento, "inicio"],
+      fecha: [evento, "fecha"],
       logoEvento: [evento, "logoEvento"],
     };
     Object.keys(mapa).forEach(function (k) {
@@ -487,11 +507,23 @@
       $$("[data-inicial='" + i + "']").forEach(function (n) {
         n.textContent = (j.nombre || "?").trim().charAt(0).toUpperCase();
       });
+      $$("[data-bandera='" + i + "']").forEach(function (n) {
+        ponerBandera(n, j.bandera);
+      });
     });
 
+    // Esquinas del gameplay: config/partida.js («mostrar») o el evento/perfil («gameplay»).
     var m = d.partida.mostrar || {};
-    html.classList.toggle("sin-marca", m.marca === false);
-    html.classList.toggle("sin-patrocinadores", m.patrocinadores === false);
+    var gp = d.evento.gameplay || {};
+    html.classList.toggle("sin-marca", m.marca === false || gp.marca === false);
+    html.classList.toggle("sin-patrocinadores", m.patrocinadores === false || gp.patrocinadores === false);
+    // Opciones de composición (las usa el perfil de Center Stage):
+    //   auspiciantesArriba: barra de auspiciantes arriba (abajo no se ve en pantallas gigantes)
+    //   carrusel: los auspiciantes se deslizan en lugar de cambiar por tandas
+    //   logoCentrado: el logo del evento grande y centrado, en lugar de chico en una esquina
+    html.classList.toggle("auspicio-arriba", d.evento.auspiciantesArriba === true);
+    html.classList.toggle("logo-centrado", d.evento.logoCentrado === true);
+    html.classList.toggle("sin-redes", !(d.evento.redes || []).length && !d.evento.sitio);
     html.classList.toggle("con-logo-evento", !!d.evento.logoEvento);
     html.classList.toggle("con-logo-h", !!d.evento.logoEventoHorizontal);
     html.classList.toggle("sin-principal", !(d.evento.patrocinadores || {}).principal);
@@ -541,9 +573,31 @@
     },
     todos: function (n, d) {
       // principal + secundarios, para tiras y rotación.
-      n.replaceChildren();
       var p = d.evento.patrocinadores || {};
       var lista = (p.principal ? [p.principal] : []).concat(p.secundarios || []);
+      // Carrusel: las tiras ([data-pagina]) se deslizan sin cortes. El rotador de a uno
+      // del gameplay no cambia.
+      var carrusel = d.evento.carrusel === true && n.hasAttribute("data-pagina");
+      n.classList.toggle("es-carrusel", carrusel);
+      if (carrusel) {
+        var firma = JSON.stringify(lista);
+        if (n.dataset.firma === firma && n.firstChild) return; // no reiniciar el deslizamiento
+        n.dataset.firma = firma;
+        n.replaceChildren();
+        var pista = el("div", "carrusel-pista");
+        for (var k = 0; k < 2; k++) {
+          var grupo = el("div", "carrusel-grupo");
+          lista.forEach(function (s) {
+            grupo.append(logoPatrocinador(s, "patrocinador"));
+          });
+          pista.append(grupo);
+        }
+        pista.style.setProperty("--duracion", Math.max(12, lista.length * 4) + "s");
+        n.append(pista);
+        return;
+      }
+      delete n.dataset.firma;
+      n.replaceChildren();
       lista.forEach(function (s, i) {
         var l = logoPatrocinador(s, "patrocinador");
         l.style.setProperty("--i", i);
@@ -626,6 +680,8 @@
         var nombre = String(x["j" + i] || "").trim();
         var p = x["p" + i];
         fila.querySelector(".br-nombre").textContent = nombre || VACIO;
+        var bandera = fila.querySelector(".br-bandera");
+        if (bandera) ponerBandera(bandera, x["f" + i] || "");
         fila.querySelector(".br-puntos").textContent = p === "" || p == null ? "" : String(p);
         fila.classList.toggle("pendiente", !nombre);
         fila.classList.toggle("ganador", w === i);
@@ -685,6 +741,17 @@
     });
   }
 
+  /** Muestra la bandera si hay ruta; si no hay o la imagen no carga, se oculta. */
+  function ponerBandera(n, url) {
+    n.onerror = function () {
+      n.removeAttribute("src");
+      n.classList.add("vacio");
+    };
+    n.classList.toggle("vacio", !url);
+    if (!url) n.removeAttribute("src");
+    else if (n.getAttribute("src") !== url) n.src = url;
+  }
+
   function logoPatrocinador(s, clase) {
     // estilo: "blanco" pasa el logo a blanco; "placa" lo pone sobre una placa clara.
     var extra = { blanco: " logo-blanco", placa: " logo-placa" }[s.estilo] || "";
@@ -726,6 +793,7 @@
   var paso = 0;
   function rotar() {
     $$("[data-rotar]").forEach(function (n) {
+      if (n.classList.contains("es-carrusel")) return;
       var hijos = n.children;
       if (!hijos.length) return;
       var cada = Number(n.dataset.rotar || 6);

@@ -268,3 +268,36 @@
   font-size: 30px;
   font-weight: 800;
 }
+
+/* Bandera en cada fila */
+.br-bandera {
+  align-self: center;
+  height: 20px;
+  width: auto;
+  margin-left: 12px;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+.br-bandera + .br-nombre {
+  padding-left: 10px;
+}
+.br-bandera:not([src]) + .br-nombre {
+  padding-left: 14px;
+}
+
+/* ------------------------------------------------------------------ auspiciantes arriba y logo centrado */
+.auspicio-arriba .escena-bracket .bracket,
+.auspicio-arriba .escena-bracket .br-titulo,
+.auspicio-arriba .escena-bracket .br-emblema,
+.auspicio-arriba .escena-bracket .fecha {
+  translate: 0 96px;
+}
+.logo-centrado .escena-bracket .logo-centro {
+  top: 126px;
+  height: 100px;
+}
+/* El logo centrado reemplaza al emblema del costado y a la fecha */
+.logo-centrado .escena-bracket .br-emblema,
+.logo-centrado .escena-bracket .fecha {
+  display: none;
+}

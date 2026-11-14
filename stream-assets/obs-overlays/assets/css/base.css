@@ -426,3 +426,102 @@ html:not(.listo) .escena {
 .con-logo-h .marca .marca-texto {
   display: none;
 }
+
+/* ------------------------------------------------------------------ banderas (TSH / start.gg) */
+.bandera {
+  display: inline-block;
+  height: 0.6em;
+  width: auto;
+  margin-right: 0.3em;
+  vertical-align: 0.08em;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+.bandera.vacio,
+.br-bandera.vacio {
+  display: none !important;
+}
+
+/* ------------------------------------------------------------------ carrusel de auspiciantes */
+/* evento.carrusel = true: las tiras se deslizan de derecha a izquierda sin cortes. */
+.es-carrusel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  display: block !important;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+.carrusel-pista {
+  display: flex;
+  width: max-content;
+  animation: carrusel var(--duracion, 40s) linear infinite;
+}
+.carrusel-grupo {
+  display: flex;
+  align-items: center;
+}
+.es-carrusel .patrocinador {
+  flex: none;
+  display: flex !important;
+  margin-right: 70px;
+}
+@keyframes carrusel {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* ------------------------------------------------------------------ logo grande y centrado */
+/* evento.logoCentrado = true: el logo horizontal del evento va centrado y grande,
+   en lugar del logo chico de la esquina. Cada escena ajusta su altura. */
+.logo-centro,
+.logo-columna {
+  display: none;
+}
+.logo-centrado .logo-centro {
+  display: block;
+  position: absolute;
+  left: 50%;
+  translate: -50% 0;
+  height: 120px;
+  width: auto;
+  max-width: 760px;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.6));
+}
+.logo-centrado .marca {
+  display: none !important;
+}
+.logo-centrado .logo-columna {
+  display: block;
+}
+
+/* ------------------------------------------------------------------ auspiciantes arriba */
+/* evento.auspiciantesArriba = true: la barra de auspiciantes pasa al borde superior
+   (en pantallas gigantes la franja inferior suele quedar tapada). */
+.auspicio-arriba .barra-inf,
+.auspicio-arriba .banda {
+  top: 0;
+  bottom: auto;
+  border-top: 0;
+  border-bottom: 2px solid var(--c-fuego);
+}
+.auspicio-arriba .barra-inf {
+  background: linear-gradient(0deg, rgba(10, 8, 7, 0.6), rgba(10, 8, 7, 0.94));
+}
+.auspicio-arriba .barra-inf::before {
+  top: auto;
+  bottom: -2px;
+}
+.auspicio-arriba .banda {
+  height: 124px;
+}
+.auspicio-arriba .banda-logos .patrocinador {
+  width: 230px;
+  height: 84px;
+}
+.auspicio-arriba .tira .patrocinador {
+  width: 180px;
+  height: 70px;
+}

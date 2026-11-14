@@ -168,3 +168,11 @@
   width: 140px;
   height: 56px;
 }
+
+/* ------------------------------------------------------------------ auspiciantes arriba */
+.auspicio-arriba .escena-inicio .emblema {
+  top: 200px;
+}
+.auspicio-arriba .escena-inicio .bloque {
+  top: 190px;
+}

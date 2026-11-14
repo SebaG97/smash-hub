@@ -51,7 +51,7 @@
   opacity: 1;
   -webkit-mask-image: none;
   mask-image: none;
-  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='1920' height='1080'><g fill='none' stroke-linecap='square'><g stroke='%2330244a' stroke-width='16'><path d='M1688 40l52 52M1740 40l-52 52'/><path d='M160 860l40 40M200 860l-40 40'/><path d='M1500 900l34 34M1534 900l-34 34'/></g><g stroke='%23e32c64' stroke-opacity='.55' stroke-width='10'><path d='M880 132l28 28M908 132l-28 28'/><path d='M60 420l24 24M84 420l-24 24'/></g><g stroke='%23f8f5fb' stroke-opacity='.5' stroke-width='3'><path d='M1800 600l26 15-26 15z'/><path d='M40 64l-22 13 22 13z'/></g><g fill='%2330244a'><path d='M1270 70l-30 18 30 18z'/><path d='M640 980l30 18-30 18z'/></g></g></svg>")
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='1920' height='1080'><g fill='none' stroke-linecap='square'><g stroke='%2330244a' stroke-width='16'><path d='M1688 40l52 52M1740 40l-52 52'/><path d='M160 860l40 40M200 860l-40 40'/><path d='M1500 900l34 34M1534 900l-34 34'/></g><g stroke='%23e32c64' stroke-opacity='.55' stroke-width='10'><path d='M520 160l28 28M548 160l-28 28'/><path d='M60 420l24 24M84 420l-24 24'/></g><g stroke='%23f8f5fb' stroke-opacity='.5' stroke-width='3'><path d='M1800 600l26 15-26 15z'/><path d='M40 64l-22 13 22 13z'/></g><g fill='%2330244a'><path d='M1270 70l-30 18 30 18z'/><path d='M640 980l30 18-30 18z'/></g></g></svg>")
     0 0 / 1920px 1080px no-repeat;
   animation: flota 9s ease-in-out infinite;
 }

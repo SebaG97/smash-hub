@@ -140,6 +140,19 @@ Eso activa todo lo de `config/perfiles/center-stage.js`: paleta oficial (fucsia 
 - Santa Bárbara (azul oscuro) va sobre una placa clara con sus colores originales, como en el pack v3 (`estilo: "placa"`). Alternativa: `estilo: "blanco"`.
 - Para destacar un auspiciante como principal, completá `principal` en el perfil.
 
+El perfil también activa opciones de composición pensadas para la pantalla gigante del evento (se pueden usar con cualquier perfil):
+
+| Opción | Efecto |
+| --- | --- |
+| `auspiciantesArriba: true` | La barra de auspiciantes va arriba: la franja inferior no se ve en la pantalla gigante |
+| `carrusel: true` | Los auspiciantes se deslizan en lugar de cambiar por tandas |
+| `logoCentrado: true` | El logo del evento va grande y centrado, en lugar de chico en una esquina |
+| `gameplay: { marca: false, patrocinadores: false }` | `gameplay.html` y `gameplay-broadcast.html` quedan solo con marcador y cámaras |
+
+**Banderas:** con TSH, el marcador, las placas de cámara, el versus y el bracket muestran la bandera del país de cada jugador, tomada de start.gg. Usan las imágenes que trae TSH; sin TSH, no se muestran.
+
+**ZIP para el stream:** `python herramientas/empaquetar_center_stage.py` arma `stream-assets/dist/CENTER-STAGE-OVERLAYS.zip`, con Center Stage y TSH activados, la fecha del evento, sin textos de ejemplo y con su `LEEME.txt` (`herramientas/paquete-center-stage/`).
+
 Para otro evento con identidad propia: copiá `config/perfiles/center-stage.js` y `assets/css/temas/center-stage.css` con otro nombre.
 
 ## Estructura

@@ -16,12 +16,13 @@
     <link rel="stylesheet" href="assets/css/gameplay.css" />
   </head>
   <body>
-    <main class="escena">
+    <main class="escena escena-gameplay">
       <!-- Marcador -->
       <section class="marcador entra" aria-label="Marcador">
         <div class="lado lado-1" data-jugador="1">
           <div class="placa">
             <span class="placa-texto" data-ajustar="0.55">
+              <img class="bandera" data-bandera="1" alt="" />
               <span class="equipo" data-campo="partida.jugador1.equipo"></span>
               <span class="nombre" data-campo="partida.jugador1.nombre"></span>
             </span>
@@ -37,6 +38,7 @@
           <div class="puntos"><span data-campo="partida.jugador2.marcador"></span></div>
           <div class="placa">
             <span class="placa-texto" data-ajustar="0.55">
+              <img class="bandera" data-bandera="2" alt="" />
               <span class="equipo" data-campo="partida.jugador2.equipo"></span>
               <span class="nombre" data-campo="partida.jugador2.nombre"></span>
             </span>

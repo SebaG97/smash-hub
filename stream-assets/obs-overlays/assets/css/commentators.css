@@ -165,3 +165,18 @@ body {
   font-size: 30px;
   font-weight: 800;
 }
+
+/* ------------------------------------------------------------------ auspiciantes arriba y logo centrado */
+.auspicio-arriba .escena-comentaristas .cabecera {
+  top: 118px;
+}
+.logo-centrado .escena-comentaristas .cabecera {
+  justify-content: flex-end;
+}
+.logo-centrado .escena-comentaristas .logo-centro {
+  top: 126px;
+  height: 104px;
+}
+.logo-centrado .escena-comentaristas .titulo-texto {
+  font-size: 56px;
+}

@@ -34,7 +34,7 @@ EJEMPLO = {
     "fijo": "1",
 }
 
-CENTER_STAGE = {"perfil": "center-stage"}
+CENTER_STAGE = {"perfil": "center-stage", "fecha": "14 y 15 de noviembre"}
 BRACKET = {"bracket": "previews/datos/bracket-ejemplo.js"}
 
 # (archivo de salida, página, parámetros extra, fondo transparente)

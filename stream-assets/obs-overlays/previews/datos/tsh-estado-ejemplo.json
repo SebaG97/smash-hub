@@ -17,6 +17,10 @@
          "name": "Pyra & Mythra",
          "en_name": "Pyra & Mythra"
         }
+       },
+       "country": {
+        "code": "AR",
+        "asset": "./assets/country_flag/ar.png"
        }
       }
      }
@@ -31,6 +35,10 @@
         "1": {
          "name": "Mr. Game & Watch"
         }
+       },
+       "country": {
+        "code": "PY",
+        "asset": "./assets/country_flag/py.png"
        }
       }
      }
@@ -260,7 +268,11 @@
      "player": {
       "1": {
        "name": "Ñandutí",
-       "team": "SCP"
+       "team": "SCP",
+       "country": {
+        "code": "PY",
+        "asset": "./assets/country_flag/py.png"
+       }
       }
      }
     },
@@ -268,7 +280,11 @@
      "player": {
       "1": {
        "name": "Mbarete",
-       "team": ""
+       "team": "",
+       "country": {
+        "code": "PY",
+        "asset": "./assets/country_flag/py.png"
+       }
       }
      }
     },
@@ -276,7 +292,11 @@
      "player": {
       "1": {
        "name": "Karai Guasu",
-       "team": ""
+       "team": "",
+       "country": {
+        "code": "AR",
+        "asset": "./assets/country_flag/ar.png"
+       }
       }
      }
     },
@@ -284,7 +304,11 @@
      "player": {
       "1": {
        "name": "Yvoty",
-       "team": ""
+       "team": "",
+       "country": {
+        "code": "BR",
+        "asset": "./assets/country_flag/br.png"
+       }
       }
      }
     },
@@ -292,7 +316,11 @@
      "player": {
       "1": {
        "name": "Tatu",
-       "team": ""
+       "team": "",
+       "country": {
+        "code": "PY",
+        "asset": "./assets/country_flag/py.png"
+       }
       }
      }
     },
@@ -300,7 +328,11 @@
      "player": {
       "1": {
        "name": "Jaguarete",
-       "team": ""
+       "team": "",
+       "country": {
+        "code": "PY",
+        "asset": "./assets/country_flag/py.png"
+       }
       }
      }
     },
@@ -308,7 +340,11 @@
      "player": {
       "1": {
        "name": "Kuarahy",
-       "team": ""
+       "team": "",
+       "country": {
+        "code": "AR",
+        "asset": "./assets/country_flag/ar.png"
+       }
       }
      }
     },
@@ -316,7 +352,11 @@
      "player": {
       "1": {
        "name": "Pytã",
-       "team": ""
+       "team": "",
+       "country": {
+        "code": "PY",
+        "asset": "./assets/country_flag/py.png"
+       }
       }
      }
     }
