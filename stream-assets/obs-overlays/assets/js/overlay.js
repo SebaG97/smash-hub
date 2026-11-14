@@ -54,7 +54,7 @@
         TSH.estado.activo = TSH.forzado || d.evento.tsh === true;
         if (!TSH.estado.activo) {
           aplicarUrl(d.evento, d.partida);
-          return d;
+          return contexto(d);
         }
         // Modo TSH: los datos de competencia vienen de Tournament Stream Helper.
         return leerTsh()
@@ -78,10 +78,16 @@
               }
             }
             aplicarUrl(d.evento, d.partida);
-            return d;
+            return contexto(d);
           });
       });
     });
+  }
+
+  /** Texto de la pestaña bajo el marcador: la fase del set (TSH) o, si no hay, el evento. */
+  function contexto(d) {
+    d.partida.contexto = d.partida.fase || d.evento.evento || "";
+    return d;
   }
 
   function clonar(o) {
@@ -308,7 +314,10 @@
       j.marcador = isFinite(s) && s >= 0 ? s : 0;
     });
     // Con TSH, lo que TSH deja vacío queda vacío: no se muestran los ejemplos de config/.
+    // TSH completa estos dos campos solo al cargar el set desde start.gg
+    // (match = «Winners Round 1», phase = «Pools - Pool A1» o «Top 8»).
     d.partida.ronda = tablero.match || tablero.phase || "";
+    d.partida.fase = tablero.match ? tablero.phase || "" : "";
     var bo = Number(tablero.best_of) || Number(String(tablero.best_of_text || "").replace(/\D+/g, ""));
     d.partida.formato = bo ? "BO" + bo : "";
     d.evento.comentaristas = lista(estado.commentary)
@@ -466,6 +475,7 @@
       evento: [evento, "evento"],
       inicio: [evento, "inicio"],
       fecha: [evento, "fecha"],
+      fase: [partida, "fase"],
       logoEvento: [evento, "logoEvento"],
     };
     Object.keys(mapa).forEach(function (k) {

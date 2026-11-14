@@ -48,6 +48,17 @@ Para ver el detalle: abrí la escena en Chrome, F12 > Consola, escribí  SH_TSH
 Si TSH se cae durante el stream, la escena queda con el último dato recibido.
 
 
+RONDA Y FASE DEL MARCADOR (por ejemplo «Winners Round 1» · «Pools - Pool A1»)
+--------------------------------------------------------------------------
+Salen de los campos «Match» y «Phase» del marcador de TSH. TSH los completa
+desde start.gg SOLO al cargar el set (botón para cargar el set, cola del
+stream o elegir el set de la lista). Si se escriben los nombres a mano, en
+«Match» queda lo que había antes (por ejemplo un «Winners Final» viejo).
+   - Mejor: cargá cada set desde start.gg en TSH.
+   - Si no: corregí a mano «Phase» y «Match» en TSH; el overlay los toma
+     al instante.
+La ronda va en el centro del marcador; la fase, debajo, junto al formato.
+
 BRACKET (bracket.html) CON TSH
 ------------------------------
 TSH solo exporta el bracket si está cargado en su pestaña «Bracket»:

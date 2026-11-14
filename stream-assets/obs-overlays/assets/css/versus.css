@@ -330,3 +330,9 @@
   height: 36px;
   margin: 0;
 }
+
+/* Fase del set (TSH), junto al formato: «BO3 · POOLS - POOL A1» */
+.titulo-fase:not(.vacio)::before {
+  content: "·";
+  margin: 0 0.6em;
+}

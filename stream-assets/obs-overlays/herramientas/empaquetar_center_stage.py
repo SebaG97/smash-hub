@@ -80,6 +80,13 @@ def main() -> None:
     for png in sorted((RAIZ / "previews").glob("*.png")):
         if png.name.startswith(("07-center-stage-", "12-tsh-")):
             shutil.copy2(png, obra / "previews" / png.name)
+    # partida.js sin ejemplos: si TSH no responde, que no aparezca una ronda inventada.
+    partida = obra / "config" / "partida.js"
+    t = partida.read_text(encoding="utf-8")
+    t = re.sub(r'ronda: "[^"]*"', 'ronda: ""', t)
+    t = re.sub(r'(jugador[12]: \{ nombre: )"[^"]*"', lambda m: m.group(1) + '""', t)
+    t = re.sub(r'(    jugador[12]): "[^"]*"', lambda m: m.group(1) + ': ""', t)
+    partida.write_text(t, encoding="utf-8")
     evento = obra / "config" / "evento.js"
     evento.write_text(evento_center_stage(evento.read_text(encoding="utf-8")), encoding="utf-8")
     shutil.copy2(RAIZ / "herramientas" / "paquete-center-stage" / "LEEME.txt", obra / "LEEME.txt")
@@ -88,6 +95,19 @@ def main() -> None:
     prueba.mkdir()
     shutil.copy2(RAIZ / "previews" / "datos" / "tsh-estado-ejemplo.json", prueba / "tsh-ejemplo.json")
     shutil.copytree(RAIZ / "previews" / "datos" / "assets", prueba / "assets")
+
+    nodo = shutil.which("node")
+    if nodo:
+        import subprocess
+
+        for js in (obra / "config").rglob("*.js"):
+            r = subprocess.run(
+                [nodo, "-e", "new Function(require('fs').readFileSync(process.argv[1],'utf8'))", str(js)],
+                capture_output=True,
+                text=True,
+            )
+            if r.returncode:
+                raise SystemExit(f"error de sintaxis en {js.name}: {r.stderr.strip()[:300]}")
 
     DIST.mkdir(exist_ok=True)
     salida = DIST / "CENTER-STAGE-OVERLAYS.zip"

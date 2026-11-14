@@ -381,3 +381,18 @@ Reporte del 14/11/2026: probado con un torneo terminado de start.gg, el bracket 
 - La prueba del ZIP, sin TSH, muestra el Top 8 con 18 banderas.
 
 **Pendiente:** confirmarlo con TSH real y el torneo de start.gg.
+
+## 20. Ronda y fase desde TSH
+
+Reporte del 14/11/2026: en pools, el gameplay mostraba «Winners Final».
+
+**Causa, confirmada en `TSHScoreboardWidget.py` (`ChangeSetData`):** TSH escribe `score.N.match` (ronda, por ejemplo «Winners Round 1») y `score.N.phase` (fase, por ejemplo «Pools - Pool A1») **solo al cargar el set desde start.gg**, y solo si start.gg los informa. Si el set no se carga, o los nombres se escriben a mano, en «Match» queda el texto anterior, y el overlay lo mostraba. Además, el overlay mostraba solo la ronda, así que no había forma de ver la fase.
+
+**Cambios:**
+- En modo TSH, `partida.fase` = `phase` cuando hay `match`.
+- Gameplay, gameplay con cámaras y cámara central: la pestaña bajo el marcador muestra «BO3 · fase» y, sin fase, el nombre del evento.
+- Versus: «BO3 · fase» bajo la ronda.
+- ZIP: `config/partida.js` sin ejemplos (ronda y jugadores vacíos), para que no aparezca una ronda inventada si TSH no responde. El empaquetador verifica con `node` la sintaxis de todos los `config/*.js`.
+- LEEME: cómo cargar el set en TSH para que ronda y fase salgan de start.gg.
+
+**Prueba:** estado de TSH con «Pools - Pool A1» / «Winners Round 1» / BO3, archivo local dentro de TSH. Gameplay, versus y cámara central lo muestran correctamente, sin errores.
