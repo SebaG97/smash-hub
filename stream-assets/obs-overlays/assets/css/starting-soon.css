@@ -180,30 +180,30 @@
 }
 
 /* ------------------------------------------------------------------ auspiciantes arriba */
-/* Anillos y logo centrados en su zona: la franja izquierda, entre el borde y el
-   bloque del título, debajo de la barra. Centro en (360, 490), 640 px. */
+/* Composición según el diseño de Figma del 13/11/2026 (Center Stage):
+   logo grande (~620 px) y anillo punteado de ~860 px, centrados en (500, 560). */
 .auspicio-arriba .escena-inicio .emblema {
-  left: 40px;
-  top: 170px;
-  width: 640px;
-  height: 640px;
+  left: 50px;
+  top: 110px;
+  width: 900px;
+  height: 900px;
 }
 .auspicio-arriba .escena-inicio .emblema-luz {
-  width: 800px;
-  height: 800px;
+  width: 1000px;
+  height: 1000px;
 }
 .auspicio-arriba .escena-inicio .anillo-1 {
-  width: 540px;
-  height: 540px;
+  width: 860px;
+  height: 860px;
 }
 .auspicio-arriba .escena-inicio .anillo-2 {
-  width: 620px;
-  height: 620px;
+  width: 960px;
+  height: 960px;
 }
 .auspicio-arriba .escena-inicio .emblema .logo-evento,
 .auspicio-arriba .escena-inicio .emblema .logo-club {
-  width: 400px;
-  height: 400px;
+  width: 620px;
+  height: 620px;
 }
 .auspicio-arriba .escena-inicio .bloque {
   top: 190px;

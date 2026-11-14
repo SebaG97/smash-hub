@@ -329,3 +329,12 @@ Reporte del 13/11/2026, con un dibujo de la ubicación esperada.
 - **Redes de Center Stage:** Instagram `@centerstagepy` y start.gg `start.gg/CSPY`, sin Discord ni sitio, en el perfil. El ZIP quita `redes` y `sitio` de su `evento.js` y deja un comentario que indica dónde están, porque el perfil los pisaría.
 
 ZIP regenerado y probado dentro de la carpeta TSH simulada: las 10 escenas leen TSH, las redes aparecen en «Empieza pronto», auspiciantes y cierre, y no queda ningún texto de ejemplo.
+
+## 16. «Empieza pronto» según el diseño de Figma
+
+El 13/11/2026 llegó una maqueta hecha en Figma. Medidas tomadas sobre la imagen (escala ≈ 2,42):
+- logo de ~620 px centrado en (500, 560);
+- anillo punteado de 860 px y anillo sólido de 960 px, con el mismo centro;
+- luz de 1000 px.
+
+El bloque de título no cambia. Se aplica solo con `auspiciantesArriba` (perfil de Center Stage). ZIP regenerado.
