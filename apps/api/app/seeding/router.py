@@ -163,6 +163,34 @@ def projects(
         ]
 
 
+# Declared before "/{slug}", which would otherwise take "countries" as a slug.
+@router.get("/countries")
+def countries(
+    request: Request,
+    actor: Admin,
+    q: str = Query("", max_length=60),
+    tournament: str | None = Query(None, max_length=40),
+    show: Literal["all", "foreign", "chosen", "unset"] = "all",
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
+):
+    """Organizers: every hub player with their flag, to mark guests of another country
+    once and for all (ADR-024). Filter by tag, by tournament or by flag."""
+    from uuid import UUID
+
+    try:
+        tournament_id = UUID(tournament) if tournament else None
+    except ValueError:
+        raise HTTPException(422, "Torneo inválido.") from None
+
+    def operation(session):
+        return service.country_roster(
+            session, q=q, tournament_id=tournament_id, show=show, page=page, page_size=page_size
+        )
+
+    return run(request, operation)
+
+
 @router.get("/{slug}")
 def project_view(request: Request, slug: str, actor: MaybeAdmin):
     def operation(session):

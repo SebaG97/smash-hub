@@ -295,6 +295,7 @@ La bandera de las imágenes del seeding era el circuito donde más compite cada 
 
 - `PUT /api/v1/seeding/countries/{id de start.gg}` (admin) con `{country: "PY" | null}` (dos letras); `null` la borra y vuelve la del circuito.
 - Las filas de la vista de organizador del seeding y de `/pools` agregan `country` (la elegida, si no el circuito cuando es un país) y `country_chosen`.
+- `GET /api/v1/seeding/countries` (admin) lista a cada jugador del hub con ID de start.gg: `player_id`, `startgg_player_id`, `tag`, `country` (la bandera elegida o `null`), `foreign`, `profile_country` (el país que puso en su perfil de start.gg, si algún seeding lo leyó, solo como pista), `tournaments` y `last_tournament`. Se puede filtrar con `q` (tag), `tournament` (id del torneo) y `show` (`all`, `foreign`, `chosen` o `unset`), y pagina con `page` y `page_size` (hasta 200). La respuesta agrega `total`, `home` y `foreign`. La página `/admin/nacionalidades` lo usa junto con el `PUT` de arriba.
 - Una bandera elegida de otro país deja al jugador fuera del ranking, del jugador del mes, de los logros y de los récords (ADR-024). En el ranking aparece con `missing: ["foreign"]`, y el endpoint recalcula los rankings afectados. Cada resultado del jugador del mes trae `placement` y `seed` contados entre los locales, y `overall_placement` y `overall_seed` con los números del bracket.
 
 ## Partidas en vivo (Misión 33)

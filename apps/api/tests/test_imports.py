@@ -168,6 +168,40 @@ def test_organizers_choose_the_costume_of_each_main(db, snapshot):
         assert s.get(Player, player).costumes == {}
 
 
+def test_organizers_set_every_players_country_in_one_place(db, snapshot):
+    """ADR-024: the roster lists every hub player with their start.gg id and flag, by
+    tournament too, so guests are marked once without hunting them in a seeding."""
+    prepare(db)
+    run(db, snapshot)
+    with Session(db) as s:
+        from app.competitions.models import Tournament
+
+        tournament = s.scalar(select(Tournament.id).where(Tournament.published.is_(True)))
+    with client_for(db) as client:
+        url = "/api/v1/seeding/countries"
+        assert client.get(url).status_code == 401
+        everyone = client.get(url, headers=AUTH).json()
+        assert everyone["home"] == "PY" and everyone["total"] >= 2
+        guest = next(r for r in everyone["items"] if r["startgg_player_id"] == "100")
+        assert guest["country"] is None and guest["tournaments"] == 1
+        by_tag = client.get(url, params={"q": guest["tag"][:3]}, headers=AUTH).json()
+        assert guest["player_id"] in {r["player_id"] for r in by_tag["items"]}
+        there = client.get(url, params={"tournament": str(tournament)}, headers=AUTH)
+        assert there.json()["total"] == everyone["total"]  # one tournament imported
+        assert client.get(url, params={"tournament": "x"}, headers=AUTH).status_code == 422
+        client.put(f"{url}/100", json={"country": "ar"}, headers=AUTH)
+        foreign = client.get(url, params={"show": "foreign"}, headers=AUTH).json()
+        assert [(r["startgg_player_id"], r["country"]) for r in foreign["items"]] == [("100", "AR")]
+        assert foreign["foreign"] == 1
+        unset = client.get(url, params={"show": "unset"}, headers=AUTH).json()
+        assert "100" not in {r["startgg_player_id"] for r in unset["items"]}
+        # A Paraguayan flag is chosen but local.
+        client.put(f"{url}/100", json={"country": "py"}, headers=AUTH)
+        assert client.get(url, params={"show": "foreign"}, headers=AUTH).json()["total"] == 0
+        chosen = client.get(url, params={"show": "chosen"}, headers=AUTH).json()
+        assert [r["startgg_player_id"] for r in chosen["items"]] == ["100"]
+
+
 def test_web_import_requires_admin_and_reports_progress(db, monkeypatch):
     calls = []
 

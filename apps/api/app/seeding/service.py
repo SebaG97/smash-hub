@@ -7,6 +7,7 @@ import logging
 import re
 import threading
 import unicodedata
+from collections import defaultdict
 from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -906,6 +907,96 @@ def foreign_players(session, home):
         )
         if country != (home or "").upper()
     }
+
+
+def country_roster(session, *, q="", tournament_id=None, show="all", page=1, page_size=50):
+    """Every hub player with a start.gg id and their flag, for organizers to set countries
+    in one place (ADR-024). Newest activity first.
+
+    `show`: "all", "foreign" (a flag of another country), "chosen" (any flag chosen) or
+    "unset". Each row carries the country typed in their start.gg profile, if a seeding
+    ever read it, as a hint.
+    """
+    from collections import Counter
+
+    from app.competitions.models import Tournament, TournamentParticipant
+    from app.core.config import get_settings
+    from app.players.models import ExternalIdentity, Player
+    from app.seeding.models import PlayerCountry
+
+    home = get_settings().startgg_sync_country
+    identities = {
+        player_id: external.removeprefix("player:")
+        for player_id, external in session.execute(
+            select(ExternalIdentity.player_id, ExternalIdentity.external_id).where(
+                ExternalIdentity.external_id.like("player:%")
+            )
+        )
+    }
+    activity = {}
+    in_tournament = set()
+    for player_id, tid, starts in session.execute(
+        select(TournamentParticipant.player_id, Tournament.id, Tournament.starts_at)
+        .join(Tournament, Tournament.id == TournamentParticipant.tournament_id)
+        .where(Tournament.published.is_(True))
+    ):
+        count, last = activity.get(player_id, (0, None))
+        activity[player_id] = (count + 1, max(filter(None, (last, starts)), default=None))
+        if tournament_id is not None and tid == tournament_id:
+            in_tournament.add(player_id)
+    flags = dict(
+        session.execute(select(PlayerCountry.startgg_player_id, PlayerCountry.country)).all()
+    )
+    hints = defaultdict(Counter)
+    for pid, country in session.execute(
+        select(SeedingEntrant.startgg_player_id, SeedingEntrant.profile_country).where(
+            SeedingEntrant.profile_country.is_not(None)
+        )
+    ):
+        hints[pid][country] += 1
+    needle = q.strip().lower()
+    rows = []
+    for player_id, tag in session.execute(select(Player.id, Player.tag)):
+        startgg_id = identities.get(player_id)
+        if startgg_id is None or player_id not in activity:
+            continue
+        if tournament_id is not None and player_id not in in_tournament:
+            continue
+        if needle and needle not in (tag or "").lower():
+            continue
+        country = flags.get(startgg_id)
+        if show == "foreign" and not (country and country != home):
+            continue
+        if show == "chosen" and not country:
+            continue
+        if show == "unset" and country:
+            continue
+        count, last = activity[player_id]
+        rows.append(
+            dict(
+                player_id=str(player_id),
+                startgg_player_id=startgg_id,
+                tag=tag,
+                country=country,
+                foreign=bool(country and country != home),
+                profile_country=hints[startgg_id].most_common(1)[0][0]
+                if hints[startgg_id]
+                else None,
+                tournaments=count,
+                last_tournament=last.isoformat() if last else None,
+            )
+        )
+    rows.sort(key=lambda r: (r["last_tournament"] or "", r["tournaments"]), reverse=True)
+    total = len(rows)
+    start = (page - 1) * page_size
+    return dict(
+        items=rows[start : start + page_size],
+        total=total,
+        page=page,
+        page_size=page_size,
+        home=home,
+        foreign=sum(1 for r in rows if r["foreign"]),
+    )
 
 
 def set_country(session, player_id, country, actor):

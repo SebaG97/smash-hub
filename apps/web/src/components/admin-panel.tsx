@@ -87,6 +87,15 @@ export function AdminPanel() {
             </article>
             <article className="data-card">
               <h3>
+                <Link href="/admin/nacionalidades">Nacionalidades</Link>
+              </h3>
+              <p>
+                Marcar la bandera de cada jugador: los de otro país quedan fuera
+                del ranking, el jugador del mes y los logros.
+              </p>
+            </article>
+            <article className="data-card">
+              <h3>
                 <Link href="/prode">Prode</Link>
               </h3>
               <p>
