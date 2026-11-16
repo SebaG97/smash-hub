@@ -587,6 +587,41 @@ def test_player_of_month_goes_to_the_surprise_not_the_top_seed():
     assert east["runners"] == [{"id": "f", "tag": "filho dele", "points": 3.8}]
 
 
+def test_guests_of_another_country_do_not_compete_in_the_scene():
+    """A guest wins the Center Stage: the best local counts as 1st among locals for the
+    player of the month, and guests stay out of the leaderboards."""
+    data = Data(tags={"g": "Guest", "w": "Wesker", "z": "Zio"}, foreign={"g"})
+
+    def at(player, placement, seed):
+        return dict(
+            finish(player, placement, seed, entrants=32, tournament="cs"),
+            city="Asunción",
+            event_id="cs",
+            starts_at=START,
+        )
+
+    data.finishes = [at("g", 1, 1), at("w", 2, 3), at("z", 3, 2)]
+    beat_guest = match(1, "w", "g", ws=3, ls=1, tournament="cs")
+    lost_to_guest = match(2, "g", "w", ws=1, ls=3, tournament="cs", comeback=True)
+    beat_guest.event_id = lost_to_guest.event_id = "cs"
+    data.matches = [beat_guest, lost_to_guest]
+
+    central = engine.player_of_month(data, "2026-09", now=START + timedelta(days=60))["regions"][0]
+    assert central["winner"]["tag"] == "Wesker"
+    result = central["winner"]["results"][0]
+    # Among locals Wesker was seed 2 and finished 1st; the bracket's numbers are kept.
+    assert (result["placement"], result["seed"]) == (1, 2)
+    assert (result["overall_placement"], result["overall_seed"]) == (2, 3)
+    assert "g" not in [r["id"] for r in central["runners"]]
+
+    records = engine.community_records(data)
+    assert records["titles"] == []  # the guest's title is not the scene's
+    assert records["upsets"] == [] and records["rivalries"] == []
+    assert records["comebacks"] == []
+    assert [r["tag"] for r in records["streaks"]] == ["Wesker"]
+    assert "g" not in {r["id"] for r in records["most_active"]}
+
+
 def test_preview_pools_for_readers_hide_organizer_tools():
     from uuid import uuid4
 

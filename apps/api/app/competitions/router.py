@@ -20,8 +20,9 @@ from app.competitions.models import (
 )
 from app.competitions.roles import event_roles
 from app.core.admin import Admin
-from app.games.models import Character, Game
-from app.players.mains import player_mains
+from app.games.models import Game
+from app.players.mains import UnknownCharacter, player_mains
+from app.players.mains import set_costume as store_costume
 from app.players.models import Player, PlayerAlias
 from app.players.summary import best_results, ranking_place
 from app.teams import service as teams
@@ -596,14 +597,10 @@ def set_costume(request: Request, id: UUID, body: CostumeChoice, actor: Admin):
         player = s.get(Player, id)
         if player is None:
             raise HTTPException(404, "Player not found")
-        if not s.scalar(select(Character.id).where(Character.name == body.character).limit(1)):
-            raise HTTPException(422, "Unknown character")
-        costumes = dict(player.costumes or {})
-        if body.costume == 1:
-            costumes.pop(body.character, None)
-        else:
-            costumes[body.character] = body.costume
-        player.costumes = costumes
+        try:
+            store_costume(s, player, body.character, body.costume)
+        except UnknownCharacter:
+            raise HTTPException(422, "Unknown character") from None
         s.commit()
         return body
 

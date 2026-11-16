@@ -71,7 +71,13 @@ class Data:
     picks: dict = field(default_factory=dict)  # player -> Counter(character -> games)
     games: list = field(default_factory=list)  # Game of eligible singles sets
     ranked: list = field(default_factory=list)  # players of the published ranking, in order
+    # Players organizers flagged with another country: their sets count, but they win no
+    # player of the month, achievement or place in the community's leaderboards.
+    foreign: set = field(default_factory=set)
     month_winners: dict | None = None  # filled on demand by month_winners()
+
+    def local(self, player):
+        return player not in self.foreign
 
 
 @dataclass
@@ -151,7 +157,7 @@ def load(session):
         if player and character != "Random Character":
             picks[player][character] += 1
 
-    data = Data(picks=dict(picks), ranked=ranked_players(session))
+    data = Data(picks=dict(picks), ranked=ranked_players(session), foreign=foreign_players(session))
     data.tags = dict(session.execute(select(Player.id, Player.tag)).all())
     for set_id, event_id, at, round_label in session.execute(
         select(Set.id, Set.event_id, Set.completed_at, Set.round_label).where(
@@ -245,6 +251,25 @@ def ranked_players(session):
         ).all()
     )
     return [hub[k] for k in keys if k in hub]
+
+
+def foreign_players(session):
+    """Hub players whose start.gg flag, chosen by organizers, is not the hub's country."""
+    from app.core.config import get_settings
+    from app.players.models import ExternalIdentity
+    from app.seeding import service
+
+    keys = [
+        f"player:{pid}"
+        for pid in service.foreign_players(session, get_settings().startgg_sync_country)
+    ]
+    if not keys:
+        return set()
+    return set(
+        session.scalars(
+            select(ExternalIdentity.player_id).where(ExternalIdentity.external_id.in_(keys))
+        )
+    )
 
 
 _cache = {"at": 0.0, "data": None}
@@ -477,15 +502,22 @@ def month_scores(data, month, region):
     against a top 10 of the ranking); -1 per tier of each upset lost. Seed and upset points
     are weighted by how many of the ranking's top 20 played (x0.6 to x1.4). The best three
     tournaments of the month count.
+
+    Players of another country do not compete for it: placements and seeds are counted
+    among the local players only (a local who finished 2nd behind a guest counts as 1st),
+    while sets against guests still give and take upset points.
     """
-    finishes = [
-        f
-        for f in data.finishes
-        if f.get("main", True)
-        and f["starts_at"]
-        and month_of(f["starts_at"]) == month
-        and region_of(f.get("city")) == region
-    ]
+    finishes = local_finishes(
+        data,
+        [
+            f
+            for f in data.finishes
+            if f.get("main", True)
+            and f["starts_at"]
+            and month_of(f["starts_at"]) == month
+            and region_of(f.get("city")) == region
+        ],
+    )
     if not finishes:
         return []
     top20, top10 = set(data.ranked[:20]), set(data.ranked[:10])
@@ -519,6 +551,9 @@ def month_scores(data, month, region):
                 placement=f["placement"],
                 entrants=f["entrants"],
                 seed=f["seed"],
+                # The bracket's own numbers, when guests moved the local ones.
+                overall_placement=f["overall_placement"],
+                overall_seed=f["overall_seed"],
                 upsets=len(upsets),
                 top10_wins=sum(1 for m in upsets if m.loser in top10),
                 wins=[dict(tag=data.tags.get(x), seed=s) for x, s in list(beaten.items())[:3]],
@@ -537,6 +572,39 @@ def month_scores(data, month, region):
             )
         )
     return sorted(rows, key=lambda r: (-r["points"], r["tag"] or ""))
+
+
+def local_finishes(data, finishes):
+    """The local players' finishes, with placement and seed counted among locals only:
+    each guest who finished (or was seeded) ahead moves them up one.
+
+    Each keeps the bracket's numbers in overall_placement/overall_seed. Without guests in
+    the event both are the same.
+    """
+    events = {f["event_id"] for f in finishes}
+    guests_of = defaultdict(list)
+    for f in data.finishes:
+        if f["event_id"] in events and not data.local(f["player"]):
+            guests_of[f["event_id"]].append(f)
+    out = []
+    for f in finishes:
+        if not data.local(f["player"]):
+            continue
+        guests = guests_of[f["event_id"]]
+        seed = f["seed"]
+        out.append(
+            dict(
+                f,
+                placement=f["placement"]
+                - sum(1 for g in guests if g["placement"] < f["placement"]),
+                seed=seed - sum(1 for g in guests if g["seed"] and g["seed"] < seed)
+                if seed
+                else None,
+                overall_placement=f["placement"],
+                overall_seed=seed,
+            )
+        )
+    return out
 
 
 def months_played(data):
@@ -607,29 +675,35 @@ def unique_upsets(matches):
 
 
 def community_records(data, limit=5):
-    players = {p for m in data.matches for p in (m.winner, m.loser)}
+    """The scene's leaderboards. Players of another country are left out of them (streaks
+    still count every set of a local, guests included)."""
+    players = {p for m in data.matches for p in (m.winner, m.loser) if data.local(p)}
     streak_rows = []
     for p in players:
         best, _, end = streaks(data.matches, p)
         streak_rows.append((best, end, p))
     streak_rows.sort(key=lambda r: (-r[0], r[1] or 0))
-    rivalries = Counter(frozenset((m.winner, m.loser)) for m in data.matches)
+    between_locals = [m for m in data.matches if data.local(m.winner) and data.local(m.loser)]
+    rivalries = Counter(frozenset((m.winner, m.loser)) for m in between_locals)
     head = Counter()
-    for m in data.matches:
+    for m in between_locals:
         head[(m.winner, m.loser)] += 1
-    upsets = unique_upsets(data.matches)
-    comebacks = Counter(m.winner for m in data.matches if m.comeback)
+    upsets = unique_upsets(between_locals)
+    comebacks = Counter(m.winner for m in data.matches if m.comeback and data.local(m.winner))
     tournaments = Counter()
     seen = set()
     for f in data.finishes:
         key = (f["player"], f["tournament_id"])
-        if key not in seen:
+        if key not in seen and data.local(f["player"]):
             seen.add(key)
             tournaments[f["player"]] += 1
     titles = Counter(
         f["player"]
         for f in data.finishes
-        if f.get("main", True) and f["placement"] == 1 and (f["entrants"] or 0) >= 8
+        if f.get("main", True)
+        and f["placement"] == 1
+        and (f["entrants"] or 0) >= 8
+        and data.local(f["player"])
     )
 
     def who(p):
@@ -750,10 +824,12 @@ def character_stats(data, top=3):
     for g in data.games:
         for player, character in (g.a, g.b):
             usage[character] += 1
-            by_player[character][player] += 1
             if g.winner == player:
                 wins[character] += 1
-                player_wins[character][player] += 1
+            # Every game counts for the character; its leaderboard is local players only.
+            if data.local(player):
+                by_player[character][player] += 1
+                player_wins[character][player] += g.winner == player
     total = sum(usage.values())
     return [
         dict(

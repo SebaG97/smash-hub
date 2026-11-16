@@ -4406,13 +4406,128 @@
         }
       }
     },
+    "/api/v1/seeding/costumes/{player_id}": {
+      "put": {
+        "tags": [
+          "seeding"
+        ],
+        "summary": "Set Costume",
+        "description": "Organizers choose a costume right from the share image editor, by start.gg player\nid: it is the hub player's own choice, the same one they can make from their account.",
+        "operationId": "set_costume_api_v1_seeding_costumes__player_id__put",
+        "parameters": [
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Player Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "x-admin-name",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Admin-Name"
+            }
+          },
+          {
+            "name": "x-requested-with",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Requested-With"
+            }
+          },
+          {
+            "name": "sh_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sh Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CostumeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/seeding/countries/{player_id}": {
       "put": {
         "tags": [
           "seeding"
         ],
         "summary": "Set Country",
-        "description": "The flag shown for a start.gg player in every seeding image; null forgets it.",
+        "description": "The flag shown for a start.gg player in every seeding image; null forgets it.\n\nA flag of another country also leaves the player out of rankings, the player of the\nmonth and achievements: the hub measures the local scene.",
         "operationId": "set_country_api_v1_seeding_countries__player_id__put",
         "parameters": [
           {
@@ -7314,6 +7429,80 @@
         }
       }
     },
+    "/api/v1/links/mine/costume": {
+      "put": {
+        "tags": [
+          "links"
+        ],
+        "summary": "Set My Costume",
+        "description": "The linked player chooses the costume share images show for one of their mains.\nOrganizers can still change it; the last choice stays.",
+        "operationId": "set_my_costume_api_v1_links_mine_costume_put",
+        "parameters": [
+          {
+            "name": "x-requested-with",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Requested-With"
+            }
+          },
+          {
+            "name": "sh_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sh Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CostumeBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/links/requests": {
       "post": {
         "tags": [
@@ -10157,6 +10346,29 @@
         ],
         "title": "BestResult"
       },
+      "CostumeBody": {
+        "properties": {
+          "character": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Character"
+          },
+          "costume": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 1.0,
+            "title": "Costume"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "character",
+          "costume"
+        ],
+        "title": "CostumeBody"
+      },
       "CostumeChoice": {
         "properties": {
           "character": {
@@ -10178,6 +10390,29 @@
           "costume"
         ],
         "title": "CostumeChoice"
+      },
+      "CostumeRequest": {
+        "properties": {
+          "character": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Character"
+          },
+          "costume": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 1.0,
+            "title": "Costume"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "character",
+          "costume"
+        ],
+        "title": "CostumeRequest"
       },
       "CountryRequest": {
         "properties": {

@@ -309,11 +309,12 @@ def run(engine, *, trigger, actor):
 
 
 def _universes(s, ctx):
+    """Who could hold each achievement: local players only, like the awards."""
     data = ctx.data
-    players = {p for m in data.matches for p in (m.winner, m.loser)}
-    main16 = {f["player"] for f in data.finishes if rules._big(f)}
-    main32 = {f["player"] for f in data.finishes if rules._big(f, 32)}
-    with_characters = set(data.picks)
+    players = {p for m in data.matches for p in (m.winner, m.loser) if data.local(p)}
+    main16 = {f["player"] for f in data.finishes if rules._big(f) and data.local(f["player"])}
+    main32 = {f["player"] for f in data.finishes if rules._big(f, 32) and data.local(f["player"])}
+    with_characters = {p for p in data.picks if data.local(p)}
     out = dict(
         players=len(players),
         main16=len(main16),
@@ -334,7 +335,7 @@ def _universes(s, ctx):
             for m in data.matches
             if player in (m.winner, m.loser)
         }
-        out[f"vs_{key}"] = len(rivals)
+        out[f"vs_{key}"] = len({p for p in rivals if data.local(p)})
     total_sets = len(data.matches) or 1
     coverage = dict(
         characters=len(ctx.games) / total_sets,

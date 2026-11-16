@@ -65,6 +65,38 @@ def with_costume(mains, costumes):
     return mains
 
 
+COSTUMES = 8
+
+
+class UnknownCharacter(ValueError):
+    pass
+
+
+def set_costume(session, player, character, costume):
+    """Store which of the 8 costumes every share image shows for the player's character
+    (1, the default, is not stored). The player, once linked, or an organizer chooses it;
+    the last choice stays."""
+    if not 1 <= costume <= COSTUMES:
+        raise ValueError("costume out of range")
+    if not session.scalar(select(Character.id).where(Character.name == character).limit(1)):
+        raise UnknownCharacter(character)
+    costumes = dict(player.costumes or {})
+    if costume == 1:
+        costumes.pop(character, None)
+    else:
+        costumes[character] = costume
+    player.costumes = costumes
+
+
+def hub_player_by_startgg(session, startgg_player_id):
+    """The hub player behind a start.gg player id, or None if never imported."""
+    return session.scalar(
+        select(Player)
+        .join(ExternalIdentity, ExternalIdentity.player_id == Player.id)
+        .where(ExternalIdentity.external_id == f"player:{startgg_player_id}")
+    )
+
+
 def costumes_by_startgg_player(session, startgg_player_ids):
     """{start.gg player id: {character: costume}} for players known to the hub."""
     external = {f"player:{pid}": pid for pid in startgg_player_ids if pid}

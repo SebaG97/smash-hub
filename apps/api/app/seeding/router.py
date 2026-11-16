@@ -555,6 +555,41 @@ def push_upload(request: Request, slug: str, body: PushRequest, actor: Admin):
     )
 
 
+# ---------------------------------------------------------------- costumes
+
+
+class CostumeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    character: str = Field(min_length=1, max_length=120)
+    costume: int = Field(ge=1, le=8)
+
+
+@router.put("/costumes/{player_id}")
+def set_costume(request: Request, player_id: str, body: CostumeRequest, actor: Admin):
+    """Organizers choose a costume right from the share image editor, by start.gg player
+    id: it is the hub player's own choice, the same one they can make from their account."""
+    from app.players.mains import UnknownCharacter, hub_player_by_startgg
+    from app.players.mains import set_costume as store
+
+    if not player_id.isdigit() or len(player_id) > 20:
+        raise HTTPException(422, "Jugador inválido.")
+
+    def operation(session):
+        player = hub_player_by_startgg(session, player_id)
+        if player is None:
+            raise service.InvalidRequest(
+                "Ese jugador todavía no tiene ficha en el hub: el color se guarda cuando se "
+                "importe un torneo suyo."
+            )
+        try:
+            store(session, player, body.character, body.costume)
+        except UnknownCharacter:
+            raise service.InvalidRequest("No existe ese personaje.") from None
+        return {"player_id": player_id, "character": body.character, "costume": body.costume}
+
+    return run(request, operation, write=True)
+
+
 # ---------------------------------------------------------------- flags (Mission 32)
 
 
@@ -565,14 +600,20 @@ class CountryRequest(BaseModel):
 
 @router.put("/countries/{player_id}")
 def set_country(request: Request, player_id: str, body: CountryRequest, actor: Admin):
-    """The flag shown for a start.gg player in every seeding image; null forgets it."""
+    """The flag shown for a start.gg player in every seeding image; null forgets it.
+
+    A flag of another country also leaves the player out of rankings, the player of the
+    month and achievements: the hub measures the local scene.
+    """
     if not player_id.isdigit() or len(player_id) > 20:
         raise HTTPException(422, "Jugador inválido.")
+    country = body.country.upper() if body.country else None
 
     def operation(session):
-        service.set_country(
-            session, player_id, body.country.upper() if body.country else None, actor
-        )
-        return {"player_id": player_id, "country": body.country.upper() if body.country else None}
+        return service.set_country(session, player_id, country, actor)
 
-    return run(request, operation, write=True)
+    if run(request, operation, write=True):
+        from app.insights import engine
+
+        engine.invalidate()  # player of the month and achievements see the change
+    return {"player_id": player_id, "country": country}

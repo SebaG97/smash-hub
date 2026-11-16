@@ -4,11 +4,19 @@ import { useEffect, useState } from "react";
 import type { Main } from "../lib/api";
 import { adminHeaders, useAdmin } from "../lib/admin";
 import { characterIcon, characterRender } from "../lib/characters";
+import { CostumeOptions } from "./mains";
+import { problem } from "./seeding-board";
 
 const api = (process.env.NEXT_PUBLIC_API_URL || "/api/v1").replace(/\/$/, "");
 const MAX_BYTES = 5 * 1024 * 1024;
 
-export type ShareRow = { place: number; tag: string | null; mains?: Main[] };
+export type ShareRow = {
+  place: number;
+  tag: string | null;
+  mains?: Main[];
+  /** start.gg player id: lets organizers change the main's costume from the editor. */
+  startggId?: string;
+};
 
 function thumbnail(main?: Main) {
   if (!main) return null;
@@ -31,6 +39,7 @@ export function ShareImage({
   label,
   rows,
   rowsPath,
+  onCostume,
 }: {
   endpoint: string;
   filename: string;
@@ -38,6 +47,8 @@ export function ShareImage({
   rows?: ShareRow[];
   /** API path whose `top` lists the rows, fetched when the editor opens. */
   rowsPath?: string;
+  /** Called after a costume is saved, so the page reloads its rows. */
+  onCostume?: () => void;
 }) {
   const admin = useAdmin();
   const [open, setOpen] = useState(false);
@@ -63,6 +74,7 @@ export function ShareImage({
           filename={filename}
           rows={rows}
           rowsPath={rowsPath}
+          onCostume={onCostume}
         />
       )}
     </div>
@@ -74,11 +86,13 @@ function Editor({
   filename,
   rows: given,
   rowsPath,
+  onCostume,
 }: {
   endpoint: string;
   filename: string;
   rows?: ShareRow[];
   rowsPath?: string;
+  onCostume?: () => void;
 }) {
   const admin = useAdmin();
   const [loaded, setLoaded] = useState<ShareRow[] | null>(null);
@@ -87,7 +101,37 @@ function Editor({
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const rows = (given ?? loaded ?? []).slice(0, 12);
+  // Costumes saved from here, shown before the page reloads its rows.
+  const [costumes, setCostumes] = useState<Record<string, number>>({});
+  const [picking, setPicking] = useState<number | null>(null);
+  const rows = (given ?? loaded ?? []).slice(0, 12).map((row) => {
+    const main = row.mains?.[0];
+    const saved = row.startggId && main && costumes[row.startggId];
+    return saved
+      ? { ...row, mains: [{ ...main, costume: saved }, ...row.mains!.slice(1)] }
+      : row;
+  });
+
+  async function saveCostume(
+    row: ShareRow,
+    character: string,
+    costume: number,
+  ) {
+    setError("");
+    setBusy(true);
+    const r = await fetch(`${api}/seeding/costumes/${row.startggId}`, {
+      method: "PUT",
+      credentials: "include",
+      headers: { ...adminHeaders(admin), "Content-Type": "application/json" },
+      body: JSON.stringify({ character, costume }),
+    }).catch(() => null);
+    setBusy(false);
+    if (!r) return setError("No se pudo contactar a la API.");
+    if (!r.ok) return setError(await problem(r));
+    setCostumes((c) => ({ ...c, [row.startggId!]: costume }));
+    setResult(null); // a generated image no longer matches
+    onCostume?.();
+  }
 
   useEffect(() => {
     if (given || !rowsPath) return;
@@ -156,10 +200,16 @@ function Editor({
         cualquier puesto por una imagen tuya: las fotos llenan la tarjeta y los
         PNG con fondo transparente se ubican como el render. Las imágenes no se
         guardan en el hub.
+        {rows.some((r) => r.startggId) &&
+          " Con «Color» elegís el traje del main: ese sí se guarda en la ficha del jugador y vale para todas las imágenes (el jugador también lo puede cambiar desde su cuenta)."}
       </p>
       <ol className="share-slots">
         {rows.map((row, i) => {
-          const preview = previews[i] ?? thumbnail(row.mains?.[0]);
+          const main = row.mains?.[0];
+          const preview = previews[i] ?? thumbnail(main);
+          const canColor = Boolean(
+            row.startggId && main && characterRender(main.character),
+          );
           return (
             <li key={`${row.place}-${row.tag}-${i}`}>
               <span className="place">{row.place}</span>
@@ -191,7 +241,27 @@ function Editor({
                     Usar el render
                   </button>
                 )}
+                {canColor && !files[i] && (
+                  <button
+                    type="button"
+                    className="link-button"
+                    aria-expanded={picking === i}
+                    onClick={() => setPicking(picking === i ? null : i)}
+                  >
+                    {picking === i ? "Listo" : "Color"}
+                  </button>
+                )}
               </span>
+              {canColor && picking === i && (
+                <div className="share-costumes">
+                  <CostumeOptions
+                    character={main!.character}
+                    chosen={main!.costume ?? 1}
+                    busy={busy}
+                    onChoose={(n) => saveCostume(row, main!.character, n)}
+                  />
+                </div>
+              )}
             </li>
           );
         })}

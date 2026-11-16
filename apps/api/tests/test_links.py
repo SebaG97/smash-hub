@@ -80,7 +80,7 @@ def test_request_reviewed_and_approved(db, people):
     assert org.post(approve, json=dict(verification=VERIFIED), headers=WEB).status_code == 200
     assert org2.post(approve, json=dict(verification=VERIFIED), headers=WEB).status_code == 409
     after = ana.get("/api/v1/links/mine").json()
-    assert after["player"] == dict(id=chag, tag="Chag")
+    assert after["player"] == dict(id=chag, tag="Chag", mains=[])
     assert after["requests"][0]["status"] == "approved"
     assert ana.get("/api/v1/auth/me").json()["user"]["player"]["tag"] == "Chag"
     # The record is taken now: nobody else can ask for it, and Ana cannot ask again.
@@ -100,6 +100,41 @@ def test_request_reviewed_and_approved(db, people):
     with Session(db) as s:
         link = s.scalar(select(PlayerLink))
         assert (link.method, link.linked_by_name, link.verification) == ("request", "org", VERIFIED)
+
+
+def test_linked_players_choose_their_costume(db, people):
+    """Once linked, a player chooses the costume share images show; organizers can too."""
+    from app.games.models import Character, Game
+
+    ana, beto = people["s"]["ana"], people["s"]["beto"]
+    chag = people["players"]["Chag"]
+    with Session(db) as s, s.begin():
+        game = Game(slug="costume-test", name="Ultimate")
+        s.add(game)
+        s.flush()
+        s.add(Character(game_id=game.id, slug="min-min", name="Min Min"))
+        s.add(
+            PlayerLink(
+                user_id=UUID(people["ids"]["ana"]),
+                player_id=UUID(chag),
+                method="admin",
+                verification=VERIFIED,
+                linked_by_name="org",
+            )
+        )
+    choice = dict(character="Min Min", costume=5)
+    url = "/api/v1/links/mine/costume"
+    assert ana.put(url, json=choice).status_code == 403  # CSRF
+    # Without a linked player there is nothing to choose for.
+    assert beto.put(url, json=choice, headers=WEB).status_code == 409
+    for bad in (dict(character="Nadie", costume=2), dict(character="Min Min", costume=9)):
+        assert ana.put(url, json=bad, headers=WEB).status_code == 422
+    assert ana.put(url, json=choice, headers=WEB).status_code == 200
+    with Session(db) as s:
+        assert s.get(Player, UUID(chag)).costumes == {"Min Min": 5}
+    ana.put(url, json=dict(character="Min Min", costume=1), headers=WEB)
+    with Session(db) as s:
+        assert s.get(Player, UUID(chag)).costumes == {}
 
 
 def test_requests_can_be_rejected_or_cancelled(db, people):

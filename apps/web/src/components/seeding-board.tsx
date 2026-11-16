@@ -1486,7 +1486,9 @@ export function SeedingBoard({
                 place: ranking ? i + 1 : s.seed,
                 tag: s.gamer_tag,
                 mains: s.mains,
+                startggId: s.player_id,
               }))}
+            onCostume={load}
           />
           {ranking && <MonthlyImage view={view} />}
           {!ranking && <SeedListDownloads view={view} onChange={load} />}

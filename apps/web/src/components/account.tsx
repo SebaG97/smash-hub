@@ -24,6 +24,8 @@ import {
   useMe,
 } from "../lib/session";
 import { MyAchievements } from "./achievements";
+import { CostumeChooser } from "./mains";
+import type { Main } from "../lib/api";
 
 /* Smash Hub accounts (Mission SH-AUTH-01, ADR-021): header badge, sign-in, sign-up,
    password recovery and the account page with the player-link request. */
@@ -457,7 +459,7 @@ type LinkRequest = {
   review_note: string | null;
 };
 type Mine = {
-  player: { id: string; tag: string } | null;
+  player: { id: string; tag: string; mains?: Main[] } | null;
   requests: LinkRequest[];
 };
 type FoundPlayer = { id: string; tag: string; linked: boolean };
@@ -531,7 +533,9 @@ function LinkSection() {
           . Tus logros del Prode también se ven en esa ficha. Si hay un error,
           hablá con un administrador.
         </p>
-      ) : pending ? (
+      ) : null}
+      {mine.player && <MyCostumes mains={mine.player.mains ?? []} />}
+      {mine.player ? null : pending ? (
         <div className="prode-login">
           <p>
             Pediste vincularte con <strong>{pending.player.tag}</strong>. Un
@@ -649,6 +653,29 @@ function LinkSection() {
         </details>
       )}
     </>
+  );
+}
+
+/** The linked player chooses the color of their mains in the hub's share images. */
+function MyCostumes({ mains }: { mains: Main[] }) {
+  async function save(character: string, costume: number) {
+    const r = await apiFetch("links/mine/costume", {
+      method: "PUT",
+      body: JSON.stringify({ character, costume }),
+    }).catch(() => null);
+    if (!r) return "No se pudo contactar a la API.";
+    return r.ok ? null : errorText(r);
+  }
+  return (
+    <div className="costumes">
+      <h3>Color en las imágenes</h3>
+      <p className="seeding-lead">
+        {mains.length
+          ? "Elegí con qué color aparece tu personaje en las imágenes del ranking, el seeding y el jugador del mes. Se guarda al tocarlo."
+          : "Cuando juegues un torneo con personajes cargados vas a poder elegir acá el color de tu main para las imágenes."}
+      </p>
+      <CostumeChooser mains={mains} save={save} />
+    </div>
   );
 }
 

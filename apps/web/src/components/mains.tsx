@@ -261,6 +261,85 @@ export function mainColor(mains?: Main[]): string | undefined {
   return (first && characterColor(first)) || undefined;
 }
 
+/** The 8 official costumes of one character, the chosen one pressed. */
+export function CostumeOptions({
+  character,
+  chosen,
+  onChoose,
+  busy = false,
+}: {
+  character: string;
+  chosen: number;
+  onChoose: (costume: number) => void;
+  busy?: boolean;
+}) {
+  return (
+    <div className="costume-options" role="group" aria-label={character}>
+      {Array.from({ length: 8 }, (_, i) => i + 1).map((n) => (
+        <button
+          key={n}
+          type="button"
+          disabled={busy}
+          aria-pressed={chosen === n}
+          aria-label={`${character}, traje ${n}`}
+          onClick={() => onChoose(n)}
+        >
+          <img
+            src={characterRender(character, n, 160)!}
+            alt=""
+            loading="lazy"
+          />
+          <span>{n}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Costume of each main (up to two) for share images. `save` stores one choice and
+ * returns an error message, or null when it worked.
+ */
+export function CostumeChooser({
+  mains,
+  save,
+}: {
+  mains: Main[];
+  save: (character: string, costume: number) => Promise<string | null>;
+}) {
+  const [chosen, setChosen] = useState<Record<string, number>>(() =>
+    Object.fromEntries(mains.map((m) => [m.character, m.costume ?? 1])),
+  );
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const options = mains.filter((m) => characterRender(m.character)).slice(0, 2);
+  if (!options.length) return null;
+  async function choose(character: string, costume: number) {
+    setError("");
+    setBusy(true);
+    const failed = await save(character, costume);
+    setBusy(false);
+    if (failed) return setError(failed);
+    setChosen((c) => ({ ...c, [character]: costume }));
+  }
+  return (
+    <>
+      {options.map((m) => (
+        <div key={m.character}>
+          <h3>{m.character}</h3>
+          <CostumeOptions
+            character={m.character}
+            chosen={chosen[m.character] ?? 1}
+            busy={busy}
+            onChoose={(n) => choose(m.character, n)}
+          />
+        </div>
+      ))}
+      {error && <p role="alert">{error}</p>}
+    </>
+  );
+}
+
 /** Organizers choose which of the 8 official costumes the share images show. */
 export function CostumePicker({
   playerId,
@@ -270,14 +349,8 @@ export function CostumePicker({
   mains: Main[];
 }) {
   const admin = useAdmin();
-  const [chosen, setChosen] = useState<Record<string, number>>(() =>
-    Object.fromEntries(mains.map((m) => [m.character, m.costume ?? 1])),
-  );
-  const [error, setError] = useState("");
-  const options = mains.filter((m) => characterRender(m.character)).slice(0, 2);
-  if (!admin || !options.length) return null;
-  async function choose(character: string, costume: number) {
-    setError("");
+  if (!admin || !mains.some((m) => characterRender(m.character))) return null;
+  async function save(character: string, costume: number) {
     const r = await fetch(`${api}/players/${playerId}/costume`, {
       method: "PUT",
       credentials: "include",
@@ -287,41 +360,18 @@ export function CostumePicker({
       },
       body: JSON.stringify({ character, costume }),
     }).catch(() => null);
-    if (!r) return setError("No se pudo contactar a la API.");
-    if (!r.ok) return setError(await problem(r));
-    setChosen((c) => ({ ...c, [character]: costume }));
+    if (!r) return "No se pudo contactar a la API.";
+    return r.ok ? null : problem(r);
   }
   return (
     <section aria-labelledby="costume-title" className="costumes">
       <h2 id="costume-title">Traje en las imágenes</h2>
       <p className="seeding-lead">
         Elegí el color con el que aparece en las imágenes para redes. Solo lo
-        ven los organizadores.
+        ven los organizadores. Si el jugador vinculó su cuenta, también lo puede
+        elegir él: queda el último que se eligió.
       </p>
-      {options.map((m) => (
-        <div key={m.character} role="group" aria-label={m.character}>
-          <h3>{m.character}</h3>
-          <div className="costume-options">
-            {Array.from({ length: 8 }, (_, i) => i + 1).map((n) => (
-              <button
-                key={n}
-                type="button"
-                aria-pressed={chosen[m.character] === n}
-                aria-label={`${m.character}, traje ${n}`}
-                onClick={() => choose(m.character, n)}
-              >
-                <img
-                  src={characterRender(m.character, n, 160)!}
-                  alt=""
-                  loading="lazy"
-                />
-                <span>{n}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      ))}
-      {error && <p role="alert">{error}</p>}
+      <CostumeChooser mains={mains} save={save} />
     </section>
   );
 }

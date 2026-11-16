@@ -66,6 +66,9 @@ type MonthResult = {
   placement: number;
   entrants: number | null;
   seed: number | null;
+  // The bracket's own numbers: placement and seed above are counted among locals only.
+  overall_placement?: number;
+  overall_seed?: number | null;
   upsets: number;
   top10_wins: number;
   points: number;
@@ -284,7 +287,12 @@ function why(r: MonthResult) {
     r.seed ? `siendo seed ${r.seed}` : "",
     r.upsets ? `${r.upsets} ${r.upsets === 1 ? "sorpresa" : "sorpresas"}` : "",
   ].filter(Boolean);
-  return `${r.placement}.º de ${r.entrants ?? "?"} en ${r.tournament}${extra.length ? ` (${extra.join(", ")})` : ""}`;
+  // Guests of another country don't compete for it: the place counts among locals.
+  const place =
+    r.overall_placement && r.overall_placement !== r.placement
+      ? `${r.placement}.º entre los locales (${r.overall_placement}.º de ${r.entrants ?? "?"})`
+      : `${r.placement}.º de ${r.entrants ?? "?"}`;
+  return `${place} en ${r.tournament}${extra.length ? ` (${extra.join(", ")})` : ""}`;
 }
 
 function points(n: number) {

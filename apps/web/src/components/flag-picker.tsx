@@ -68,7 +68,12 @@ export function FlagPicker({
       <p className="seeding-lead">
         Por defecto va la bandera del circuito donde más compite cada jugador.
         Los que juegan sobre todo online no tienen: elegila acá. Queda guardada
-        para todos los seedings.
+        para todos los seedings.{" "}
+        <strong>
+          Elegir otro país que no sea Paraguay deja al jugador fuera del
+          ranking, del jugador del mes y de los logros
+        </strong>{" "}
+        (sus sets siguen contando para los demás).
         {missing.length > 0 && !all
           ? ` ${missing.length} sin bandera en este top.`
           : ""}

@@ -99,8 +99,22 @@ def _num(value, digits=0):
     return f"{value:,.{digits}f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
-def compute(entrants, sets, *, merges, duplicates, window_start, window_end, parameters=None):
-    """entrants: [{player_id, gamer_tag}]; sets: SeedingSet-like dicts. Returns (rows, summary)."""
+def compute(
+    entrants,
+    sets,
+    *,
+    merges,
+    duplicates,
+    window_start,
+    window_end,
+    parameters=None,
+    foreign=(),
+):
+    """entrants: [{player_id, gamer_tag}]; sets: SeedingSet-like dicts. Returns (rows, summary).
+
+    `foreign`: start.gg ids organizers flagged with another country. Rankings measure the
+    local scene, so they are never eligible; their sets still count for everyone else.
+    """
     p = parameters or Parameters()
     start, end = utc(window_start), utc(window_end)
     recent_from = end - timedelta(days=p.recent_days)
@@ -114,6 +128,8 @@ def compute(entrants, sets, *, merges, duplicates, window_start, window_end, par
     def canon(pid):
         pid = merges.get(pid, pid) if pid else pid
         return duplicates.get(pid, pid) if pid else pid
+
+    foreign = {canon(pid) for pid in foreign}
 
     games, wins, losses = [], Counter(), Counter()
     offline_sets, merged_sets = Counter(), Counter()
@@ -206,6 +222,8 @@ def compute(entrants, sets, *, merges, duplicates, window_start, window_end, par
             last_offline is None or last_offline < end - timedelta(days=p.active_days)
         ):
             missing.append("inactive")
+        if pid in foreign:
+            missing.append("foreign")
         main = circuits[pid].most_common(1)[0][0] if circuits[pid] else None
         rows.append(
             dict(
@@ -260,7 +278,8 @@ def compute(entrants, sets, *, merges, duplicates, window_start, window_end, par
                 win_rate=round(100 * wins[pid] / sets_total, 1) if sets_total else None,
                 wilson=round(wilson_lower_bound(wins[pid], losses[pid]), 1) if sets_total else None,
                 eligible=not missing,
-                # What keeps an ineligible player out: "sets", "events" or "inactive".
+                # What keeps an ineligible player out: "sets", "events", "inactive" or
+                # "foreign" (flagged with another country by organizers).
                 missing=missing,
             )
         )
@@ -349,6 +368,7 @@ def _flags(r, p, home, duplicates):
                 "sets": f"menos de {p.min_sets} sets",
                 "events": f"menos de {p.min_events} torneos",
                 "inactive": f"sin torneos en {p.active_days} días",
+                "foreign": "jugador de otro país",
             }[m]
             for m in r["missing"]
         )
@@ -383,6 +403,8 @@ def _reasons(r, p, rated, method):
             f"y hacen falta al menos {p.min_events}",
             "inactive": f"no juega un torneo presencial desde el {r['last_event']}; hace falta "
             f"al menos uno en los últimos {p.active_days} días",
+            "foreign": "la organización lo marcó como jugador de otro país, y el ranking mide "
+            "solo a la escena local (sus sets sí cuentan para los demás)",
         }
         return [f"No entra en este cálculo: {'; '.join(why[m] for m in r['missing'])}."]
     rank = r["ranks"].get(method)

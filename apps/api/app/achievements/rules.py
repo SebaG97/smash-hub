@@ -667,10 +667,13 @@ def _vbash(b, ctx, matches_of):
 
 
 def _finish(b, ctx):
-    """Drop what is not active, then the meta achievements over what remains."""
+    """Drop what is not active or belongs to a player of another country (the hub's
+    achievements are for the local scene), then the meta achievements over what remains."""
     active_gates = set(ctx.subjects)
     out = {}
     for key, award in b.out.items():
+        if not ctx.data.local(award.player):
+            continue
         entry = catalog.get(award.achievement_id)
         if entry is None or entry.status != "active" or entry.scope != "player":
             continue
@@ -682,7 +685,8 @@ def _finish(b, ctx):
     for p, aid in out:
         per_player[p].add(aid)
     for p, ids in ctx.manual.items():
-        per_player[p] |= set(ids)
+        if ctx.data.local(p):
+            per_player[p] |= set(ids)
     if "vbash" in active_gates:
         vbash_ids = {a.id for a in catalog.ACHIEVEMENTS if a.collection == "vbash"}
         for p, ids in per_player.items():

@@ -151,6 +151,7 @@ Imágenes para redes (web, PNG 1080×1080): `/og/tournament/{id}`, `/og/ranking/
 
 - `MainView` y los mains de seeding y ranking agregan `costume` (1 a 8; 1 es el traje por defecto).
 - `PUT /api/v1/players/{id}/costume` (admin) recibe `{character, costume}`. 401 sin clave, 404 si el jugador no existe, 422 con un personaje desconocido o un traje fuera de 1–8.
+- El jugador vinculado elige su traje desde su cuenta. `GET /api/v1/links/mine` agrega `player.mains` (con `costume`), y `PUT /api/v1/links/mine/costume` (sesión de usuario) recibe `{character, costume}`: responde 409 sin ficha vinculada y 422 con un personaje desconocido. Los organizadores lo eligen desde el editor de la imagen con `PUT /api/v1/seeding/costumes/{id de start.gg}` (admin), que responde 422 si ese jugador todavía no tiene ficha en el hub. Las tres vías guardan lo mismo (`players.costumes`), y queda la última elección.
 - `GET /api/v1/insights/tournaments/{id}` acepta `limit` (1–16, por defecto 8); la imagen pide 12.
 - Web: `/renders/{personaje}/{traje}?w=160|320|640` devuelve el render oficial recortado (PNG). Las imágenes de `/og/*` muestran el podio con los 12 primeros.
 - `POST` a `/og/tournament/{id}`, `/og/ranking/{slug}` y `/og/seeding/{slug}` (multipart, como organizador: la cookie de sesión, que la ruta reenvía a la API, o la clave en `Authorization` durante la transición): campos `image-0` a `image-11` reemplazan la imagen de cada fila. 401 sin organizador válido, 413 si una pesa más de 5 MB, 422 si no es una imagen. No se guardan.
@@ -294,6 +295,7 @@ La bandera de las imágenes del seeding era el circuito donde más compite cada 
 
 - `PUT /api/v1/seeding/countries/{id de start.gg}` (admin) con `{country: "PY" | null}` (dos letras); `null` la borra y vuelve la del circuito.
 - Las filas de la vista de organizador del seeding y de `/pools` agregan `country` (la elegida, si no el circuito cuando es un país) y `country_chosen`.
+- Una bandera elegida de otro país deja al jugador fuera del ranking, del jugador del mes, de los logros y de los récords (ADR-024). En el ranking aparece con `missing: ["foreign"]`, y el endpoint recalcula los rankings afectados. Cada resultado del jugador del mes trae `placement` y `seed` contados entre los locales, y `overall_placement` y `overall_seed` con los números del bracket.
 
 ## Partidas en vivo (Misión 33)
 

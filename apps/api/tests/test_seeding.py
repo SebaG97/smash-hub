@@ -698,6 +698,47 @@ def test_public_ranking_shows_eligible_players_with_reasons(ranking, monkeypatch
         assert public["method_label"].startswith("Combinado") and "flags" not in str(public)
 
 
+def test_players_flagged_with_another_country_leave_the_ranking(ranking):
+    """The hub measures the local scene: a guest of the Center Stage never enters the
+    ranking nor its "close to entering" list, but local players keep the sets against them."""
+    with Session(ranking) as session:
+        p = session.scalar(select(SeedingProject))
+        p.published = True
+        entrants = [
+            dict(startgg_entrant_id=f"p{i}", startgg_player_id=str(i), gamer_tag=t)
+            for i, t in ((1, "Ace"), (2, "Bee"), (3, "Gus"))
+        ]
+        rows = [a_set(n, "1", "2", day=n % 50 + 1, event=f"e{n % 3}") for n in range(1, 13)]
+        # Gus beats Ace in two tournaments: enough to enter, unless he is a guest.
+        rows += [a_set(90, "3", "1", day=3, event="e1"), a_set(91, "3", "1", day=4, event="e2")]
+        service.replace_dataset(session, p, entrants, rows, cutoff=EVENT)
+        session.flush()
+        service.recalculate(session, p, "test")
+        session.commit()
+    with client_for(ranking) as client:
+        before = client.get("/api/v1/seeding/rk").json()
+        assert "Gus" in [s["gamer_tag"] for s in before["seeds"]]
+        # A flag of another country recalculates the ranking at once.
+        r = client.put("/api/v1/seeding/countries/3", json={"country": "ar"}, headers=AUTH)
+        assert r.status_code == 200
+        public = client.get("/api/v1/seeding/rk").json()
+        assert [s["gamer_tag"] for s in public["seeds"]] == ["Ace", "Bee"]
+        assert public["pending"] == [] and public["inactive"] == []
+        ace = public["seeds"][0]
+        assert (ace["wins"], ace["losses"]) == (12, 2)  # the sets against Gus still count
+        gus = next(
+            s
+            for s in client.get("/api/v1/seeding/rk", headers=AUTH).json()["seeds"]
+            if s["gamer_tag"] == "Gus"
+        )
+        assert gus["missing"] == ["foreign"] and "jugador de otro país" in gus["flags"]
+        assert "otro país" in gus["reasons"][0]
+        # A Paraguayan flag (or none) keeps him local.
+        client.put("/api/v1/seeding/countries/3", json={"country": "py"}, headers=AUTH)
+        again = client.get("/api/v1/seeding/rk").json()
+        assert "Gus" in [s["gamer_tag"] for s in again["seeds"]]
+
+
 def test_recent_mains_count_only_the_players_own_picks():
     def game(*picks):
         return {
@@ -940,6 +981,46 @@ def test_pools_swap_two_players_and_adopt_startgg_order(project, monkeypatch):
         assert [s["player_id"] for s in seeds] == order
         view = client.get("/api/v1/seeding/cs/pools", headers=AUTH).json()
         assert [p["player_id"] for p in view["pools"][0]["players"]] == order
+
+
+def test_organizers_choose_costumes_from_the_image_editor(project):
+    """By start.gg id, from the share image editor: it is the hub player's own choice."""
+    from app.games.models import Character, Game
+    from app.integrations.models import DataSource
+    from app.players.models import ExternalIdentity, Player
+
+    with Session(project) as s, s.begin():
+        game = Game(slug="costume-editor", name="Ultimate")
+        player = Player(tag="Ace")
+        s.add_all([game, player])
+        s.flush()
+        s.add(Character(game_id=game.id, slug="min-min", name="Min Min"))
+        origin = s.scalar(select(DataSource).where(DataSource.slug == "start-gg"))
+        if origin is None:
+            origin = DataSource(slug="start-gg", name="start.gg", base_url="https://start.gg")
+            s.add(origin)
+            s.flush()
+        s.add(
+            ExternalIdentity(
+                player_id=player.id,
+                data_source_id=origin.id,
+                external_id="player:1",
+                synced_at=datetime.now(UTC),
+            )
+        )
+        player_id = player.id
+    choice = {"character": "Min Min", "costume": 3}
+    with client_for(project) as client:
+        url = "/api/v1/seeding/costumes/1"
+        assert client.put(url, json=choice).status_code == 401
+        assert client.put(url, json=choice, headers=AUTH).json()["costume"] == 3
+        bad = {"character": "Nadie", "costume": 3}
+        assert client.put(url, json=bad, headers=AUTH).status_code == 422
+        # Not in the hub yet: nothing to store it on.
+        r = client.put("/api/v1/seeding/costumes/777", json=choice, headers=AUTH)
+        assert r.status_code == 422 and "ficha en el hub" in r.json()["detail"]
+    with Session(project) as s:
+        assert s.get(Player, player_id).costumes == {"Min Min": 3}
 
 
 def test_organizers_choose_a_players_flag_for_every_seeding(project):

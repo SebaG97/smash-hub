@@ -9,6 +9,8 @@ from sqlalchemy.orm import Session
 
 from app.auth.service import AuthError, Member
 from app.links import service
+from app.players.mains import UnknownCharacter, player_mains, set_costume
+from app.players.models import Player
 
 router = APIRouter(prefix="/api/v1/links", tags=["links"])
 
@@ -27,9 +29,19 @@ def _fail(exc: AuthError):
     raise HTTPException(exc.status, str(exc)) from None
 
 
+class CostumeBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    character: str = Field(min_length=1, max_length=120)
+    costume: int = Field(ge=1, le=8)
+
+
 def _mine(s, user):
+    player = service.active_player(s, user.id)
+    if player:
+        # Their mains with the costume share images use, to choose it themselves.
+        player["mains"] = player_mains(s, [UUID(player["id"])]).get(UUID(player["id"]), [])
     return dict(
-        player=service.active_player(s, user.id),
+        player=player,
         requests=service.describe_requests(s, service.requests_of(s, user)),
     )
 
@@ -44,6 +56,22 @@ def players(request: Request, user: Member, q: Annotated[str, Query(max_length=6
 @router.get("/mine")
 def mine(request: Request, user: Member):
     with _session(request) as s:
+        return _mine(s, user)
+
+
+@router.put("/mine/costume")
+def set_my_costume(request: Request, body: CostumeBody, user: Member):
+    """The linked player chooses the costume share images show for one of their mains.
+    Organizers can still change it; the last choice stays."""
+    with _session(request) as s:
+        with s.begin():
+            player_id = service.linked_player_id(s, user.id)
+            if player_id is None:
+                raise HTTPException(409, "Tu cuenta no está vinculada a una ficha de jugador.")
+            try:
+                set_costume(s, s.get(Player, player_id), body.character, body.costume)
+            except UnknownCharacter:
+                raise HTTPException(422, "No existe ese personaje.") from None
         return _mine(s, user)
 
 

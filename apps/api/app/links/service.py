@@ -43,6 +43,15 @@ def active_player(s, user_id):
     return dict(id=str(row.id), tag=row.tag) if row else None
 
 
+def linked_player_id(s, user_id):
+    """The hub player an account is actively linked to, or None."""
+    return s.scalar(
+        select(PlayerLink.player_id).where(
+            PlayerLink.user_id == user_id, PlayerLink.unlinked_at.is_(None)
+        )
+    )
+
+
 def users_for_player(s, player_id):
     """Active accounts linked to a hub player (at most one, by the unique index)."""
     return list(

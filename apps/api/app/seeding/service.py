@@ -333,9 +333,11 @@ def recalculate(
         {c.name: getattr(s, c.name) for c in SeedingSet.__table__.columns}
         for s in session.scalars(select(SeedingSet).where(SeedingSet.project_id == project.id))
     ]
+    foreign = set()
     if project.kind == "ranking":
         allowed = ranked_events(session)
         sets = [s for s in sets if s["startgg_event_id"] in allowed]
+        foreign = foreign_players(session, project.country_code)
     rows, summary = compute(
         entrants,
         sets,
@@ -344,6 +346,7 @@ def recalculate(
         window_start=start,
         window_end=end,
         parameters=params,
+        foreign=foreign,
     )
     run = SeedingRun(
         project_id=project.id,
@@ -888,20 +891,59 @@ def with_countries(session, rows):
     return rows
 
 
-def set_country(session, player_id, country, actor):
-    """Choose (or with None, forget) the flag of a start.gg player."""
+def foreign_players(session, home):
+    """start.gg ids whose flag, chosen by organizers, is a country other than `home`.
+
+    The hub is for the local scene: these players stay out of rankings, the player of the
+    month and achievements (their sets still count for the rest). No flag means local.
+    """
     from app.seeding.models import PlayerCountry
 
+    return {
+        pid
+        for pid, country in session.execute(
+            select(PlayerCountry.startgg_player_id, PlayerCountry.country)
+        )
+        if country != (home or "").upper()
+    }
+
+
+def set_country(session, player_id, country, actor):
+    """Choose (or with None, forget) the flag of a start.gg player.
+
+    Rankings whose country that moves the player in or out of are recalculated at once.
+    Returns whether the player moved in or out of the hub's own country: then the caller
+    must refresh the statistics (player of the month, achievements).
+    """
+    from app.core.config import get_settings
+    from app.seeding.models import PlayerCountry, SeedingProject
+
+    def outside(flag, home):
+        return flag is not None and flag != home
+
     found = session.get(PlayerCountry, player_id)
+    before = found.country if found else None
     if country is None:
         if found:
             session.delete(found)
-        return
-    if found is None:
+    elif found is None:
         session.add(PlayerCountry(startgg_player_id=player_id, country=country, actor=actor))
     else:
         found.country, found.actor = country, actor
         found.updated_at = datetime.now(UTC)
+    session.flush()
+    for project in session.scalars(
+        select(SeedingProject).where(
+            SeedingProject.kind == "ranking",
+            SeedingProject.current_run_id.is_not(None),
+            SeedingProject.refresh_status != "RUNNING",
+        )
+    ):
+        home = project.country_code
+        if outside(before, home) != outside(country, home):
+            recalculate(session, project, actor)
+    home = get_settings().startgg_sync_country
+    return outside(before, home) != outside(country, home)
 
 
 def _public_prefixes(session, rows, seeds):
@@ -1047,6 +1089,7 @@ def _standings(session, project, params, start, end):
         window_start=start,
         window_end=end,
         parameters=params,
+        foreign=foreign_players(session, project.country_code),
     )
     return [r for r in rows if r["eligible"]], summary
 

@@ -222,6 +222,22 @@ def test_pending_achievements_are_never_awarded():
         assert catalog.get(aid).status == "active", aid
 
 
+def test_guests_of_another_country_earn_no_achievements():
+    """Achievements are for the local scene; locals keep what they did against guests."""
+    matches, finishes, sets = bracket_through_losers()
+    tags = {p: p.upper() for x in matches for p in (x.winner, x.loser)}
+    ctx = rules.Context(
+        data=Data(matches=matches, finishes=finishes, tags=tags, foreign={"a"}),
+        sets=sets,
+    )
+    got = rules.evaluate(ctx)
+    assert got and not any(p == "a" for p, _ in got)
+    # The locals keep everything they had; the guest's player of the month goes to one.
+    everyone = evaluate(matches, finishes, sets)
+    assert {k for k in everyone if k[0] != "a"} <= set(got)
+    assert ("a", "mes") in everyone and any(aid == "mes" for _, aid in got)
+
+
 # ---------------------------------------------------------------- database
 
 
