@@ -11,6 +11,7 @@ import {
   type Ref,
   type Social,
 } from "../lib/tournament-social";
+import { save, zip } from "../lib/zip";
 import { CostumeOptions } from "./mains";
 import { problem } from "./seeding-board";
 
@@ -117,24 +118,33 @@ function Panel({ id, event }: { id: string; event: string | null }) {
     `${data.tournament.slug.replace(/\W+/g, "-")}-${key}-${format}.png`;
   const ready = CARDS.filter((c) => c.has(data));
 
+  /** Every available image in one ZIP, numbered in the carousel's order. */
   async function downloadAll() {
     setError("");
     setBusy(true);
+    const files: { name: string; data: Uint8Array }[] = [];
+    const failed: string[] = [];
     for (const [i, card] of ready.entries()) {
       setProgress(`Generando ${i + 1} de ${ready.length}: ${card.title}…`);
       const r = await fetch(url(card.key)).catch(() => null);
       if (!r?.ok) {
-        setError(`No se pudo generar «${card.title}».`);
+        failed.push(card.title);
         continue;
       }
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(await r.blob());
-      link.download = name(card.key);
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(link.href), 10_000);
+      files.push({
+        name: `${String(files.length + 1).padStart(2, "0")}-${name(card.key)}`,
+        data: new Uint8Array(await r.arrayBuffer()),
+      });
     }
     setProgress("");
     setBusy(false);
+    if (failed.length)
+      setError(`No se pudieron generar: ${failed.join(", ")}.`);
+    if (!files.length) return;
+    save(
+      zip(files),
+      `${data!.tournament.slug.replace(/\W+/g, "-")}-${format}.zip`,
+    );
   }
 
   async function saveCostume(player: Ref, character: string, costume: number) {
@@ -186,7 +196,9 @@ function Panel({ id, event }: { id: string; event: string | null }) {
           disabled={busy || !ready.length}
           onClick={downloadAll}
         >
-          {`Descargar todas (${ready.length})`}
+          {busy && progress
+            ? "Generando…"
+            : `Descargar todas en un ZIP (${ready.length})`}
         </button>
       </div>
       {progress && <p role="status">{progress}</p>}
