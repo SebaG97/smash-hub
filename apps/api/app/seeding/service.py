@@ -1144,6 +1144,100 @@ def clear_all_overrides(session, project, actor):
     return removed
 
 
+# ---------------------------------------------------------------- tournament impact
+
+
+def tournament_impact(session, tournament_id, *, limit=5):
+    """How the official ranking moved with one tournament (SH-SOCIAL-01): the standings
+    at its end with and without its sets, for the players who took part. None when no
+    published ranking covers it or it does not count for rankings.
+    """
+    from app.competitions.models import Event, Tournament
+    from app.integrations.models import ExternalMapping
+
+    tournament = session.get(Tournament, tournament_id)
+    if tournament is None or tournament.starts_at is None:
+        return None
+    project = session.scalar(
+        select(SeedingProject)
+        .where(
+            SeedingProject.kind == "ranking",
+            SeedingProject.published.is_(True),
+            SeedingProject.current_run_id.is_not(None),
+        )
+        .order_by(SeedingProject.event_date.desc())
+    )
+    run = session.get(SeedingRun, project.current_run_id) if project else None
+    if run is None:
+        return None
+    events = set(
+        session.scalars(
+            select(ExternalMapping.external_id)
+            .join(Event, Event.id == ExternalMapping.event_id)
+            .where(ExternalMapping.entity_type == "event", Event.tournament_id == tournament.id)
+        )
+    ) & ranked_events(session)
+    start = utc(run.window_start)
+    end = utc(tournament.ends_at or tournament.starts_at) + timedelta(hours=12)
+    if not events or utc(tournament.starts_at) < start or end <= start:
+        return None
+    end = min(end, datetime.now(UTC))
+    played = {
+        pid
+        for row in session.execute(
+            select(SeedingSet.p1_player_id, SeedingSet.p2_player_id).where(
+                SeedingSet.project_id == project.id, SeedingSet.startgg_event_id.in_(events)
+            )
+        )
+        for pid in row
+        if pid
+    }
+    if not played:
+        return None
+    params = default_parameters(session, project)
+    after, _ = _standings(session, project, params, start, end)
+    before = {
+        r["player_id"]: i
+        for i, r in enumerate(_standings(session, project, params, start, end, events)[0], 1)
+    }
+    rows = []
+    for place, r in enumerate(after, 1):
+        if r["player_id"] not in played:
+            continue
+        previous = before.get(r["player_id"])
+        rows.append(
+            dict(
+                player_id=r["player_id"],
+                gamer_tag=r["gamer_tag"],
+                place=place,
+                previous=previous,
+                change=None if previous is None else previous - place,
+            )
+        )
+    ids = [r["player_id"] for r in rows]
+    mains = mains_by_startgg_player(session, ids)
+    costumes = costumes_by_startgg_player(session, ids)
+    for r in rows:
+        r["mains"] = with_costume(
+            [dict(x) for x in mains.get(r["player_id"], [])[:1]], costumes.get(r["player_id"])
+        )
+    up = sorted(
+        (r for r in rows if (r["change"] or 0) > 0), key=lambda r: (-r["change"], r["place"])
+    )
+    down = sorted(
+        (r for r in rows if (r["change"] or 0) < 0), key=lambda r: (r["change"], r["place"])
+    )
+    entered = sorted((r for r in rows if r["previous"] is None), key=lambda r: r["place"])
+    return dict(
+        slug=project.slug,
+        name=project.name,
+        up=up[:limit],
+        down=down[:3],
+        entered=entered[:limit],
+        top=[r for r in rows if r["place"] <= 10],
+    )
+
+
 # ---------------------------------------------------------------- monthly ranking
 
 ASUNCION = ZoneInfo("America/Asuncion")
@@ -1158,8 +1252,9 @@ def _month_start(year, month):
     return datetime(year, month, 1, tzinfo=ASUNCION).astimezone(UTC)
 
 
-def _standings(session, project, params, start, end):
-    """Eligible players of the ranking with only the sets played before `end`, in order."""
+def _standings(session, project, params, start, end, skip=frozenset()):
+    """Eligible players of the ranking with only the sets played before `end`, in order,
+    leaving out the start.gg events in `skip`."""
     entrants = [
         dict(player_id=e.startgg_player_id, gamer_tag=e.gamer_tag)
         for e in session.scalars(
@@ -1170,7 +1265,7 @@ def _standings(session, project, params, start, end):
     sets = [
         {c.name: getattr(s, c.name) for c in SeedingSet.__table__.columns}
         for s in session.scalars(select(SeedingSet).where(SeedingSet.project_id == project.id))
-        if s.startgg_event_id in allowed
+        if s.startgg_event_id in allowed and s.startgg_event_id not in skip
     ]
     rows, summary = compute(
         entrants,

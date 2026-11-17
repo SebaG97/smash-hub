@@ -1390,6 +1390,42 @@ body {
 .share-actions label:focus-within {
   outline: 2px solid var(--gold);
 }
+/* Social media images of a tournament (SH-SOCIAL-01), organizers only. */
+.social-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  margin: 12px 0;
+}
+.social-cards {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  gap: 12px;
+}
+.social-cards li {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  background: var(--slab);
+  border-left: 4px solid var(--gold);
+}
+.social-cards li.unavailable {
+  border-left-color: var(--line);
+  opacity: 0.6;
+}
+.social-cards img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.share-slots.social-colors li {
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+}
 .share-result img {
   width: min(100%, 540px);
   height: auto;

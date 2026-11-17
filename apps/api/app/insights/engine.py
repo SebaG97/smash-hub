@@ -57,6 +57,12 @@ class Match:
     winner_seed: int | None
     loser_seed: int | None
     comeback: bool
+    # Games won by the winner and the loser, when start.gg reported a score.
+    score: tuple | None = None
+    round_number: int | None = None  # negative in the losers bracket
+    # Characters of each game, in order: dict(winner=char, loser=char, won=bool), where
+    # won says whether the set's winner took that game. Empty when nobody reported them.
+    games: list = field(default_factory=list)
 
     @property
     def factor(self):
@@ -128,12 +134,12 @@ def load(session):
         )
     }
     sides = defaultdict(list)
-    for set_id, entrant_id, won in session.execute(
-        select(SetSide.set_id, SetSide.entrant_id, SetSide.is_winner).where(
+    for set_id, entrant_id, won, score in session.execute(
+        select(SetSide.set_id, SetSide.entrant_id, SetSide.is_winner, SetSide.score).where(
             SetSide.event_id.in_(list(events)), SetSide.entrant_id.is_not(None)
         )
     ):
-        sides[set_id].append((entrant_id, won))
+        sides[set_id].append((entrant_id, won, score))
     games = defaultdict(dict)  # set -> game number -> winning entrant
     picks = defaultdict(Counter)
     selections = defaultdict(list)  # (set, game number) -> [(entrant, character)]
@@ -159,14 +165,16 @@ def load(session):
 
     data = Data(picks=dict(picks), ranked=ranked_players(session), foreign=foreign_players(session))
     data.tags = dict(session.execute(select(Player.id, Player.tag)).all())
-    for set_id, event_id, at, round_label in session.execute(
-        select(Set.id, Set.event_id, Set.completed_at, Set.round_label).where(
+    by_set = {}
+    for set_id, event_id, at, round_label, round_number in session.execute(
+        select(Set.id, Set.event_id, Set.completed_at, Set.round_label, Set.round_number).where(
             Set.event_id.in_(list(events)), Set.stats_eligible.is_(True)
         )
     ):
         pair = sides.get(set_id) or []
-        winners = [e for e, won in pair if won]
-        losers = [e for e, won in pair if not won]
+        winners = [e for e, won, _ in pair if won]
+        losers = [e for e, won, _ in pair if not won]
+        scores = [score for _, won, score in sorted(pair, key=lambda x: not x[1])]
         if len(winners) != 1 or len(losers) != 1 or at is None:
             continue
         w, lo = winners[0], losers[0]
@@ -175,6 +183,7 @@ def load(session):
             continue
         tournament_id, name, _, _ = events[event_id]
         first = games.get(set_id, {}).get(1)
+        by_set[set_id] = (w, lo)
         data.matches.append(
             Match(
                 id=str(set_id),
@@ -188,8 +197,11 @@ def load(session):
                 winner_seed=entrants.get(w, (None, None, None))[1],
                 loser_seed=entrants.get(lo, (None, None, None))[1],
                 comeback=first is not None and first == lo,
+                score=tuple(scores) if None not in scores and len(scores) == 2 else None,
+                round_number=round_number,
             )
         )
+    _attach_games(data.matches, by_set, selections, games)
     data.matches.sort(key=lambda m: (m.at, m.id))
     eligible = {m.id for m in data.matches}
     for (set_id, number), sides_picked in selections.items():
@@ -222,6 +234,29 @@ def load(session):
                 )
             )
     return data
+
+
+def _attach_games(matches, by_set, selections, winners):
+    """Characters of every reported game of each set, from the winner's point of view."""
+    numbers = defaultdict(set)
+    for set_id, number in selections:
+        numbers[set_id].add(number)
+    keys = {str(k): k for k in by_set}
+    for m in matches:
+        key = keys.get(m.id)
+        if key is None or key not in numbers:
+            continue
+        w, lo = by_set[key]
+        for number in sorted(numbers[key]):
+            picked = dict(selections[(key, number)])
+            winner = winners.get(key, {}).get(number)
+            m.games.append(
+                dict(
+                    winner=picked.get(w),
+                    loser=picked.get(lo),
+                    won=None if winner is None else winner == w,
+                )
+            )
 
 
 def ranked_players(session):

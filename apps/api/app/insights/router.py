@@ -6,11 +6,12 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Path, Query, Request
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.brackets import service as brackets
 from app.core import stale
-from app.insights import engine, preview, visitors
+from app.insights import engine, preview, social, visitors
 from app.integrations.startgg.client import ImportFailure, StartGGClient
 from app.integrations.startgg.images import tournament_images
 from app.players.mains import player_mains
@@ -122,6 +123,161 @@ def tournament(
         _with_mains(s, summary["overperformers"], None)
         _with_mains(s, summary["upsets"], "winner", "loser")
         return summary
+
+
+IMPACT_SECONDS = 600
+_impacts = {}  # tournament -> (monotonic time, ranking impact); it recomputes the ranking twice
+
+
+def _people(value, found):
+    """Every player reference (a dict with id and tag) inside a payload."""
+    if isinstance(value, dict):
+        if "id" in value and "tag" in value:
+            found.append(value)
+        for item in value.values():
+            _people(item, found)
+    elif isinstance(value, list):
+        for item in value:
+            _people(item, found)
+    return found
+
+
+def _achievements(session, tournament_id):
+    """Achievements players earned at the tournament, rarest first."""
+    from app.achievements import catalog
+    from app.achievements.models import PlayerAchievement
+    from app.players.models import Player
+
+    rows = session.execute(
+        select(PlayerAchievement.achievement_id, Player.id, Player.tag)
+        .join(Player, Player.id == PlayerAchievement.player_id)
+        .where(
+            PlayerAchievement.tournament_id == tournament_id,
+            PlayerAchievement.status == "active",
+            PlayerAchievement.hidden.is_(False),
+        )
+    ).all()
+    holders = {}
+    for achievement_id, player_id, tag in rows:
+        holders.setdefault(achievement_id, {})[str(player_id)] = tag
+    order = list(catalog.RARITIES)
+    items = []
+    for achievement_id, players in holders.items():
+        a = catalog.get(achievement_id)
+        if a is None or a.scope != "player":
+            continue
+        items.append(
+            dict(
+                id=a.id,
+                name=a.name,
+                description=a.description,
+                rarity=a.rarity,
+                rarity_name=catalog.RARITIES[a.rarity],
+                players=[dict(id=k, tag=v) for k, v in sorted(players.items(), key=lambda x: x[1])],
+            )
+        )
+    items.sort(key=lambda i: (-order.index(i["rarity"]), -len(i["players"]), i["name"]))
+    return items
+
+
+def _prode(session, slug):
+    """Final table of the tournament's settled Prode."""
+    from app.auth.models import User
+    from app.prode import service as prode
+    from app.prode.models import ProdeCandidate, ProdeContest, ProdeQuestion, ProdeScore
+
+    contest = session.scalar(
+        select(ProdeContest)
+        .where(
+            ProdeContest.tournament_slug.in_({slug, slug.removeprefix("tournament/")}),
+            ProdeContest.status == "settled",
+        )
+        .order_by(ProdeContest.created_at.desc())
+    )
+    if contest is None:
+        return None
+    rows = session.execute(
+        select(ProdeScore, User.display_name)
+        .join(User, User.id == ProdeScore.user_id)
+        .where(ProdeScore.contest_id == contest.id)
+        .order_by(ProdeScore.rank, ProdeScore.points.desc())
+    ).all()
+    champion = session.scalar(
+        select(ProdeQuestion.result).where(
+            ProdeQuestion.contest_id == contest.id, ProdeQuestion.kind == "champion"
+        )
+    )
+    picks = prode.picks_of(session, contest)
+    champion_tag = (
+        session.scalar(
+            select(ProdeCandidate.tag).where(
+                ProdeCandidate.contest_id == contest.id,
+                ProdeCandidate.startgg_player_id == str(champion),
+            )
+        )
+        if champion
+        else None
+    )
+    return dict(
+        name=contest.name,
+        participants=len(picks),
+        champion=champion_tag,
+        champion_hits=sum(
+            1 for p, _ in picks.values() if champion and str(p.get("champion")) == str(champion)
+        ),
+        ranking=[
+            dict(
+                rank=score.rank,
+                name=name,
+                points=score.points,
+                exact_hits=score.exact_hits,
+                hits=score.hits,
+            )
+            for score, name in rows[:8]
+        ],
+    )
+
+
+@router.get("/tournaments/{id}/social")
+def tournament_social(request: Request, id: UUID, event: UUID | None = None):
+    """Everything the social media images of a tournament show (SH-SOCIAL-01): results,
+    upsets, numbers and characters of one singles event (its main one unless `event`),
+    plus how the official ranking moved, the achievements earned there and the Prode."""
+    from app.competitions.models import Tournament
+    from app.seeding.service import tournament_impact
+
+    with Session(request.app.state.engine) as s:
+        tournament = s.get(Tournament, id)
+        if tournament is None or not tournament.published:
+            raise HTTPException(404, "Tournament not found")
+        story = social.story(engine.cached(s), id, event_id=event)
+        if story is None:
+            raise HTTPException(404, "Tournament not found")
+        _with_mains(s, _people(story, []), None)
+        main = story["summary"].get("main", True)
+        impact = None
+        if main:
+            hit = _impacts.get(id)
+            if hit and time.monotonic() - hit[0] < IMPACT_SECONDS:
+                impact = hit[1]
+            else:
+                impact = tournament_impact(s, id)
+                _impacts[id] = (time.monotonic(), impact)
+        return dict(
+            tournament=dict(
+                id=str(tournament.id),
+                name=tournament.name,
+                slug=tournament.slug,
+                starts_at=tournament.starts_at,
+                city=(tournament.location or {}).get("city"),
+                images=tournament.images or {},
+            ),
+            **story,
+            # Only the main bracket feeds rankings, gives achievements and has a Prode.
+            ranking=impact,
+            achievements=_achievements(s, id) if main else [],
+            prode=_prode(s, tournament.slug) if main else None,
+        )
 
 
 def _event(event):

@@ -467,6 +467,36 @@ def test_wrongly_seeded_tournaments_yield_no_seed_records(db, snapshot):
     engine.invalidate()
 
 
+def test_social_images_data_of_a_tournament(db, snapshot):
+    from uuid import uuid4
+
+    from app.competitions.models import Tournament
+    from app.insights import engine
+
+    prepare(db)
+    run(db, snapshot)
+    engine.invalidate()
+    with Session(db) as s:
+        tournament = s.scalar(select(Tournament.id))
+    with client_for(db) as client:
+        body = client.get(f"/api/v1/insights/tournaments/{tournament}/social").json()
+        summary = client.get(f"/api/v1/insights/tournaments/{tournament}").json()
+        assert body["tournament"]["id"] == str(tournament)
+        assert body["summary"]["top"] == summary["top"]
+        assert body["numbers"]["sets"] > 0
+        assert body["champion"]["tag"] == summary["top"][0]["tag"]
+        assert body["champion_path"] and all(
+            "mains" in p["opponent"] for p in body["champion_path"]
+        )
+        for key in ("upsets", "over", "under", "close_sets", "grand_final", "rivalries"):
+            assert isinstance(body[key], list)
+        assert {"debuts", "returns", "debut_count"} <= set(body["newcomers"])
+        assert body["prode"] is None and body["achievements"] == []
+        missing = client.get(f"/api/v1/insights/tournaments/{uuid4()}/social")
+        assert missing.status_code == 404
+    engine.invalidate()
+
+
 def test_startgg_player_endpoint_is_cached_and_validated(monkeypatch):
     from app.insights import router, visitors
 

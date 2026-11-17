@@ -10,6 +10,7 @@ import { MainIcons, mainColor } from "./mains";
 import { Prefix } from "./prefix";
 import { ShareImage } from "./share-image";
 import { TournamentLogo, type TournamentImages } from "./tournament-art";
+import { TournamentSocial } from "./tournament-social";
 import { PlayerAchievementsBlock } from "./achievements";
 
 type Ref = {
@@ -538,6 +539,11 @@ export function TournamentSummaryBlock({ id }: { id: string }) {
             filename={`top-${id}${event ? `-${event.slice(0, 8)}` : ""}.png`}
             label="Descargar imagen del top"
             rowsPath={`insights/tournaments/${id}?limit=12${query}`}
+          />
+          <TournamentSocial
+            key={`social-${s.event_id}`}
+            id={id}
+            event={event}
           />
           {s.upsets.length > 0 && (
             <>

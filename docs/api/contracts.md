@@ -388,3 +388,27 @@ Prefijo `/api/v1/achievements`. Leer nunca evalúa ni consulta start.gg.
 | `GET /admin/grants`, `POST /admin/grants`, `POST /admin/grants/{id}/revoke` | Admin | Logros manuales con motivo público (mínimo 5 caracteres); 422 si el logro no es manual; 409 si ya lo tiene o la colección está inactiva. |
 
 Compatibilidad: `GET /insights/players/{id}` mantiene `badges` (`id`, `name`, `why`), y ahora «Campeón» aparece junto a «Coleccionista de trofeos». `GET /prode/users/{id}` y `GET /prode/players/{id}/achievements` mantienen su forma, pero omiten los logros revocados u ocultos.
+
+## Imágenes para redes de un torneo (SH-SOCIAL-01)
+
+`GET /api/v1/insights/tournaments/{id}/social` es público y acepta `?event={id}`. Sin `event`, usa el evento principal. Devuelve 404 si el torneo no existe, no está publicado o no tiene resultados de singles. Es solo lectura y no consulta start.gg.
+
+| Campo | Contenido |
+| --- | --- |
+| `tournament` | `{id, name, slug, starts_at, city, images}` |
+| `summary` | Lo mismo que `/insights/tournaments/{id}` con `limit=8`. |
+| `champion`, `champion_path` | El campeón y cada uno de sus sets en orden: `{opponent, won, score, round, losers, factor}`. `score` va desde el lado del campeón, por ejemplo `"1-3"`. |
+| `grand_final` | Sets con ronda «Grand Final» (y su reset). Cada set es `{winner, loser, score, round, factor, comeback, games}`, y `games` es `[{winner, loser, won}]` con el personaje de cada lado y si el ganador del set ganó ese game. |
+| `upsets`, `close_sets` | Hasta 6 sorpresas, de la mayor a la menor, y hasta 6 sets que llegaron al último game (un 3-2 antes que un 2-1). |
+| `over`, `under` | Hasta 6 jugadores que terminaron por encima o por debajo de su seed: `{seed, placement, tiers}`. |
+| `numbers` | `entrants`, `sets`, `games`, `full_length`, `sweeps`, `comebacks`, `upsets`, `biggest_upset`, `characters` y `top_character`. |
+| `characters` | `{games, coverage, items}` con los 8 personajes más usados: `{character, games, share, win_rate, players}`. `coverage` es el % de los games del torneo que tienen personajes reportados. |
+| `newcomers` | `debuts` (primer torneo en el hub, hasta 8), `debut_count` y `returns` (sin jugar 180 días o más, con `days`). Solo cuenta a los locales (ADR-024). |
+| `rivalries` | Hasta 3 pares de locales con 2 o más sets entre ellos antes del torneo: `before`, `here` (sus sets en el torneo) y `after`. |
+| `ranking` | Cuánto movió el ranking oficial publicado: `{slug, name, up, down, entered}`, calculado con y sin los sets del torneo hasta su cierre. Es `null` si el torneo no cuenta para ese ranking o queda fuera de su período. El cálculo se guarda 10 minutos. |
+| `achievements` | Logros de jugadores ganados en el torneo, activos y no ocultos, del más raro al más común: `{id, name, description, rarity, rarity_name, players}`. |
+| `prode` | Tabla final del Prode liquidado del torneo: `{name, participants, champion, champion_hits, ranking}`, o `null`. |
+
+`ranking`, `achievements` y `prode` solo se completan para el evento principal. Cada jugador de la respuesta trae `mains` (con el traje elegido) y `prefix`.
+
+La web genera las imágenes en `/og/tournament/{id}/{imagen}`, con `imagen` igual a `podio`, `campeon`, `final`, `sorpresas`, `seeds`, `peleados`, `numeros`, `personajes`, `debutantes`, `ranking`, `logros`, `prode` o `rivalidad`. Acepta `?format=portrait` (1080×1350, por defecto), `square` (1080×1080), `story` (1080×1920) o `wide` (1920×1080), además de `?event=` y, solo para `seeds`, `?under=1`. Cuando una imagen no tiene datos, responde 404 con el motivo en texto. Los administradores las ven y descargan desde «Imágenes para redes», en la página del torneo.

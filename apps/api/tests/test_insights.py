@@ -652,3 +652,108 @@ def test_preview_pools_for_readers_hide_organizer_tools():
     chag = result["pools"][1]["players"][0]
     assert (chag["id"], chag["country"], chag["mains"]) == (None, "MX", [{"character": "Min Min"}])
     assert "rating" not in chag and "startgg_seed" not in chag
+
+
+def test_social_story_of_a_tournament():
+    from app.insights import social
+
+    tags = {"a": "Ana", "b": "Beto", "c": "Caro", "d": "Dani", "g": "Guest"}
+    data = Data(tags=tags, foreign={"g"})
+
+    def scored(n, winner, loser, score, *, ws, ls, round, number, games=(), **kw):
+        m = match(n, winner, loser, ws=ws, ls=ls, **kw)
+        m.round, m.round_number, m.score, m.games = round, number, score, list(games)
+        return m
+
+    # History before the tournament: Ana and Beto met twice, Ana played an older event.
+    data.matches = [
+        match(0, "b", "a", tournament="t0", days=-30),
+        match(1, "a", "b", tournament="t0", days=-30),
+    ]
+    data.matches += [
+        scored(10, "a", "c", (2, 0), ws=1, ls=8, round="Winners Round 1", number=1),
+        scored(11, "d", "b", (2, 1), ws=4, ls=2, round="Winners Round 1", number=1),
+        scored(12, "a", "d", (3, 2), ws=1, ls=4, round="Winners Final", number=2),
+        scored(13, "b", "g", (2, 1), ws=2, ls=3, round="Losers Round 1", number=-1),
+        scored(
+            14,
+            "d",
+            "a",
+            (3, 1),
+            ws=4,
+            ls=1,
+            round="Grand Final",
+            number=3,
+            comeback=True,
+            games=[
+                dict(winner="Ryu", loser="Fox", won=False),
+                dict(winner="Ryu", loser="Fox", won=True),
+                dict(winner="Ryu", loser="Fox", won=True),
+                dict(winner="Ryu", loser="Fox", won=True),
+            ],
+        ),
+    ]
+    data.finishes = [
+        finish("a", 1, 9, tournament="t0", days=-30),
+        finish("b", 5, 2, tournament="t0", days=-300),
+        finish("d", 1, 4),
+        finish("a", 2, 1),
+        finish("b", 3, 2),
+        finish("g", 4, 3),
+        finish("c", 5, 8),
+    ]
+    data.finishes[1]["tournament_id"] = "t-old"  # Beto had not played for 300 days
+
+    story = social.story(data, "t1")
+    assert story["champion"]["tag"] == "Dani"
+    path = story["champion_path"]
+    assert [(p["opponent"]["tag"], p["won"], p["score"]) for p in path] == [
+        ("Beto", True, "2-1"),
+        ("Ana", False, "2-3"),
+        ("Ana", True, "3-1"),
+    ]
+    assert story["grand_final"][0]["games"][0] == dict(winner="Ryu", loser="Fox", won=False)
+    # Seed 4 beat seed 1 (and seed 2): biggest upset first.
+    assert [u["winner"]["tag"] for u in story["upsets"]] == ["Dani", "Dani"]
+    assert [(p["tag"], p["tiers"]) for p in story["over"]] == [("Dani", 3), ("Caro", 1)]
+    assert [p["tag"] for p in story["under"]] == ["Ana", "Beto", "Guest"]
+    assert [(s["winner"]["tag"], s["score"]) for s in story["close_sets"]] == [
+        ("Ana", "3-2"),
+        ("Beto", "2-1"),  # same length and round: the latest first
+        ("Dani", "2-1"),
+    ]
+    numbers = story["numbers"]
+    assert (numbers["sets"], numbers["games"], numbers["full_length"]) == (5, 17, 3)
+    assert (numbers["sweeps"], numbers["comebacks"], numbers["upsets"]) == (1, 1, 2)
+    assert numbers["top_character"] in ("Fox", "Ryu")
+    chars = story["characters"]
+    assert chars["games"] == 4 and chars["coverage"] == 24
+    ryu = next(c for c in chars["items"] if c["character"] == "Ryu")
+    assert (ryu["games"], ryu["win_rate"], ryu["players"]) == (4, 75, 1)
+    # Caro and Dani debuted (the guest does not count); Beto came back after 300 days.
+    assert [p["tag"] for p in story["newcomers"]["debuts"]] == ["Dani", "Caro"]
+    assert [(p["tag"], p["days"]) for p in story["newcomers"]["returns"]] == [("Beto", 300)]
+    # Ana and Beto never met here: no rivalry. Ana–Dani have no history either.
+    assert story["rivalries"] == []
+    assert social.story(data, "nope") is None
+
+
+def test_social_rivalry_shows_the_record_before_and_after():
+    from app.insights import social
+
+    data = Data(tags={"a": "Ana", "b": "Beto", "g": "Guest"}, foreign={"g"})
+    data.matches = [
+        match(0, "b", "a", tournament="t0", days=-60),
+        match(1, "b", "a", tournament="t0", days=-30),
+        match(2, "a", "b", tournament="t0", days=-20),
+        match(3, "g", "a", tournament="t0", days=-20),
+        match(4, "g", "a", tournament="t0", days=-10),
+        match(10, "a", "b"),
+        match(11, "a", "g"),
+    ]
+    data.finishes = [finish("a", 1, 1), finish("b", 2, 2), finish("g", 3, 3)]
+    (rivalry,) = social.rivalries(data, [m for m in data.matches if m.tournament_id == "t1"])
+    # Guests have history with Ana too, but rivalries are between locals.
+    assert (rivalry["a"]["tag"], rivalry["b"]["tag"]) == ("Ana", "Beto")
+    assert (rivalry["before"], rivalry["after"]) == ([1, 2], [2, 2])
+    assert rivalry["here"][0]["winner"]["tag"] == "Ana"

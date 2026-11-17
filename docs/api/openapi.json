@@ -5241,6 +5241,65 @@
         }
       }
     },
+    "/api/v1/insights/tournaments/{id}/social": {
+      "get": {
+        "tags": [
+          "insights"
+        ],
+        "summary": "Tournament Social",
+        "description": "Everything the social media images of a tournament show (SH-SOCIAL-01): results,\nupsets, numbers and characters of one singles event (its main one unless `event`),\nplus how the official ranking moved, the achievements earned there and the Prode.",
+        "operationId": "tournament_social_api_v1_insights_tournaments__id__social_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "event",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/insights/calendar": {
       "get": {
         "tags": [
