@@ -89,8 +89,13 @@ def test_compute_orders_explains_and_respects_window_and_merges():
     assert dot["merged_sets"] == 1 and any("fusionados" in f for f in dot["flags"])
     assert eve["combined"] is None and eve["flags"] == ["sin datos: ubicar manualmente"]
     assert any("Glicko-2" in r for r in ace["reasons"]) and any(
-        "Posiciones" in r for r in ace["reasons"]
+        "Hasta dónde llegó" in r for r in ace["reasons"]
     )
+    # Plain-language data: who they beat and lost to, with each rival's place.
+    assert "Mejores victorias: Bee (2.º) ×8, Cid (3.º) ×8, Dot (4.º) ×8." in ace["reasons"]
+    assert "No perdió ningún set." in ace["reasons"]
+    assert "Perdió con: Ace (1.º) ×8, Bee (2.º) ×8, Cid (3.º) ×9." in dot["reasons"]
+    assert "played_events" not in ace
 
 
 def test_duplicates_are_excluded_and_overrides_pin_seeds():

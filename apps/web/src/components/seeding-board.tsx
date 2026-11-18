@@ -339,13 +339,15 @@ function Details({ row, method }: { row: SeedingRow; method: string }) {
       </ul>
       {Object.keys(row.circuits || {}).length > 0 && (
         <p>
-          Sets por circuito:{" "}
+          Dónde jugó sus sets:{" "}
           {Object.entries(row.circuits)
             .map(([c, n]) => `${c} ${n}`)
             .join(" · ")}
         </p>
       )}
-      {row.flags.length > 0 && <p>Alertas: {row.flags.join(" · ")}</p>}
+      {row.flags.length > 0 && (
+        <p>A tener en cuenta: {row.flags.join(" · ")}</p>
+      )}
     </div>
   );
 }

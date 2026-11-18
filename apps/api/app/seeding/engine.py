@@ -152,6 +152,8 @@ def compute(
     offline_sets, merged_sets = Counter(), Counter()
     circuits = defaultdict(Counter)
     events = defaultdict(dict)  # player -> event -> dict
+    results = defaultdict(list)  # player -> [(opponent, won)], for the reasons
+    other_tags = {}  # tags of opponents who are not entrants
     used_events, offline_events_all = set(), set()
     for s in sets:
         at = utc(s["played_at"])
@@ -186,6 +188,10 @@ def compute(
                 event_id=s["startgg_event_id"],
             )
         )
+        other_tags.setdefault(a, s.get("p1_tag"))
+        other_tags.setdefault(b, s.get("p2_tag"))
+        results[a].append((b, a_won))
+        results[b].append((a, not a_won))
         for raw, side, won in ((s["p1_player_id"], a, a_won), (s["p2_player_id"], b, not a_won)):
             (wins if won else losses)[side] += 1
             circuits[side]["ONLINE" if s["online"] else (s["country"] or "?")] += 1
@@ -358,6 +364,18 @@ def compute(
         )
         for i, r in enumerate(ranked, 1):
             r["ranks"][m] = i
+    # Reasons speak of places in the ranking readers see: eligible players only.
+    by_place = sorted(
+        (r for r in rows if r["eligible"] and r["placement_score"] is not None),
+        key=lambda r: (-r["placement_score"], r["player_id"]),
+    )
+    context = dict(
+        results=results,
+        names={**{k: v for k, v in other_tags.items() if v}, **tags},
+        strength={pid: g["rating"] for pid, g in ratings.items()},
+        ranks={r["player_id"]: r["ranks"] for r in rows},
+        placement_rank={r["player_id"]: i for i, r in enumerate(by_place, 1)},
+    )
     ordered = sorted(
         (r for r in rows if r["scores"][p.method] is not None),
         key=lambda r: r["ranks"][p.method],
@@ -372,8 +390,14 @@ def compute(
         ranks = [x for x in (r["rank_conservative"], r["rank_placement"]) if x is not None]
         r["rank_spread"] = max(ranks) - min(ranks) if len(ranks) == 2 else None
         r["flags"] = _flags(r, p, home, duplicates)
-        r["reasons_by_method"] = {m: _reasons(r, p, rated, m) for m in METHODS}
+        r["played_events"] = sorted(
+            (e for e in events[r["player_id"]].values() if e["counted"] and not e["online"]),
+            key=lambda e: e["date"],
+            reverse=True,
+        )
+        r["reasons_by_method"] = {m: _reasons(r, p, context, m) for m in METHODS}
         r["reasons"] = r["reasons_by_method"][p.method]
+        del r["played_events"]
 
     summary = dict(
         set_count=len(games),
@@ -409,7 +433,7 @@ def _flags(r, p, home, duplicates):
     if r["sets"] and not r["offline_sets"]:
         flags.append("solo online")
     if r["sets"] and r["confidence"] in ("baja", "nula"):
-        flags.append("muestra chica")
+        flags.append("pocos datos todavía")
     if r["merged_sets"]:
         flags.append(f"IDs fusionados (+{r['merged_sets']} sets)")
     if r["player_id"] in duplicates.values():
@@ -419,7 +443,32 @@ def _flags(r, p, home, duplicates):
     return flags
 
 
-def _reasons(r, p, rated, method):
+def _day(value):
+    return value.strftime("%d/%m/%Y")
+
+
+def _list(items, limit):
+    shown = ", ".join(items[:limit])
+    rest = len(items) - limit
+    return f"{shown} y {rest} más" if rest > 0 else shown
+
+
+def _opponents(r, context, method, won):
+    """Opponents beaten (or lost to), strongest first, with their place in the ranking."""
+    count = Counter(opp for opp, w in context["results"][r["player_id"]] if w == won)
+    strength = context["strength"]
+    ordered = sorted(count, key=lambda o: (-strength.get(o, float("-inf")), str(o)))
+    out = []
+    for opp in ordered:
+        name = context["names"].get(opp) or "jugador sin tag"
+        place = context["ranks"].get(opp, {}).get(method)
+        text = f"{name} ({place}.º)" if place else name
+        out.append(f"{text} ×{count[opp]}" if count[opp] > 1 else text)
+    return out
+
+
+def _reasons(r, p, context, method):
+    """What a reader needs to understand the place, in plain words and with the data."""
     if not r["sets"]:
         return [
             "No tiene sets contados en la ventana analizada, así que el método no puede ubicarlo. "
@@ -438,86 +487,124 @@ def _reasons(r, p, rated, method):
         }
         return [f"No entra en este cálculo: {'; '.join(why[m] for m in r['missing'])}."]
     rank = r["ranks"].get(method)
-    reasons = [
-        f"Resultados: {r['wins']}-{r['losses']} en {r['sets']} sets contados "
-        f"({r['offline_sets']} offline), {r['events']} eventos; último el {r['last_event']}.",
-    ]
+    torneos = "torneo presencial" if r["offline_events"] == 1 else "torneos presenciales"
+    online = r["sets"] - r["offline_sets"]
+    summary = (
+        f"Ganó {r['wins']} de sus {r['sets']} sets ({_num(r['win_rate'])} %) en "
+        f"{r['offline_events']} {torneos}"
+        + (f", más {online} sets online" if online else "")
+        + (f"; el último, el {_day(r['played_events'][0]['date'])}." if r["played_events"] else ".")
+    )
+    reasons = [summary]
+
     glicko = (
-        f"Glicko-2: {_num(r['rating'])} ± {_num(r['rd'])}. El valor conservador "
-        f"(rating − {_num(p.conservative_k)}·RD = {_num(r['conservative'])}) es el "
-        f"{r['rank_conservative']}.º de {rated} jugadores con datos."
+        f"Por a quién le ganó y con quién perdió: {_num(r['conservative'])} puntos (Glicko-2). "
+        "Ganarle a alguien de arriba suma mucho y perder con alguien de abajo resta mucho. "
+        "Como el sistema todavía no está seguro de su nivel exacto, le descuenta un margen: "
+        f"{_num(r['rating'])} − {_num(p.conservative_k)} × {_num(r['rd'])} = "
+        f"{_num(r['conservative'])}. Ese margen se achica a medida que juega más."
     )
     if method == "combined":
-        reasons.append(glicko)
-        if r["rank_placement"] is None:
+        g_rank = r["ranks"].get("glicko2")
+        p_rank = context["placement_rank"].get(r["player_id"])
+        if p_rank is None:
             reasons.append(
-                f"Sin eventos offline de ≥{p.placement_min_field} inscritos: "
-                "el puesto sale solo del rating."
+                glicko + f" No tiene torneos presenciales de {p.placement_min_field} o más "
+                f"inscritos, así que su puesto sale solo de esto: {rank}.º."
             )
         else:
-            best = "; ".join(
-                f"{b['placement']}/{b['entrants']} {b['tournament']}" for b in r["best_placements"]
-            )
             reasons.append(
-                f"Posiciones: {_num(r['placement_score'], 2)} rondas superadas en promedio "
-                f"({best}); es el {r['rank_placement']}.º puntaje por posiciones."
+                f"El puesto mezcla dos cosas: a quién le ganó ({_num(p.rating_weight * 100)} %) "
+                f"y hasta dónde llegó en los torneos ({_num(100 - p.rating_weight * 100)} %). "
+                f"Por lo primero sería {g_rank}.º y por lo segundo {p_rank}.º; combinadas "
+                f"queda {rank}.º."
             )
-        weights = (
-            "solo rating"
-            if r["rank_placement"] is None
-            else f"{_num(p.rating_weight * 100)} % rating, "
-            f"{_num((1 - p.rating_weight) * 100)} % posiciones"
-        )
-        reasons.append(f"Combinado ({weights}): {_num(r['combined'], 3)}, que da el puesto {rank}.")
+            reasons.append(glicko)
+            reasons.append(
+                f"Hasta dónde llegó: se promedian sus {p.placement_top_events} mejores torneos "
+                f"de {p.placement_min_field} o más inscritos, y cuenta más llegar lejos en un "
+                "torneo grande (ganar uno de 32 vale 5; top 8 de 32 vale 2). Su promedio: "
+                f"{_num(r['placement_score'], 2)}."
+            )
     elif method == "glicko2":
-        reasons.append(glicko + f" Con este método queda {rank}.º.")
+        reasons.append(glicko + f" Con eso queda {rank}.º.")
     elif method == "glicko1":
         reasons.append(
-            f"Glicko-1: {_num(r['glicko1'])} ± {_num(r['glicko1_rd'])}; conservador "
-            f"(rating − 2·RD) {_num(r['glicko1_conservative'])}, el {rank}.º."
+            f"Por a quién le ganó y con quién perdió: {_num(r['glicko1_conservative'])} puntos "
+            f"(Glicko-1, ya con el margen por pocos datos: {_num(r['glicko1'])} − 2 × "
+            f"{_num(r['glicko1_rd'])}). Queda {rank}.º."
         )
     elif method == "elo":
         reasons.append(
-            f"Elo (K = {_num(p.elo_k)}, todos empiezan en 1.500): {_num(r['elo'])}, el {rank}.º."
+            f"Elo: {_num(r['elo'])} puntos. Todos empiezan en 1.500 y en cada set el ganador le "
+            "saca puntos al perdedor: muchos si no era favorito, pocos si lo era. "
+            f"Queda {rank}.º."
         )
     elif method == "bradley_terry":
         reasons.append(
-            f"Bradley-Terry: {_num(r['bradley_terry'])} en escala tipo Elo, el {rank}.º. "
-            f"Como referencia, su Glicko-2 es {_num(r['rating'])}."
+            f"Bradley-Terry: {_num(r['bradley_terry'])} puntos. Mira todos los sets juntos y "
+            "busca el nivel de cada jugador que mejor explica quién le ganó a quién. 1.500 es "
+            "el promedio y 100 puntos más que un rival equivalen a ganarle unas 2 de cada 3 "
+            f"veces. Queda {rank}.º."
         )
     elif method == "weighted_bt":
+        online_share = p.online_weight * 100
         reasons.append(
-            f"Bradley-Terry ponderado: {_num(r['weighted_bt'])} en escala tipo Elo, el {rank}.º. "
-            f"Los sets pierden la mitad del peso cada {_num(p.half_life_days)} días, el online "
-            f"pesa {_num(p.online_weight * 100, 0 if p.online_weight * 100 >= 1 else 1)} % y "
-            "los cruces repetidos con el mismo rival suman cada vez menos. Sin ponderar daría "
-            f"{_num(r['bradley_terry'])}."
+            f"Bradley-Terry ponderado: {_num(r['weighted_bt'])} puntos (sin ponderar serían "
+            f"{_num(r['bradley_terry'])}). Igual que Bradley-Terry, pero los sets recientes "
+            f"valen más (cada {_num(p.half_life_days)} días un set vale la mitad), el online "
+            f"vale el {_num(online_share, 0 if online_share >= 1 else 1)} % y jugar muchas "
+            "veces con el mismo rival suma cada vez menos. Con pocos sets recientes, el "
+            f"puntaje queda cerca de 1.500. Queda {rank}.º."
         )
     elif method == "points":
         if r["points"] is None:
             reasons.append(
-                f"Sin torneos presenciales de ≥{p.placement_min_field} inscritos: no suma puntos "
-                "y va después de los que sí."
+                f"Sin torneos presenciales de {p.placement_min_field} o más inscritos: no suma "
+                "puntos y va después de los que sí."
             )
         else:
-            best = "; ".join(
-                f"{b['placement']}/{b['entrants']} {b['tournament']} ({_num(b['score'], 1)})"
-                for b in r["points_events"]
-            )
             reasons.append(
-                f"Puntos: {_num(r['points'], 1)} sumando sus {len(r['points_events'])} mejores "
-                f"torneos ({best}); el {rank}.º."
+                f"Puntos: {_num(r['points'], 1)}, la suma de sus {len(r['points_events'])} "
+                "mejores torneos. Cada torneo da más cuanto más lejos llegó y más grande era: "
+                f"ganar uno de 32 da 50 y top 8 de 32 da 20. Queda {rank}.º."
             )
     elif method == "wilson":
         reasons.append(
-            f"Ganó el {_num(r['win_rate'], 1)} % de sus sets. Corregido por tamaño de muestra "
-            f"(Wilson 95 %): {_num(r['wilson'], 1)} %, el {rank}.º."
+            f"Ganó el {_num(r['win_rate'], 1)} % de sus sets. Con pocos sets ese porcentaje "
+            "puede ser suerte, así que se usa una versión prudente que baja más cuantos menos "
+            f"sets tiene: {_num(r['wilson'], 1)} %. Queda {rank}.º."
         )
-    if r["main_circuit"]:
+
+    if r["played_events"]:
         reasons.append(
-            f"Circuito principal: {r['main_circuit']}. Confianza de los datos: {r['confidence']}."
+            "Torneos: "
+            + _list(
+                [
+                    f"{e['placement']}.º de {e['entrants']} en {e['name']} ({_day(e['date'])})"
+                    if e["placement"] and e["entrants"]
+                    else f"{e['name']} ({_day(e['date'])})"
+                    for e in r["played_events"]
+                ],
+                5,
+            )
+            + "."
         )
-    return reasons
+    beaten = _opponents(r, context, method, True)
+    lost = _opponents(r, context, method, False)
+    reasons.append(
+        ("Mejores victorias: " + _list(beaten, 4) + ".") if beaten else "Todavía no ganó sets."
+    )
+    reasons.append(("Perdió con: " + _list(lost, 4) + ".") if lost else "No perdió ningún set.")
+    reasons.append(
+        {
+            "baja": f"Todavía hay pocos datos ({r['sets']} sets): su puesto puede moverse "
+            "bastante en los próximos torneos.",
+            "media": "Hay datos suficientes, aunque su puesto todavía puede moverse.",
+            "alta": "Tiene muchos datos: su puesto es estable.",
+        }.get(r["confidence"], "")
+    )
+    return [x for x in reasons if x]
 
 
 def apply_overrides(rows, overrides):
