@@ -465,16 +465,22 @@ function MethodPicker({
   onChange,
   admin,
   onAdopt,
+  onRecalculate,
 }: {
   view: SeedingView;
   value: string;
   onChange: (method: string) => void;
   admin: Admin | null;
   onAdopt: (method: string) => void;
+  /** Recalculate keeping the official method (a method newer than the stored run). */
+  onRecalculate: () => void;
 }) {
   const selected = view.methods.find((m) => m.id === value);
   const official = view.methods.find((m) => m.id === view.method);
   const preview = value !== view.method;
+  // The stored run was calculated before this method existed: it has no scores for it.
+  const missing =
+    preview && !view.seeds.some((r) => (r.scores?.[value] ?? null) !== null);
   return (
     <section className="seeding-methods" aria-label="Método de cálculo">
       <label>
@@ -489,7 +495,23 @@ function MethodPicker({
         </select>
       </label>
       {selected && <p>{selected.description}</p>}
-      {preview && (
+      {missing && (
+        <p className="seeding-preview" role="alert">
+          <strong>Sin datos para este método:</strong> el último cálculo se hizo
+          antes de que existiera {selected?.label}. Recalculá para poder
+          compararlo; el método oficial no cambia.{" "}
+          {admin && (
+            <button
+              className="primary-button"
+              onClick={onRecalculate}
+              type="button"
+            >
+              Recalcular ahora
+            </button>
+          )}
+        </p>
+      )}
+      {preview && !missing && (
         <p className="seeding-preview">
           <strong>Vista previa:</strong> así quedaría el orden con{" "}
           {selected?.label}. El orden oficial sigue siendo {official?.label}
@@ -1253,6 +1275,12 @@ export function SeedingBoard({
               value={method}
               onChange={(m) => setPreview(m === official ? null : m)}
               admin={admin}
+              onRecalculate={async () => {
+                if (await act("POST", `${slug}/recalculate`, {}))
+                  setMessage(
+                    "Recalculado con los mismos datos: ya podés comparar todos los métodos.",
+                  );
+              }}
               onAdopt={async (m) => {
                 if (
                   await act("POST", `${slug}/recalculate`, {

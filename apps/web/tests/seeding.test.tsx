@@ -243,6 +243,50 @@ describe("seeding board", () => {
     });
   });
 
+  it("asks to recalculate when the stored run predates a method", async () => {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    sessionStorage.setItem(
+      "seeding-admin",
+      JSON.stringify({ key: "secret-key", name: "Org" }),
+    );
+    const newer = {
+      ...view,
+      methods: [
+        ...view.methods,
+        { id: "weighted_bt", label: "BT ponderado", description: "Pesos" },
+      ],
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string, init?: RequestInit) => {
+        calls.push({ url, init });
+        return Promise.resolve(
+          new Response(
+            JSON.stringify(
+              init?.method === "POST" ? { status: "recalculated" } : newer,
+            ),
+          ),
+        );
+      }),
+    );
+    render(<SeedingBoard slug="cs" />);
+    await screen.findByRole("heading", { name: "Center Stage" });
+    fireEvent.change(screen.getByLabelText("Ver con el método"), {
+      target: { value: "weighted_bt" },
+    });
+    expect(screen.getByText(/Sin datos para este método/)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Usar como método oficial" }),
+    ).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Recalcular ahora" }));
+    await waitFor(() =>
+      expect(calls.some((c) => c.init?.method === "POST")).toBe(true),
+    );
+    const post = calls.find((c) => c.init?.method === "POST")!;
+    // A plain recalculation: the official method stays.
+    expect(JSON.parse(String(post.init?.body))).toEqual({});
+  });
+
   it("shows rankings without manual moves and hides low-activity players", async () => {
     const ranking: SeedingView = {
       ...view,
