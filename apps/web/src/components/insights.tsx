@@ -483,9 +483,20 @@ export function RecordsPage() {
 }
 
 /** Tournament page: top 8 with mains, upsets and who beat their seed. */
-export function TournamentSummaryBlock({ id }: { id: string }) {
+export function TournamentSummaryBlock({
+  id,
+  event: chosen,
+  embedded = false,
+}: {
+  id: string;
+  /** Embedded in the tournament's event tabs: that tab picks the event. */
+  event?: string | null;
+  /** Without its own event tabs and bracket (the tournament page shows them). */
+  embedded?: boolean;
+}) {
   // A tournament with an amateur (or ladder…) bracket shows one tab per singles event.
-  const [event, setEvent] = useState<string | null>(null);
+  const [picked, setEvent] = useState<string | null>(null);
+  const event = embedded ? (chosen ?? null) : picked;
   const query = event ? `&event=${event}` : "";
   return (
     <Resource<TournamentSummary>
@@ -494,8 +505,8 @@ export function TournamentSummaryBlock({ id }: { id: string }) {
     >
       {(s) => (
         <section className="tournament-summary" aria-label="Resumen">
-          <h2>Resultados</h2>
-          {(s.events?.length ?? 0) > 1 && (
+          {!embedded && <h2>Resultados</h2>}
+          {!embedded && (s.events?.length ?? 0) > 1 && (
             <div className="event-tabs" role="tablist" aria-label="Eventos">
               {s.events!.map((e) => (
                 <button
@@ -514,7 +525,7 @@ export function TournamentSummaryBlock({ id }: { id: string }) {
               ))}
             </div>
           )}
-          {s.main === false && (
+          {s.main === false && !embedded && (
             <p className="seeding-lead">
               Evento secundario: no cuenta para el ranking ni para títulos y
               podios.
@@ -570,7 +581,7 @@ export function TournamentSummaryBlock({ id }: { id: string }) {
               </ul>
             </>
           )}
-          <EventBracket eventId={s.event_id} />
+          {!embedded && <EventBracket eventId={s.event_id} />}
         </section>
       )}
     </Resource>

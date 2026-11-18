@@ -320,7 +320,7 @@ function SetCard({
             <Prefix prefix={side.prefix} />
             {side.tag ?? "—"}
           </span>
-          <Icons characters={side.characters} />
+          <CharacterIcons characters={side.characters} />
           <b>{dq && !side.winner ? "DQ" : (side.score ?? "")}</b>
         </span>
       ))}
@@ -328,7 +328,7 @@ function SetCard({
   );
 }
 
-function Icons({
+export function CharacterIcons({
   characters,
   size = 18,
 }: {
@@ -355,7 +355,14 @@ function Icons({
   );
 }
 
-function SetDetail({ set }: { set: BracketSet }) {
+export function SetDetail({
+  set,
+  heading = true,
+}: {
+  set: BracketSet;
+  /** False where the players and score are already shown above. */
+  heading?: boolean;
+}) {
   const [a, b] = set.sides;
   // Big brackets push the detail far below the card that opened it.
   const box = useRef<HTMLElement>(null);
@@ -372,10 +379,16 @@ function SetDetail({ set }: { set: BracketSet }) {
     : null;
   return (
     <section ref={box} className="bracket-detail" aria-label="Detalle del set">
-      <h3>
-        <Player side={a} /> {a.score ?? "–"} – {b.score ?? "–"}{" "}
-        <Player side={b} />
-      </h3>
+      {heading ? (
+        <h3>
+          <Player side={a} /> {a.score ?? "–"} – {b.score ?? "–"}{" "}
+          <Player side={b} />
+        </h3>
+      ) : (
+        <p className="set-players">
+          <Player side={a} /> · <Player side={b} />
+        </p>
+      )}
       <p className="seeding-lead">
         {set.status === "projected"
           ? "Cruce proyectado según el seeding publicado."
@@ -394,9 +407,9 @@ function SetDetail({ set }: { set: BracketSet }) {
           {set.games.map((g) => (
             <li key={g.number}>
               <span>Partida {g.number}</span>
-              <Icons characters={[g.characters[0]]} size={26} />
+              <CharacterIcons characters={[g.characters[0]]} size={26} />
               <span>contra</span>
-              <Icons characters={[g.characters[1]]} size={26} />
+              <CharacterIcons characters={[g.characters[1]]} size={26} />
               <small>
                 {g.winner ? `gana ${set.sides[g.winner - 1].tag}` : ""}
               </small>

@@ -63,12 +63,37 @@ it("shows tournament dates, game, participants and entrants separately", async (
   ).toBeInTheDocument();
 });
 it("shows tournament detail and access to event results", async () => {
-  mock((url) => (url.includes("/events?") ? page([event]) : tournament));
-  render(<TournamentPage id="t1" />);
-  expect(await screen.findByRole("link", { name: /Dobles/ })).toHaveAttribute(
-    "href",
-    "/events/e1",
+  mock((url) =>
+    url.includes("/events?")
+      ? page([event])
+      : url.includes("/entrants?")
+        ? page([
+            {
+              id: "en",
+              name: "Equipo A",
+              seed: 1,
+              placement: 1,
+              members: [
+                { player_id: "p1", tag: "Ana" },
+                { player_id: "p2", tag: "Luis" },
+              ],
+            },
+          ])
+        : tournament,
   );
+  render(<TournamentPage id="t1" />);
+  expect(
+    await screen.findByRole("heading", { name: "Dobles" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("link", { name: "Página del evento" }),
+  ).toHaveAttribute("href", "/events/e1");
+  // A team event's summary: final placements with each member.
+  expect(await screen.findByRole("link", { name: "Ana" })).toHaveAttribute(
+    "href",
+    "/players/p1",
+  );
+  expect(screen.getByRole("tab", { name: "Sets" })).toBeInTheDocument();
   expect(screen.getByText(/Fuente: start.gg/)).toBeInTheDocument();
 });
 it("shows individual doubles members, placements, pending, DQ and missing scores", async () => {

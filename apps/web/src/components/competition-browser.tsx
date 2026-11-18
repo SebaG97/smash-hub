@@ -4,19 +4,19 @@ import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { PlayerMatchups } from "./characters";
 import { ImportPanel } from "./import-panel";
-import { PlayerAchievements, TournamentSummaryBlock } from "./insights";
+import { PlayerAchievements } from "./insights";
 import { PlayerProdeAchievements } from "./prode";
 import { characterColor, characterIcon } from "../lib/characters";
 import {
   CostumePicker,
   MainIcons,
-  MainEventFlag,
   RankingFlag,
   SeedingFlag,
   WinBar,
   mainColor,
 } from "./mains";
 import { PlayerStatistics } from "./player-statistics";
+import { TournamentEvents } from "./tournament-events";
 import { Prefix } from "./prefix";
 import {
   TournamentBanner,
@@ -65,9 +65,12 @@ export function Resource<T>({
   children,
   optional = false,
   timeout = 12000,
+  notFound,
 }: {
   path: string;
   children: (data: T) => ReactNode;
+  /** Shown instead of the error when the API answers 404. */
+  notFound?: ReactNode;
   /** Extra blocks: render nothing while loading or when the data is missing. */
   optional?: boolean;
   /** Milliseconds before giving up; slow start.gg answers need more than the default. */
@@ -114,6 +117,12 @@ export function Resource<T>({
       clearTimeout(timer);
     };
   }, [path, retry, timeout]);
+  if (
+    notFound !== undefined &&
+    state.path === path &&
+    state.error === "No se encontró este registro."
+  )
+    return <>{notFound}</>;
   if (optional && (state.path !== path || state.loading || state.error))
     return null;
   if (state.path !== path || state.loading)
@@ -245,60 +254,59 @@ export function Tournaments() {
     </div>
   );
 }
-function EventCard(e: Event) {
-  return (
-    <>
-      <h3>
-        <Link href={`/events/${e.id}`}>{e.name}</Link>
-      </h3>
-      <p>
-        {e.game} ·{" "}
-        {e.team_size === 1 ? "Individual" : `Equipos de ${e.team_size}`}
-      </p>
-      <p>
-        {e.entrant_count} entrants · {status(e.status)}
-      </p>
-      <MainEventFlag event={e} />
-    </>
-  );
-}
 export function TournamentPage({ id }: { id: string }) {
   return (
     <div className="competition-page">
-      <Link href="/tournaments">← Torneos</Link>
+      <Link className="back-link" href="/tournaments">
+        ← Torneos
+      </Link>
       <Resource<Tournament> path={`tournaments/${id}`}>
         {(t) => (
           <>
             <TournamentBanner images={t.images} name={t.name} />
-            <h1 className="tournament-title">
-              {!t.images?.banner && (
-                <TournamentLogo images={t.images} size={64} />
-              )}
-              {t.name}
-            </h1>
-            <p>
-              {date(t.starts_at)} · {status(t.status)}
-            </p>
-            <p>
-              {[t.location?.city, t.location?.country_code]
-                .filter(Boolean)
-                .join(", ")}
-            </p>
-            <p>
-              {t.participant_count} participantes · {t.entrant_count}{" "}
-              inscripciones a eventos
-            </p>
-            <p>Fuente: {t.source || "No disponible"}</p>
+            <header className="tournament-head">
+              <h1 className="tournament-title">
+                {!t.images?.banner && (
+                  <TournamentLogo images={t.images} size={64} />
+                )}
+                {t.name}
+              </h1>
+              <p className="seeding-lead">
+                {[
+                  date(t.starts_at),
+                  [t.location?.city, t.location?.country_code]
+                    .filter(Boolean)
+                    .join(", "),
+                  status(t.status),
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+              <dl className="player-strip">
+                <div>
+                  <dt>Jugadores</dt>
+                  <dd>{t.participant_count}</dd>
+                </div>
+                <div>
+                  <dt>Inscripciones a eventos</dt>
+                  <dd>{t.entrant_count}</dd>
+                </div>
+                {t.games.length > 0 && (
+                  <div>
+                    <dt>{t.games.length === 1 ? "Juego" : "Juegos"}</dt>
+                    <dd className="strip-text">{t.games.join(", ")}</dd>
+                  </div>
+                )}
+              </dl>
+            </header>
             <SeedingFlag
               tournamentId={id}
               initial={t.seeding_reliable !== false}
             />
-            <TournamentSummaryBlock id={id} />
-            <Collection<Event>
-              title="Eventos y resultados"
-              path={`tournaments/${id}/events`}
-              render={EventCard}
-            />
+            <TournamentEvents id={id} reliable={t.seeding_reliable !== false} />
+            <p className="seeding-lead">
+              Fuente: {t.source || "No disponible"}
+            </p>
           </>
         )}
       </Resource>

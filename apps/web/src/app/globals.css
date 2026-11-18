@@ -3254,3 +3254,241 @@ body {
     padding: 12px;
   }
 }
+
+/* ---------------------------------------------------------------- tournament events
+ * One tab per event, and in it summary, sets (round by round), bracket and players.
+ */
+.tournament-head h1 {
+  margin-bottom: 4px;
+}
+.tournament-events {
+  margin-top: 28px;
+}
+.event-head h2 {
+  margin: 6px 0 2px;
+}
+.event-head p {
+  margin: 0;
+}
+.tournament-events .tournament-summary {
+  margin-top: 12px;
+}
+
+.set-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 20px;
+  margin: 16px 0 4px;
+}
+.set-filters .search-label {
+  margin: 0;
+}
+.set-filters .search-label input {
+  min-width: 0;
+  width: 220px;
+}
+.set-filters label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.segmented button {
+  padding: 6px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--ash);
+  font: inherit;
+  cursor: pointer;
+}
+.segmented button + button {
+  border-left: 1px solid var(--line);
+}
+.segmented button[aria-pressed="true"] {
+  background: var(--slab);
+  color: var(--bone);
+  box-shadow: inset 0 -2px 0 var(--fire);
+}
+.check-label input {
+  accent-color: var(--fire);
+}
+
+.set-round {
+  margin-top: 22px;
+}
+.set-round h3 {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 6px;
+  font-family: var(--display);
+  font-size: 1.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.set-round h3 small {
+  font-family: var(--text);
+  font-size: 0.8rem;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--ash);
+  font-weight: 400;
+}
+.set-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.set-line {
+  border-bottom: 1px solid var(--line);
+  border-left: 4px solid var(--main, var(--line));
+}
+.set-line.open {
+  background: color-mix(in srgb, var(--main, var(--slab)) 10%, var(--concrete));
+}
+.set-line > button {
+  display: grid;
+  /* Fixed tag column: the score stays aligned whether a set has tags or not. */
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) 84px;
+  grid-template-areas: "a score b tags";
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--bone);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.set-line > button:hover {
+  background: color-mix(in srgb, var(--slab) 70%, transparent);
+}
+.set-side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--ash);
+}
+.set-side:first-child {
+  grid-area: a;
+}
+.set-side.mirror {
+  grid-area: b;
+  flex-direction: row-reverse;
+  text-align: right;
+}
+.set-side.won {
+  color: var(--bone);
+  font-weight: 700;
+}
+.set-seed {
+  min-width: 2ch;
+  color: var(--ash);
+  font-size: 0.75rem;
+  font-weight: 400;
+  text-align: center;
+}
+.set-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.set-score {
+  grid-area: score;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--display);
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--ash);
+}
+.set-score b {
+  min-width: 1.2ch;
+  text-align: center;
+}
+.set-score b.won {
+  color: var(--bone);
+}
+.set-tags {
+  grid-area: tags;
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  min-width: 0;
+}
+.tag-upset,
+.tag-state {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+.tag-upset {
+  background: var(--fire);
+  color: var(--on-fire);
+  font-weight: 700;
+}
+.tag-state {
+  border: 1px solid var(--line);
+  color: var(--ash);
+}
+.set-line.upset .set-side.won .set-name::after {
+  content: " ↑";
+  color: var(--fire);
+}
+.set-open {
+  padding: 0 12px 12px 16px;
+}
+.set-open .bracket-detail {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.set-players {
+  margin: 0 0 6px;
+}
+
+/* Phones: each player on its own line, the score on the right. */
+@media (max-width: 560px) {
+  .set-line > button {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "a score"
+      "b score"
+      "tags tags";
+    row-gap: 6px;
+  }
+  .set-side.mirror {
+    flex-direction: row;
+    text-align: left;
+  }
+  .set-score {
+    flex-direction: column;
+    gap: 6px;
+    font-size: 1.15rem;
+  }
+  .set-score > span {
+    display: none;
+  }
+  .set-tags {
+    justify-content: flex-start;
+  }
+  .set-tags:empty {
+    display: none;
+  }
+  .set-filters .search-label input {
+    min-width: 0;
+    width: 100%;
+  }
+}
