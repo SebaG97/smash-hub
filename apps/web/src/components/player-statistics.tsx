@@ -5,9 +5,9 @@ import { useState } from "react";
 import { Collection, Resource } from "./competition-browser";
 import { MainIcons, WinBar } from "./mains";
 import { PlayerCharts } from "./player-charts";
+import { RecentResults, ResultGroups } from "./recent-results";
 import type {
   Breakdown,
-  CompetitiveMatch,
   FrequentOpponent,
   HeadToHead,
   PlayerDetail,
@@ -84,38 +84,6 @@ function query(scope: string, from: string, to: string) {
   if (from) values.set("date_from", new Date(from).toISOString());
   if (to) values.set("date_to", new Date(to).toISOString());
   return values.toString();
-}
-
-export function CompetitiveMatchCard({ match }: { match: CompetitiveMatch }) {
-  return (
-    <>
-      <h3>
-        {match.result === "W" ? "Victoria" : "Derrota"} ·{" "}
-        {match.opponents.map((p) => p.tag).join(" / ")}
-      </h3>
-      <p>
-        {match.score === null || match.opponent_score === null
-          ? "Puntuación no disponible"
-          : `${match.score} – ${match.opponent_score}`}{" "}
-        · {match.round_label || "Ronda no disponible"}
-      </p>
-      <p>
-        <Link href={`/tournaments/${match.tournament_id}`}>
-          {match.tournament_name}
-        </Link>{" "}
-        · {date(match.completed_at)}
-      </p>
-      <p>
-        <Link href={`/events/${match.event_id}`}>{match.event_name}</Link> · Set
-        elegible
-      </p>
-      {match.source_url && (
-        <a href={match.source_url} target="_blank" rel="noreferrer">
-          Fuente: {match.source || "Origen"}
-        </a>
-      )}
-    </>
-  );
 }
 
 export function PlayerStatistics({
@@ -205,11 +173,10 @@ export function PlayerStatistics({
             />
           )}
           {section !== "rivals" && (
-            <Collection<CompetitiveMatch>
+            <RecentResults
               key={`matches-${filters}`}
-              title="Últimos resultados"
-              path={`players/${id}/matches?${filters}`}
-              render={(match) => <CompetitiveMatchCard match={match} />}
+              id={id}
+              filters={filters}
             />
           )}
         </>
@@ -354,13 +321,12 @@ function Comparison({
               ) : (
                 <>
                   <h2>Historial de enfrentamientos</h2>
-                  <div className="data-grid">
-                    {h.history.items.map((match) => (
-                      <article className="data-card" key={match.id}>
-                        <CompetitiveMatchCard match={match} />
-                      </article>
-                    ))}
-                  </div>
+                  <ResultGroups
+                    matches={h.history.items}
+                    playerId={h.player_a.id}
+                    filters={filters}
+                    h2h={false}
+                  />
                   <div className="pagination">
                     <button
                       disabled={page === 1}

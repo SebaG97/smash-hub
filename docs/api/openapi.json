@@ -10972,6 +10972,31 @@
         ],
         "title": "CharacterRecordView"
       },
+      "CharacterRef": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "icon": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "icon"
+        ],
+        "title": "CharacterRef"
+      },
       "CostumeBody": {
         "properties": {
           "character": {
@@ -11962,6 +11987,49 @@
               }
             ],
             "title": "Source Url"
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed"
+          },
+          "opponent_seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opponent Seed"
+          },
+          "upset": {
+            "type": "boolean",
+            "title": "Upset",
+            "default": false
+          },
+          "characters": {
+            "items": {
+              "$ref": "#/components/schemas/CharacterRef"
+            },
+            "type": "array",
+            "title": "Characters",
+            "default": []
+          },
+          "opponent_characters": {
+            "items": {
+              "$ref": "#/components/schemas/CharacterRef"
+            },
+            "type": "array",
+            "title": "Opponent Characters",
+            "default": []
           }
         },
         "type": "object",

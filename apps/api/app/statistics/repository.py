@@ -138,6 +138,7 @@ def perspective(universe, player_id, opponent_id=None):
         c.eligibility_reason,
         c.source,
         case((is_a, c.players_b), else_=c.players_a).label("opponent_ids"),
+        case((is_a, c.entrant_a), else_=c.entrant_b).label("entrant_id"),
         case((is_a, c.entrant_b), else_=c.entrant_a).label("opponent_entrant_id"),
         case((is_a, c.a_won), else_=~c.a_won).label("won"),
         case((is_a, c.score_a), else_=c.score_b).label("score"),

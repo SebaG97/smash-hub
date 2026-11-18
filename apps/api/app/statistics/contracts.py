@@ -28,6 +28,11 @@ class ListingFilters(Filters):
     page_size: int = Field(20, ge=1, le=100)
 
 
+class CharacterRef(BaseModel):
+    name: str
+    icon: str | None
+
+
 class MatchView(BaseModel):
     id: UUID
     tournament_id: UUID
@@ -46,6 +51,13 @@ class MatchView(BaseModel):
     eligibility_reason: str
     source: str | None
     source_url: str | None
+    seed: int | None = None
+    opponent_seed: int | None = None
+    # The lower seed won, by start.gg's tiers; never marked when the seeds were unreliable.
+    upset: bool = False
+    # Characters each side picked in this set, in order of first use.
+    characters: list[CharacterRef] = []
+    opponent_characters: list[CharacterRef] = []
 
 
 class PlacementView(BaseModel):

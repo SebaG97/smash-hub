@@ -132,6 +132,8 @@ def test_history_excludes_administrative_and_keeps_scoreless_winner(competition)
     assert scoreless["result"] == "W" and scoreless["stats_eligible"] is True
     assert all(r["opponents"][0]["id"] == competition["b"] for r in rows)
     assert all(r["source_url"] == "https://www.start.gg/tournament/fixture-open" for r in rows)
+    assert all(r["seed"] is not None or r["opponent_seed"] is None for r in rows)
+    assert all(isinstance(r["characters"], list) and r["upset"] in (True, False) for r in rows)
     assert rows[-1]["completed_at"] is None
 
 
@@ -325,7 +327,8 @@ def test_no_n_plus_one(competition):
         small = len(statements)
         statements.clear()
         assert get(competition, "matches", page_size=100).status_code == 200
-        assert len(statements) == small <= 6
+        # Seeds, seed reliability and characters: three more queries, never one per set.
+        assert len(statements) == small <= 9
     finally:
         event.remove(competition["db"], "before_cursor_execute", record)
 

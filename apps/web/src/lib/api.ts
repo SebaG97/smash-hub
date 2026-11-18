@@ -134,6 +134,11 @@ export type CompetitiveMatch = {
   stats_eligible: true;
   source: string | null;
   source_url: string | null;
+  seed?: number | null;
+  opponent_seed?: number | null;
+  upset?: boolean;
+  characters?: { name: string; icon: string | null }[];
+  opponent_characters?: { name: string; icon: string | null }[];
 };
 export type WinLoss = { wins: number; losses: number };
 /** Data for the charts of the statistics tab (GET players/{id}/breakdown). */

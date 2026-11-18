@@ -1,4 +1,4 @@
-from sqlalchemy import func, select
+from sqlalchemy import select
 
 from app.competitions.router import visible_players
 from app.integrations.startgg.client import ImportFailure, parse_slug
@@ -43,8 +43,34 @@ def listing(items, total, filters):
 
 
 def match_views(session, rows):
+    from app.competitions.models import EventEntrant, SetSelection, Tournament
+    from app.games.models import Character
+    from app.insights.engine import upset_factor
+
     ids = {id for row in rows for id in row["opponent_ids"]}
     tags = dict(session.execute(select(Player.id, Player.tag).where(Player.id.in_(ids))).all())
+    entrants = {row["entrant_id"] for row in rows} | {row["opponent_entrant_id"] for row in rows}
+    seeds = dict(
+        session.execute(
+            select(EventEntrant.id, EventEntrant.seed).where(EventEntrant.id.in_(entrants))
+        ).all()
+    )
+    reliable = dict(
+        session.execute(
+            select(Tournament.id, Tournament.seeding_reliable).where(
+                Tournament.id.in_({row["tournament_id"] for row in rows})
+            )
+        ).all()
+    )
+    picks = {}
+    for set_id, entrant_id, name, icon in session.execute(
+        select(SetSelection.set_id, SetSelection.entrant_id, Character.name, Character.image_url)
+        .join(Character, Character.id == SetSelection.character_id)
+        .where(SetSelection.set_id.in_([row["id"] for row in rows]))
+        .order_by(SetSelection.game_number)
+    ):
+        chosen = picks.setdefault((set_id, entrant_id), {})
+        chosen.setdefault(name, {"name": name, "icon": icon})
     result = []
     for row in rows:
         source_url = None
@@ -53,54 +79,37 @@ def match_views(session, rows):
                 source_url = "https://www.start.gg/tournament/" + parse_slug(row["tournament_slug"])
             except ImportFailure:
                 pass
+        seed, opponent_seed = seeds.get(row["entrant_id"]), seeds.get(row["opponent_entrant_id"])
+        winner, loser = (seed, opponent_seed) if row["won"] else (opponent_seed, seed)
         result.append(
             {
                 **{
                     k: v
                     for k, v in row.items()
-                    if k not in {"opponent_ids", "opponent_entrant_id", "won", "tournament_slug"}
+                    if k
+                    not in {
+                        "opponent_ids",
+                        "opponent_entrant_id",
+                        "entrant_id",
+                        "won",
+                        "tournament_slug",
+                    }
                 },
                 "result": "W" if row["won"] else "L",
                 "opponents": [{"id": id, "tag": tags[id]} for id in sorted(row["opponent_ids"])],
                 "source_url": source_url,
+                "seed": seed,
+                "opponent_seed": opponent_seed,
+                "upset": bool(
+                    reliable.get(row["tournament_id"], True) and upset_factor(winner, loser)
+                ),
+                "characters": list(picks.get((row["id"], row["entrant_id"]), {}).values()),
+                "opponent_characters": list(
+                    picks.get((row["id"], row["opponent_entrant_id"]), {}).values()
+                ),
             }
         )
     return result
-
-
-def statistics(session, id, filters):
-    identity = player(session, id)
-    matches = repo.perspective(repo.eligible_sets(session, filters), id)
-    result = dict(repo.summary(session, matches))
-    latest = (
-        session.execute(
-            repo.ordered_matches(matches).where(matches.c.completed_at.is_not(None)).limit(1)
-        )
-        .mappings()
-        .first()
-    )
-    registrations = repo.registrations(filters, id).subquery()
-    tournaments_registered = session.scalar(
-        select(func.count(func.distinct(registrations.c.tournament_id)))
-    )
-    best = session.scalar(
-        select(func.min(registrations.c.placement)).where(registrations.c.placement > 0)
-    )
-    unique = session.scalar(
-        select(func.count()).select_from(repo.opponents(matches).order_by(None).subquery())
-    )
-    return {
-        **result,
-        "player": identity,
-        "filters": metadata(filters),
-        "win_rate": percentage(result["wins"], result["sets_played"]),
-        "tournaments_registered": tournaments_registered,
-        "latest_tournament": {"id": latest["tournament_id"], "name": latest["tournament_name"]}
-        if latest
-        else None,
-        "best_final_placement": best,
-        "unique_opponents": unique,
-    }
 
 
 def ranking_places(session):

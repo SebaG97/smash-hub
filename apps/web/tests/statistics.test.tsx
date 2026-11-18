@@ -1,6 +1,12 @@
 import React from "react";
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import {
   HeadToHeadPage,
   PlayerStatistics,
@@ -103,6 +109,7 @@ const breakdown = {
 };
 const match = {
   id: "set",
+  upset: false,
   tournament_id: "t",
   tournament_name: "Open",
   event_id: "e",
@@ -171,9 +178,16 @@ it("integrates API statistics into the existing profile and links comparisons", 
   expect(screen.getByText("4.º")).toBeInTheDocument();
   expect(screen.getByText("superó al 90 %")).toBeInTheDocument();
   expect(screen.getByText("Mario")).toBeInTheDocument();
+  const results = await screen.findByRole("region", { name: "Open" });
+  expect(within(results).getByText("Ganó")).toBeInTheDocument();
+  expect(within(results).getByText("Final")).toBeInTheDocument();
+  expect(within(results).getByRole("link", { name: "Beta" })).toHaveAttribute(
+    "href",
+    "/players/b",
+  );
   expect(
-    await screen.findByText("Puntuación no disponible · Final"),
-  ).toBeInTheDocument();
+    within(results).getByRole("link", { name: "Head-to-Head con Beta" }),
+  ).toHaveAttribute("href", "/players/a/vs/b?game_id=game&mode=singles");
   fireEvent.click(screen.getByRole("tab", { name: "Rivales" }));
   expect(
     await screen.findByRole("link", { name: /ver Head-to-Head/i }),
@@ -328,4 +342,43 @@ it("handles comparison errors and retries", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Reintentar" }));
   expect(await screen.findByRole("alert")).toBeInTheDocument();
   expect(fetch).toHaveBeenCalledTimes(2);
+});
+
+it("groups the latest sets by tournament with characters, score and surprises", async () => {
+  const set = (
+    id: string,
+    result: "W" | "L",
+    score: number,
+    other: number,
+  ) => ({
+    ...match,
+    id,
+    result,
+    score,
+    opponent_score: other,
+    completed_at: "2026-11-14T20:00:00Z",
+    upset: id === "s1",
+    opponent_seed: 2,
+    characters: [{ name: "Joker", icon: null }],
+    opponent_characters: [{ name: "Sonic", icon: null }],
+  });
+  mock((url) =>
+    url.includes("/matches?")
+      ? { ...page([set("s1", "W", 2, 1), set("s2", "L", 0, 2)]), total: 30 }
+      : url.includes("/statistics?")
+        ? { ...stats, sets_played: 0 }
+        : page([]),
+  );
+  render(<PlayerStatistics id="a" scopes={scopes} section="stats" />);
+  const group = await screen.findByRole("region", { name: "Open" });
+  expect(
+    within(group).getByTitle("1 ganados y 1 perdidos en este evento"),
+  ).toHaveTextContent("1–1");
+  expect(within(group).getByText("2–1")).toBeInTheDocument();
+  expect(within(group).getByText("Sorpresa")).toBeInTheDocument();
+  expect(within(group).getAllByAltText("Joker")).toHaveLength(2);
+  expect(screen.getByText(/2 de 30 sets/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Ver más" }));
+  await screen.findByRole("region", { name: "Open" });
+  expect(vi.mocked(fetch).mock.calls.at(-1)?.[0]).toContain("page_size=40");
 });
