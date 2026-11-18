@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.competitions.router import visible_players
 from app.integrations.startgg.client import ImportFailure, parse_slug
@@ -110,6 +110,41 @@ def match_views(session, rows):
             }
         )
     return result
+
+
+def statistics(session, id, filters):
+    identity = player(session, id)
+    matches = repo.perspective(repo.eligible_sets(session, filters), id)
+    result = dict(repo.summary(session, matches))
+    latest = (
+        session.execute(
+            repo.ordered_matches(matches).where(matches.c.completed_at.is_not(None)).limit(1)
+        )
+        .mappings()
+        .first()
+    )
+    registrations = repo.registrations(filters, id).subquery()
+    tournaments_registered = session.scalar(
+        select(func.count(func.distinct(registrations.c.tournament_id)))
+    )
+    best = session.scalar(
+        select(func.min(registrations.c.placement)).where(registrations.c.placement > 0)
+    )
+    unique = session.scalar(
+        select(func.count()).select_from(repo.opponents(matches).order_by(None).subquery())
+    )
+    return {
+        **result,
+        "player": identity,
+        "filters": metadata(filters),
+        "win_rate": percentage(result["wins"], result["sets_played"]),
+        "tournaments_registered": tournaments_registered,
+        "latest_tournament": {"id": latest["tournament_id"], "name": latest["tournament_name"]}
+        if latest
+        else None,
+        "best_final_placement": best,
+        "unique_opponents": unique,
+    }
 
 
 def ranking_places(session):
