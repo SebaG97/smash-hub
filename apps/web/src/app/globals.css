@@ -3900,3 +3900,200 @@ body {
     grid-area: value;
   }
 }
+
+/* ---------------------------------------------------------------- event standings */
+.event-standings {
+  margin-top: 16px;
+}
+.podium {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: 12px;
+  margin: 0 0 24px;
+  padding: 0;
+  list-style: none;
+}
+.podium li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 18px 10px 16px;
+  background: color-mix(in srgb, var(--main) 14%, var(--slab));
+  border-top: 4px solid var(--main);
+  text-align: center;
+  min-width: 0;
+}
+.podium .podium-1 {
+  padding-top: 30px;
+  padding-bottom: 28px;
+}
+.podium .place {
+  font-size: 2.6rem;
+}
+.podium .podium-1 .place {
+  font-size: 3.6rem;
+  color: var(--gold);
+}
+.podium .standing-name {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 1.35rem;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.podium .podium-1 .standing-name {
+  font-size: 1.7rem;
+}
+.podium small {
+  color: var(--ash);
+  font-size: 0.8rem;
+}
+.standing-name a {
+  color: var(--bone);
+  text-decoration: none;
+}
+.standing-name a:hover {
+  color: var(--fire);
+}
+.standing-group h3 {
+  margin: 18px 0 4px;
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: var(--ash);
+}
+.standing-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.standing-row {
+  display: grid;
+  grid-template-columns: 3.2rem 4.4rem minmax(0, 1.2fr) 2.8rem 4.6rem minmax(
+      0,
+      2fr
+    );
+  gap: 12px;
+  align-items: center;
+  padding: 8px 10px 8px 0;
+  border-bottom: 1px solid var(--line);
+  border-left: 3px solid var(--main);
+}
+.standing-row .place {
+  font-size: 1.7rem;
+  text-align: center;
+}
+.standing-icons {
+  display: flex;
+  justify-content: flex-end;
+}
+.standing-who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.standing-who .standing-name {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.standing-who small,
+.standing-record small {
+  font-size: 0.75rem;
+  color: var(--ash);
+}
+.standing-record {
+  display: flex;
+  flex-direction: column;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.standing-record strong {
+  font-family: var(--display);
+  font-size: 1.2rem;
+}
+.standing-story {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.85rem;
+  min-width: 0;
+}
+.standing-story a {
+  color: var(--bone);
+}
+.story-label {
+  color: var(--ash);
+  font-size: 0.75rem;
+}
+.story-champion {
+  font-family: var(--display);
+  font-weight: 800;
+  color: var(--gold);
+  font-size: 1.05rem;
+}
+.standing-story .tag-upset {
+  margin-left: 6px;
+}
+.perf {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 1.1rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.perf-up {
+  color: var(--win);
+}
+.perf-down {
+  color: var(--loss);
+}
+.perf-even,
+.perf-none {
+  color: var(--ash);
+}
+
+@media (max-width: 720px) {
+  .standing-row {
+    grid-template-columns: 2.6rem minmax(0, 1fr) 2.4rem 4.6rem;
+    grid-template-areas:
+      "place who perf record"
+      "place story story story";
+    row-gap: 4px;
+  }
+  .standing-row .place {
+    grid-area: place;
+    font-size: 1.5rem;
+  }
+  .standing-icons {
+    display: none;
+  }
+  .standing-who {
+    grid-area: who;
+  }
+  .standing-row .perf {
+    grid-area: perf;
+  }
+  .standing-record {
+    grid-area: record;
+  }
+  .standing-story {
+    grid-area: story;
+  }
+}
+@media (max-width: 480px) {
+  .podium {
+    gap: 6px;
+  }
+  .podium li {
+    padding: 12px 4px;
+  }
+  .podium .standing-name {
+    font-size: 1.05rem;
+  }
+  .podium .podium-1 .standing-name {
+    font-size: 1.2rem;
+  }
+}

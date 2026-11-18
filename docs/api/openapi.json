@@ -5994,6 +5994,48 @@
         }
       }
     },
+    "/api/v1/events/{id}/standings": {
+      "get": {
+        "tags": [
+          "brackets"
+        ],
+        "summary": "Standings",
+        "description": "Every entrant of a published event by final placement, with record, who knocked\nthem out, best win, seed performance and characters.",
+        "operationId": "standings_api_v1_events__id__standings_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/seeding/{slug}/bracket": {
       "get": {
         "tags": [

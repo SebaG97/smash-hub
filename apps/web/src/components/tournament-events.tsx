@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useState } from "react";
 import type { Entrant, Event, Page } from "../lib/api";
 import { BracketView, type Bracket } from "./bracket";
-import { Collection, Resource } from "./competition-browser";
+import { Resource } from "./competition-browser";
+import { EventStandings } from "./event-standings";
 import { EventSets } from "./event-sets";
 import { TournamentSummaryBlock } from "./insights";
 import { MainEventFlag } from "./mains";
@@ -15,7 +16,7 @@ const VIEWS = [
   ["resumen", "Resumen"],
   ["sets", "Sets"],
   ["bracket", "Bracket"],
-  ["participantes", "Participantes"],
+  ["posiciones", "Posiciones"],
 ] as const;
 type View = (typeof VIEWS)[number][0];
 
@@ -92,7 +93,9 @@ export function EventTabs({
     return events.some((e) => e.id === wanted) ? wanted! : events[0].id;
   });
   const [view, setView] = useState<View>(() => {
-    const wanted = readUrl().view;
+    // Old links to the players list open the standings that replaced it.
+    const raw = readUrl().view;
+    const wanted = raw === "participantes" ? "posiciones" : raw;
     return VIEWS.some(([key]) => key === wanted) ? (wanted as View) : "resumen";
   });
   const current = events.find((e) => e.id === event) ?? events[0];
@@ -167,8 +170,8 @@ export function EventTabs({
         {view === "bracket" && (
           <BracketOrNotice key={current.id} eventId={current.id} />
         )}
-        {view === "participantes" && (
-          <Entrants key={current.id} event={current} />
+        {view === "posiciones" && (
+          <EventStandings key={current.id} eventId={current.id} />
         )}
       </div>
     </section>
@@ -251,43 +254,5 @@ function BracketOrNotice({ eventId }: { eventId: string }) {
     >
       {(b) => <BracketView bracket={b} />}
     </Resource>
-  );
-}
-
-function Entrants({ event }: { event: Event }) {
-  return (
-    <Collection<Entrant>
-      title={event.team_size === 1 ? "Jugadores" : "Equipos"}
-      path={`events/${event.id}/entrants`}
-      search
-      render={(entrant) => (
-        <>
-          <h3>
-            {entrant.members.length === 1 ? (
-              <Link href={`/players/${entrant.members[0].player_id}`}>
-                {entrant.name}
-              </Link>
-            ) : (
-              entrant.name
-            )}
-          </h3>
-          <p>
-            {entrant.placement
-              ? `Terminó ${entrant.placement}.º`
-              : "Sin posición final"}
-            {entrant.seed ? ` · seed ${entrant.seed}` : ""}
-          </p>
-          {entrant.members.length > 1 && (
-            <ul>
-              {entrant.members.map((m) => (
-                <li key={m.player_id}>
-                  <Link href={`/players/${m.player_id}`}>{m.tag}</Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </>
-      )}
-    />
   );
 }

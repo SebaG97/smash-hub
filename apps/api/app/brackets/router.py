@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.brackets import service
+from app.brackets.standings import event_standings
 from app.competitions.models import Event
 from app.core.admin import Admin
 from app.insights import preview
@@ -58,6 +59,17 @@ def bracket(request: Request, id: UUID):
         result = service.event_bracket(s, id)
         if result is None:
             raise HTTPException(404, "Bracket not found")
+        return result
+
+
+@router.get("/events/{id}/standings")
+def standings(request: Request, id: UUID):
+    """Every entrant of a published event by final placement, with record, who knocked
+    them out, best win, seed performance and characters."""
+    with Session(request.app.state.engine) as s:
+        result = event_standings(s, id)
+        if result is None:
+            raise HTTPException(404, "Event not found")
         return result
 
 
