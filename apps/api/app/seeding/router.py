@@ -43,6 +43,9 @@ class RecalculateRequest(BaseModel):
     parameters: Parameters | None = None
     # Shortcut: keep the current parameters and only change the official method.
     method: Method | None = None
+    # Shortcut: keep the current parameters and only change the margin for few data
+    # (rating - k*RD), which every Glicko-2 based method sorts by.
+    conservative_k: float | None = Field(default=None, ge=0, le=4)
     # Also drop manual moves, so every player goes back to the calculated place.
     reset_overrides: bool = False
 
@@ -279,6 +282,7 @@ def recalculate(
             window_end=body.window_end,
             parameters=body.parameters,
             method=body.method,
+            conservative_k=body.conservative_k,
         )
         return {"status": "recalculated"}
 

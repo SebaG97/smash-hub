@@ -12543,6 +12543,19 @@
             ],
             "title": "Method"
           },
+          "conservative_k": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 4.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conservative K"
+          },
           "reset_overrides": {
             "type": "boolean",
             "title": "Reset Overrides",

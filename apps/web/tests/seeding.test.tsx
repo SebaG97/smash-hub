@@ -336,6 +336,79 @@ describe("seeding board", () => {
     expect(screen.getByRole("button", { name: "Cid" })).toBeInTheDocument();
   });
 
+  it("previews a smaller margin for few data and applies it", async () => {
+    // Ace: many sets (small RD). Bee: few sets, higher level, big RD.
+    const ranking: SeedingView = {
+      ...view,
+      kind: "ranking",
+      name: "Ranking Paraguay",
+      method: "glicko2",
+      methods: [{ id: "glicko2", label: "Glicko-2", description: "Glicko" }],
+      run: { ...view.run!, parameters: { conservative_k: 2 } },
+      seeds: [
+        row(1, "Ace", {
+          rating: 1971,
+          rd: 62,
+          scores: { glicko2: 1847 },
+          ranks: { glicko2: 1 },
+        }),
+        row(2, "Bee", {
+          rating: 1799,
+          rd: 138,
+          scores: { glicko2: 1523 },
+          ranks: { glicko2: 2 },
+        }),
+        row(3, "Cid", {
+          rating: 1700,
+          rd: 60,
+          scores: { glicko2: 1580 },
+          ranks: { glicko2: 3 },
+        }),
+      ],
+    };
+    const calls: { url: string; init?: RequestInit }[] = [];
+    signIn();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string, init?: RequestInit) => {
+        calls.push({ url, init });
+        return Promise.resolve(
+          new Response(
+            JSON.stringify(
+              init?.method === "POST" ? { status: "recalculated" } : ranking,
+            ),
+          ),
+        );
+      }),
+    );
+    render(<SeedingBoard slug="rk" base="rankings" />);
+    await screen.findByRole("heading", { name: "Ranking Paraguay" });
+    const order = () =>
+      screen
+        .getAllByRole("button", { name: /^(Ace|Bee|Cid)$/ })
+        .map((b) => b.textContent);
+    expect(screen.queryByText(/Vista previa/)).toBeNull();
+    fireEvent.change(screen.getByLabelText("Margen por pocos datos"), {
+      target: { value: "1" },
+    });
+    // 1971-62 = 1909, 1799-138 = 1661, 1700-60 = 1640: Bee passes Cid.
+    expect(order()).toEqual(["Ace", "Bee", "Cid"]);
+    expect(screen.getByText(/Vista previa/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Margen por pocos datos"), {
+      target: { value: "3" },
+    });
+    // 1971-186 = 1785, 1799-414 = 1385, 1700-180 = 1520: Bee drops below Cid.
+    expect(order()).toEqual(["Ace", "Cid", "Bee"]);
+    expect(screen.getByText(/▼1 \(hoy 2\)/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Usar este margen" }));
+    await waitFor(() =>
+      expect(calls.some((c) => c.init?.method === "POST")).toBe(true),
+    );
+    const post = calls.find((c) => c.init?.method === "POST")!;
+    expect(post.url).toContain("/seeding/rk/recalculate");
+    expect(JSON.parse(String(post.init?.body))).toEqual({ conservative_k: 3 });
+  });
+
   it("shows readers a clean published seeding without tools", async () => {
     const calls: RequestInit[] = [];
     const publicView: PublicSeedingView = {

@@ -3492,3 +3492,11 @@ body {
     width: 100%;
   }
 }
+
+/* Margin preview: how many places each player moves. */
+.seeding-table .moved-up {
+  color: var(--win);
+}
+.seeding-table .moved-down {
+  color: var(--loss);
+}

@@ -426,6 +426,22 @@ def test_method_choice_is_official_and_survives_recalculation(project):
         assert bad.status_code == 422
 
 
+def test_margin_shortcut_changes_only_the_margin(project):
+    with client_for(project) as client:
+        client.post("/api/v1/seeding/cs/recalculate", json={"method": "glicko2"}, headers=AUTH)
+        r = client.post("/api/v1/seeding/cs/recalculate", json={"conservative_k": 1}, headers=AUTH)
+        assert r.status_code == 200
+        body = client.get("/api/v1/seeding/cs", headers=AUTH).json()
+        assert body["method"] == "glicko2"  # the method stays
+        assert body["run"]["parameters"]["conservative_k"] == 1
+        seed = next(s for s in body["seeds"] if s["rating"] is not None)
+        assert seed["conservative"] == pytest.approx(seed["rating"] - seed["rd"], abs=0.2)
+        bad = client.post(
+            "/api/v1/seeding/cs/recalculate", json={"conservative_k": 9}, headers=AUTH
+        )
+        assert bad.status_code == 422
+
+
 @pytest.fixture
 def ranking(db, monkeypatch):
     # These datasets use start.gg events that are not imported into the hub; the hub's

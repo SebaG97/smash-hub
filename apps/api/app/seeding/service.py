@@ -303,6 +303,7 @@ def recalculate(
     window_end=None,
     parameters=None,
     method=None,
+    conservative_k=None,
 ):
     start = utc(window_start) if window_start else utc(project.window_start)
     end = utc(window_end) if window_end else utc(project.event_date)
@@ -322,6 +323,8 @@ def recalculate(
     params = parameters or default_parameters(session, project)
     if method is not None:
         params = params.model_copy(update={"method": method})
+    if conservative_k is not None:
+        params = params.model_copy(update={"conservative_k": conservative_k})
     entrants = [
         dict(player_id=e.startgg_player_id, gamer_tag=e.gamer_tag)
         for e in session.scalars(

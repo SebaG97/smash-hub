@@ -531,6 +531,78 @@ function MethodPicker({
   );
 }
 
+export const MARGINS = [1, 1.5, 2, 3];
+
+/** Ranking by Glicko-2: how much to discount players with few sets (rating - k*RD). */
+function MarginPicker({
+  current,
+  value,
+  onChange,
+  admin,
+  onApply,
+}: {
+  current: number;
+  value: number;
+  onChange: (k: number) => void;
+  admin: Admin | null;
+  onApply: (k: number) => void;
+}) {
+  const options = MARGINS.includes(current)
+    ? MARGINS
+    : [...MARGINS, current].sort((a, b) => a - b);
+  return (
+    <section className="seeding-methods" aria-label="Ajuste del margen">
+      <label>
+        Margen por pocos datos
+        <select
+          value={value}
+          onChange={(e) => onChange(Number(e.target.value))}
+        >
+          {options.map((k) => (
+            <option key={k} value={k}>
+              {num(k, k % 1 ? 1 : 0)} × RD{k === current ? " · actual" : ""}
+            </option>
+          ))}
+        </select>
+      </label>
+      <p>
+        El puesto sale de nivel − margen × RD (la duda del sistema sobre su
+        nivel). Con un margen más chico, quien tiene pocos sets pero buenos
+        resultados sube antes; con uno más grande tiene que confirmar su nivel
+        jugando más.
+      </p>
+      {value !== current && (
+        <p className="seeding-preview">
+          <strong>Vista previa:</strong> así quedaría con{" "}
+          {num(value, value % 1 ? 1 : 0)} × RD (hoy{" "}
+          {num(current, current % 1 ? 1 : 0)} × RD). Las explicaciones de cada
+          jugador se actualizan al aplicarlo.{" "}
+          {admin && (
+            <button
+              className="primary-button"
+              onClick={() => onApply(value)}
+              type="button"
+            >
+              Usar este margen
+            </button>
+          )}
+        </p>
+      )}
+    </section>
+  );
+}
+
+/** Eligible players sorted by rating - k*RD: {player id: place}. */
+export function marginPlaces(rows: SeedingRow[], k: number) {
+  const scored = rows
+    .filter((r) => r.eligible && r.rating !== null && r.rd !== null)
+    .map((r) => ({ id: r.player_id, score: r.rating! - k * r.rd! }))
+    .sort((a, b) => b.score - a.score || a.id.localeCompare(b.id));
+  return new Map(
+    scored.map((r, i) => [r.id, { place: i + 1, score: r.score }]),
+  );
+}
+
 function IdentityPanel({
   view,
   act,
@@ -1042,6 +1114,7 @@ export function SeedingBoard({
   const [open, setOpen] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
+  const [margin, setMargin] = useState<number | null>(null);
   const [showAll, setShowAll] = useState(false);
   // Sections as tabs, kept in the address (#pools) so a reload stays on the same one.
   const [tab, setTab] = useState(() =>
@@ -1156,13 +1229,24 @@ export function SeedingBoard({
   const official = view.method || "combined";
   const method = preview || official;
   const previewing = method !== official;
-  const canMove = !ranking && !!admin && !previewing;
+  const currentK = Number(view.run?.parameters?.conservative_k ?? 2);
+  const k = margin ?? currentK;
+  // Margin preview: Glicko-2 places recomputed here from each row's rating and RD.
+  const byMargin =
+    method === "glicko2" && k !== currentK ? marginPlaces(view.seeds, k) : null;
+  const canMove = !ranking && !!admin && !previewing && !byMargin;
   let rows = view.seeds;
   if (previewing)
     rows = [...rows].sort(
       (a, b) =>
         (a.ranks?.[method] ?? Infinity) - (b.ranks?.[method] ?? Infinity) ||
         b.sets - a.sets,
+    );
+  if (byMargin)
+    rows = [...rows].sort(
+      (a, b) =>
+        (byMargin.get(a.player_id)?.place ?? Infinity) -
+          (byMargin.get(b.player_id)?.place ?? Infinity) || b.sets - a.sets,
     );
   const hidden = ranking && !showAll ? rows.filter((r) => !r.eligible) : [];
   if (hidden.length) rows = rows.filter((r) => r.eligible);
@@ -1296,6 +1380,27 @@ export function SeedingBoard({
             />
           )}
 
+          {method === "glicko2" && view.run && (
+            <MarginPicker
+              current={currentK}
+              value={k}
+              onChange={(value) => setMargin(value === currentK ? null : value)}
+              admin={admin}
+              onApply={async (value) => {
+                if (
+                  await act("POST", `${slug}/recalculate`, {
+                    conservative_k: value,
+                  })
+                ) {
+                  setMargin(null);
+                  setMessage(
+                    `Margen aplicado: el puesto ahora sale de nivel − ${num(value, value % 1 ? 1 : 0)} × RD.`,
+                  );
+                }
+              }}
+            />
+          )}
+
           <section
             aria-label={ranking ? "Ranking" : "Seeds"}
             className="data-section"
@@ -1318,11 +1423,15 @@ export function SeedingBoard({
                 </thead>
                 <tbody>
                   {rows.map((row, index) => {
-                    const place = previewing
-                      ? (row.ranks?.[method] ?? null)
-                      : ranking
-                        ? index + 1
-                        : row.seed;
+                    const moved = byMargin?.get(row.player_id);
+                    const before = row.ranks?.[method] ?? null;
+                    const place = byMargin
+                      ? (moved?.place ?? null)
+                      : previewing
+                        ? (row.ranks?.[method] ?? null)
+                        : ranking
+                          ? index + 1
+                          : row.seed;
                     return (
                       <Fragment key={row.player_id}>
                         <tr
@@ -1331,6 +1440,23 @@ export function SeedingBoard({
                         >
                           <td>
                             <strong>{place ?? "—"}</strong>
+                            {byMargin &&
+                              moved &&
+                              before &&
+                              before !== moved.place && (
+                                <small
+                                  className={
+                                    before > moved.place
+                                      ? "moved-up"
+                                      : "moved-down"
+                                  }
+                                >
+                                  {" "}
+                                  {before > moved.place ? "▲" : "▼"}
+                                  {Math.abs(before - moved.place)} (hoy {before}
+                                  )
+                                </small>
+                              )}
                             {previewing && !ranking && (
                               <small> (oficial {row.seed})</small>
                             )}
@@ -1356,7 +1482,13 @@ export function SeedingBoard({
                             )}
                           </td>
                           <td>{row.main_circuit || "—"}</td>
-                          <td>{scoreText(row, method)}</td>
+                          <td>
+                            {byMargin
+                              ? moved
+                                ? num(moved.score)
+                                : "—"
+                              : scoreText(row, method)}
+                          </td>
                           <td>
                             {row.rating === null
                               ? "—"
