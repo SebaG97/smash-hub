@@ -93,6 +93,19 @@ def test_valid_win_loss_homonyms_and_missing_dates(competition):
     assert a["first_set_at"] is not None and a["latest_tournament"] is not None
 
 
+def test_breakdown_matches_the_summary(competition):
+    a = get(competition, "breakdown").json()
+    assert a["record"] == {"wins": 4, "losses": 0}
+    assert sum(m["wins"] + m["losses"] for m in a["months"]) == 3  # one set has no date
+    assert len(a["form"]) == 3 and {f["result"] for f in a["form"]} == {"W"}
+    assert a["current_streak"] == {"result": "W", "length": 3} and a["best_win_streak"] == 3
+    assert a["placements"][0]["placement"] == 1
+    # No published ranking in the fixture: no strength bands.
+    assert a["ranking"] is None and a["vs_ranking"] == [] and a["best_wins"] == []
+    b = get(competition, "breakdown", who="b").json()
+    assert b["record"] == {"wins": 0, "losses": 4} and b["current_streak"]["result"] == "L"
+
+
 def test_no_sets_and_no_denominator(competition):
     result = get(competition, who="c").json()
     assert result["sets_played"] == 0 and result["wins"] == result["losses"] == 0
@@ -122,7 +135,7 @@ def test_history_excludes_administrative_and_keeps_scoreless_winner(competition)
     assert rows[-1]["completed_at"] is None
 
 
-@pytest.mark.parametrize("path", ["statistics", "matches", "opponents", "placements"])
+@pytest.mark.parametrize("path", ["statistics", "matches", "opponents", "placements", "breakdown"])
 def test_endpoint_contract_and_uuid_errors(competition, path):
     response = get(competition, path)
     assert response.status_code == 200, response.text

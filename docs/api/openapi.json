@@ -1430,6 +1430,145 @@
         }
       }
     },
+    "/api/v1/players/{id}/breakdown": {
+      "get": {
+        "tags": [
+          "statistics"
+        ],
+        "summary": "Breakdown",
+        "description": "Charts of the profile: form, months, scores, bracket side, ranking bands, mains.",
+        "operationId": "breakdown_api_v1_players__id__breakdown_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "game_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Game Id"
+            }
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "singles",
+                "doubles"
+              ],
+              "type": "string",
+              "default": "singles",
+              "title": "Mode"
+            }
+          },
+          {
+            "name": "tournament_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tournament Id"
+            }
+          },
+          {
+            "name": "community_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Community Id"
+            }
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BreakdownView"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Player not found or unpublished"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/players/{id}/matches": {
       "get": {
         "tags": [
@@ -10568,6 +10707,229 @@
         ],
         "title": "BestResult"
       },
+      "BestWinView": {
+        "properties": {
+          "opponents": {
+            "items": {
+              "$ref": "#/components/schemas/OpponentRef"
+            },
+            "type": "array",
+            "title": "Opponents"
+          },
+          "place": {
+            "type": "integer",
+            "title": "Place"
+          },
+          "tournament_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Tournament Id"
+          },
+          "tournament_name": {
+            "type": "string",
+            "title": "Tournament Name"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "opponent_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opponent Score"
+          }
+        },
+        "type": "object",
+        "required": [
+          "opponents",
+          "place",
+          "tournament_id",
+          "tournament_name",
+          "completed_at",
+          "score",
+          "opponent_score"
+        ],
+        "title": "BestWinView"
+      },
+      "BreakdownView": {
+        "properties": {
+          "player": {
+            "$ref": "#/components/schemas/PlayerView"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/Filters"
+          },
+          "ranking": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ranking"
+          },
+          "record": {
+            "$ref": "#/components/schemas/RecordView"
+          },
+          "months": {
+            "items": {
+              "$ref": "#/components/schemas/MonthView"
+            },
+            "type": "array",
+            "title": "Months"
+          },
+          "form": {
+            "items": {
+              "$ref": "#/components/schemas/FormView"
+            },
+            "type": "array",
+            "title": "Form"
+          },
+          "current_streak": {
+            "$ref": "#/components/schemas/StreakView"
+          },
+          "best_win_streak": {
+            "type": "integer",
+            "title": "Best Win Streak"
+          },
+          "scores": {
+            "items": {
+              "$ref": "#/components/schemas/ScoreView"
+            },
+            "type": "array",
+            "title": "Scores"
+          },
+          "games": {
+            "$ref": "#/components/schemas/RecordView"
+          },
+          "winners_side": {
+            "$ref": "#/components/schemas/RecordView"
+          },
+          "losers_side": {
+            "$ref": "#/components/schemas/RecordView"
+          },
+          "deciding": {
+            "$ref": "#/components/schemas/RecordView"
+          },
+          "vs_ranking": {
+            "items": {
+              "$ref": "#/components/schemas/TierView"
+            },
+            "type": "array",
+            "title": "Vs Ranking"
+          },
+          "best_wins": {
+            "items": {
+              "$ref": "#/components/schemas/BestWinView"
+            },
+            "type": "array",
+            "title": "Best Wins"
+          },
+          "placements": {
+            "items": {
+              "$ref": "#/components/schemas/PlacementPoint"
+            },
+            "type": "array",
+            "title": "Placements"
+          },
+          "characters": {
+            "items": {
+              "$ref": "#/components/schemas/CharacterRecordView"
+            },
+            "type": "array",
+            "title": "Characters"
+          }
+        },
+        "type": "object",
+        "required": [
+          "player",
+          "filters",
+          "ranking",
+          "record",
+          "months",
+          "form",
+          "current_streak",
+          "best_win_streak",
+          "scores",
+          "games",
+          "winners_side",
+          "losers_side",
+          "deciding",
+          "vs_ranking",
+          "best_wins",
+          "placements",
+          "characters"
+        ],
+        "title": "BreakdownView",
+        "description": "Data for the profile charts. ``vs_ranking`` and ``best_wins`` follow the latest\npublished ranking and are empty without one (or in doubles)."
+      },
+      "CharacterRecordView": {
+        "properties": {
+          "wins": {
+            "type": "integer",
+            "title": "Wins"
+          },
+          "losses": {
+            "type": "integer",
+            "title": "Losses"
+          },
+          "character": {
+            "type": "string",
+            "title": "Character"
+          },
+          "icon": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon"
+          },
+          "games": {
+            "type": "integer",
+            "title": "Games"
+          }
+        },
+        "type": "object",
+        "required": [
+          "wins",
+          "losses",
+          "character",
+          "icon",
+          "games"
+        ],
+        "title": "CharacterRecordView"
+      },
       "CostumeBody": {
         "properties": {
           "character": {
@@ -11024,6 +11386,79 @@
           "game_id"
         ],
         "title": "Filters"
+      },
+      "FormView": {
+        "properties": {
+          "result": {
+            "type": "string",
+            "enum": [
+              "W",
+              "L"
+            ],
+            "title": "Result"
+          },
+          "opponents": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Opponents"
+          },
+          "tournament_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Tournament Id"
+          },
+          "tournament_name": {
+            "type": "string",
+            "title": "Tournament Name"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "opponent_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opponent Score"
+          }
+        },
+        "type": "object",
+        "required": [
+          "result",
+          "opponents",
+          "tournament_id",
+          "tournament_name",
+          "completed_at",
+          "score",
+          "opponent_score"
+        ],
+        "title": "FormView"
       },
       "Grant": {
         "properties": {
@@ -11579,6 +12014,29 @@
         ],
         "title": "MetaResponse"
       },
+      "MonthView": {
+        "properties": {
+          "wins": {
+            "type": "integer",
+            "title": "Wins"
+          },
+          "losses": {
+            "type": "integer",
+            "title": "Losses"
+          },
+          "month": {
+            "type": "string",
+            "title": "Month"
+          }
+        },
+        "type": "object",
+        "required": [
+          "wins",
+          "losses",
+          "month"
+        ],
+        "title": "MonthView"
+      },
       "OpponentPage": {
         "properties": {
           "items": {
@@ -11613,6 +12071,25 @@
           "filters"
         ],
         "title": "OpponentPage"
+      },
+      "OpponentRef": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "tag": {
+            "type": "string",
+            "title": "Tag"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "tag"
+        ],
+        "title": "OpponentRef"
       },
       "OpponentView": {
         "properties": {
@@ -12137,6 +12614,60 @@
         ],
         "title": "PlacementPage"
       },
+      "PlacementPoint": {
+        "properties": {
+          "tournament_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Tournament Id"
+          },
+          "tournament_name": {
+            "type": "string",
+            "title": "Tournament Name"
+          },
+          "event_name": {
+            "type": "string",
+            "title": "Event Name"
+          },
+          "starts_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starts At"
+          },
+          "placement": {
+            "type": "integer",
+            "title": "Placement"
+          },
+          "entrants": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entrants"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tournament_id",
+          "tournament_name",
+          "event_name",
+          "starts_at",
+          "placement",
+          "entrants"
+        ],
+        "title": "PlacementPoint"
+      },
       "PlacementView": {
         "properties": {
           "entrant_id": {
@@ -12566,6 +13097,24 @@
         "type": "object",
         "title": "RecalculateRequest"
       },
+      "RecordView": {
+        "properties": {
+          "wins": {
+            "type": "integer",
+            "title": "Wins"
+          },
+          "losses": {
+            "type": "integer",
+            "title": "Losses"
+          }
+        },
+        "type": "object",
+        "required": [
+          "wins",
+          "losses"
+        ],
+        "title": "RecordView"
+      },
       "Registration": {
         "properties": {
           "username": {
@@ -12700,6 +13249,29 @@
           "role"
         ],
         "title": "RoleChange"
+      },
+      "ScoreView": {
+        "properties": {
+          "score": {
+            "type": "integer",
+            "title": "Score"
+          },
+          "opponent_score": {
+            "type": "integer",
+            "title": "Opponent Score"
+          },
+          "sets": {
+            "type": "integer",
+            "title": "Sets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "score",
+          "opponent_score",
+          "sets"
+        ],
+        "title": "ScoreView"
       },
       "SeedingFlag": {
         "properties": {
@@ -13060,6 +13632,35 @@
         ],
         "title": "StatusChange"
       },
+      "StreakView": {
+        "properties": {
+          "result": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "W",
+                  "L"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "length": {
+            "type": "integer",
+            "title": "Length"
+          }
+        },
+        "type": "object",
+        "required": [
+          "result",
+          "length"
+        ],
+        "title": "StreakView"
+      },
       "Subject": {
         "properties": {
           "startgg_player_id": {
@@ -13121,6 +13722,35 @@
           "tournament"
         ],
         "title": "SyncRequest"
+      },
+      "TierView": {
+        "properties": {
+          "wins": {
+            "type": "integer",
+            "title": "Wins"
+          },
+          "losses": {
+            "type": "integer",
+            "title": "Losses"
+          },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "top10",
+              "top25",
+              "ranked",
+              "unranked"
+            ],
+            "title": "Tier"
+          }
+        },
+        "type": "object",
+        "required": [
+          "wins",
+          "losses",
+          "tier"
+        ],
+        "title": "TierView"
       },
       "TournamentSummary": {
         "properties": {

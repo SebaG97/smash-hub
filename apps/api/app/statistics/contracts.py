@@ -113,3 +113,90 @@ class HeadToHeadView(BaseModel):
     first_encounter_at: datetime | None
     last_encounter_at: datetime | None
     history: MatchPage
+
+
+class RecordView(BaseModel):
+    wins: int
+    losses: int
+
+
+class MonthView(RecordView):
+    month: str  # YYYY-MM, local time
+
+
+class FormView(BaseModel):
+    result: Literal["W", "L"]
+    opponents: list[str]
+    tournament_id: UUID
+    tournament_name: str
+    completed_at: datetime | None
+    score: int | None
+    opponent_score: int | None
+
+
+class StreakView(BaseModel):
+    result: Literal["W", "L"] | None
+    length: int
+
+
+class ScoreView(BaseModel):
+    score: int
+    opponent_score: int
+    sets: int
+
+
+class TierView(RecordView):
+    tier: Literal["top10", "top25", "ranked", "unranked"]
+
+
+class OpponentRef(BaseModel):
+    id: UUID
+    tag: str
+
+
+class BestWinView(BaseModel):
+    opponents: list[OpponentRef]
+    place: int
+    tournament_id: UUID
+    tournament_name: str
+    completed_at: datetime | None
+    score: int | None
+    opponent_score: int | None
+
+
+class PlacementPoint(BaseModel):
+    tournament_id: UUID
+    tournament_name: str
+    event_name: str
+    starts_at: datetime | None
+    placement: int
+    entrants: int | None
+
+
+class CharacterRecordView(RecordView):
+    character: str
+    icon: str | None
+    games: int
+
+
+class BreakdownView(BaseModel):
+    """Data for the profile charts. ``vs_ranking`` and ``best_wins`` follow the latest
+    published ranking and are empty without one (or in doubles)."""
+
+    player: PlayerView
+    filters: Filters
+    ranking: str | None
+    record: RecordView
+    months: list[MonthView]
+    form: list[FormView]
+    current_streak: StreakView
+    best_win_streak: int
+    scores: list[ScoreView]
+    games: RecordView
+    winners_side: RecordView
+    losers_side: RecordView
+    deciding: RecordView
+    vs_ranking: list[TierView]
+    best_wins: list[BestWinView]
+    placements: list[PlacementPoint]
+    characters: list[CharacterRecordView]

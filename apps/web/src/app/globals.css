@@ -3500,3 +3500,403 @@ body {
 .seeding-table .moved-down {
   color: var(--loss);
 }
+
+/* ---------------------------------------------------------------- player statistics charts */
+.player-charts {
+  margin-top: 18px;
+}
+.stat-empty {
+  color: var(--ash);
+}
+.stat-hero {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 28px;
+  align-items: center;
+  padding: 18px 0 22px;
+  border-bottom: 1px solid var(--line);
+}
+.stat-ring {
+  width: 150px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  background:
+    radial-gradient(closest-side, var(--concrete) 78%, transparent 79%),
+    conic-gradient(var(--win) var(--rate), var(--loss) 0);
+}
+.stat-ring strong {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 2.6rem;
+  line-height: 1;
+  transform: skewX(-10deg);
+}
+.stat-ring span {
+  font-size: 0.8rem;
+  color: var(--ash);
+}
+.stat-tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px 20px;
+  margin: 0;
+}
+.stat-tiles dt {
+  font-size: 0.8rem;
+  color: var(--ash);
+}
+.stat-tiles dd {
+  margin: 2px 0 0;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 1.6rem;
+  line-height: 1.1;
+}
+.stat-tiles dd small {
+  display: block;
+  font-family: var(--text);
+  font-weight: 400;
+  font-size: 0.8rem;
+  color: var(--ash);
+}
+.stat-tiles .stat-small {
+  font-size: 1.15rem;
+}
+.stat-tiles .is-win,
+.form-line .is-win span {
+  color: var(--win);
+}
+.stat-tiles .is-loss {
+  color: var(--loss);
+}
+.stat-block {
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+  min-width: 0;
+}
+.stat-block h3 {
+  margin: 0 0 12px;
+}
+.stat-block h4 {
+  margin: 18px 0 8px;
+  font-size: 0.9rem;
+  color: var(--ash);
+  font-weight: 400;
+}
+.stat-note {
+  margin: 10px 0 0;
+  font-size: 0.8rem;
+  color: var(--ash);
+}
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 40px;
+}
+
+/* Recent form: one tile per set. */
+.form-line {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.form-line li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 2px 6px;
+  background: var(--slab);
+  border-bottom: 4px solid var(--loss);
+  min-width: 0;
+  cursor: default;
+}
+.form-line li.is-win {
+  border-bottom-color: var(--win);
+}
+.form-line span {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 1.4rem;
+  line-height: 1;
+  color: var(--loss);
+}
+.form-line small {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.72rem;
+  color: var(--ash);
+}
+
+/* Split win/loss bars. */
+.record-list,
+.score-chart,
+.placement-chart,
+.best-wins {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.record-row {
+  display: grid;
+  grid-template-columns: minmax(0, 11rem) minmax(0, 1fr) 4.5rem;
+  gap: 12px;
+  align-items: center;
+  padding: 6px 0;
+}
+.record-label {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.record-label small,
+.record-value small {
+  font-size: 0.75rem;
+  color: var(--ash);
+}
+.record-track {
+  display: flex;
+  gap: 2px;
+  height: 10px;
+}
+.record-track > span {
+  min-width: 3px;
+}
+.record-w,
+.record-l,
+.record-empty {
+  display: block;
+  height: 100%;
+}
+.record-w {
+  background: var(--win);
+  border-radius: 2px;
+}
+.record-l {
+  background: var(--loss);
+  border-radius: 2px;
+}
+.record-empty {
+  flex-grow: 1;
+  background: var(--line);
+  border-radius: 2px;
+}
+.record-value {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-variant-numeric: tabular-nums;
+}
+.char-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-left: 3px solid var(--main);
+  padding-left: 8px;
+}
+.char-label > span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Months: wins grow up, losses grow down from the same baseline. */
+.month-chart {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+.month {
+  flex: 1 0 28px;
+  display: grid;
+  grid-template-rows: 70px 70px auto;
+  text-align: center;
+}
+.month-up,
+.month-down {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.month-up {
+  justify-content: flex-end;
+  border-bottom: 1px solid var(--ash);
+}
+.month-up small,
+.month-down small {
+  font-size: 0.7rem;
+  color: var(--ash);
+  font-variant-numeric: tabular-nums;
+}
+.month-w,
+.month-l {
+  width: 14px;
+  display: block;
+}
+.month-w {
+  background: var(--win);
+  border-radius: 4px 4px 0 0;
+  margin-bottom: 1px;
+}
+.month-l {
+  background: var(--loss);
+  border-radius: 0 0 4px 4px;
+  margin-top: 1px;
+}
+.month-name {
+  font-size: 0.72rem;
+  color: var(--ash);
+  white-space: nowrap;
+  padding-top: 4px;
+}
+.key {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  vertical-align: -1px;
+}
+.key-w {
+  background: var(--win);
+}
+.key-l {
+  background: var(--loss);
+}
+
+/* Scores. */
+.score-chart li {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr) 2rem;
+  gap: 10px;
+  align-items: center;
+  padding: 3px 0;
+}
+.score-name {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 1.1rem;
+}
+.score-track span {
+  display: block;
+  height: 10px;
+  min-width: 3px;
+}
+.score-count {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tournaments. */
+.placement-chart li {
+  display: grid;
+  grid-template-columns: 3.2rem minmax(0, 1fr) minmax(0, 7rem);
+  grid-template-areas: "place name name" "place track beat";
+  column-gap: 12px;
+  align-items: center;
+  padding: 6px 0;
+}
+.placement-chart .place {
+  grid-area: place;
+  font-size: 1.8rem;
+  text-align: center;
+}
+.placement-chart .is-champion .place {
+  color: var(--gold);
+}
+.placement-name {
+  grid-area: name;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 8px;
+  align-items: baseline;
+  min-width: 0;
+}
+.placement-name small,
+.placement-beat {
+  font-size: 0.75rem;
+  color: var(--ash);
+}
+.placement-track {
+  grid-area: track;
+  height: 6px;
+  background: var(--line);
+  border-radius: 3px;
+}
+.placement-track span {
+  display: block;
+  height: 100%;
+  background: var(--bone);
+  border-radius: 3px;
+}
+.placement-beat {
+  grid-area: beat;
+  text-align: right;
+}
+
+/* Best wins. */
+.best-wins li {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 7px 0;
+}
+.best-wins li > span:last-child {
+  display: flex;
+  flex-direction: column;
+}
+.best-wins small {
+  font-size: 0.78rem;
+  color: var(--ash);
+}
+.rank-badge {
+  flex: 0 0 3.2rem;
+  text-align: center;
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 1.3rem;
+  padding: 4px 0;
+  background: var(--slab);
+  border-left: 3px solid var(--gold);
+}
+
+@media (max-width: 900px) {
+  .stat-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 580px) {
+  .stat-hero {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+  }
+  .stat-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+  .form-line {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  .record-row {
+    grid-template-columns: minmax(0, 1fr) 4rem;
+    grid-template-areas: "label value" "track track";
+    row-gap: 4px;
+  }
+  .record-label {
+    grid-area: label;
+  }
+  .record-track {
+    grid-area: track;
+  }
+  .record-value {
+    grid-area: value;
+  }
+}

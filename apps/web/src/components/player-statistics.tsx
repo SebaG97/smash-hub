@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useState } from "react";
 import { Collection, Resource } from "./competition-browser";
 import { MainIcons, WinBar } from "./mains";
+import { PlayerCharts } from "./player-charts";
 import type {
+  Breakdown,
   CompetitiveMatch,
   FrequentOpponent,
   HeadToHead,
@@ -164,30 +166,19 @@ export function PlayerStatistics({
         <>
           {section !== "rivals" && (
             <Resource<Statistics> path={`players/${id}/statistics?${filters}`}>
-              {(s) => (
-                <div className="data-card">
-                  {s.sets_played === 0 && (
-                    <p>No hay sets elegibles en este ámbito.</p>
-                  )}
-                  <p>
-                    {s.sets_played} sets jugados · {s.wins} victorias ·{" "}
-                    {s.losses} derrotas
+              {(s) =>
+                s.sets_played === 0 ? (
+                  <p className="stat-empty">
+                    No hay sets elegibles en este ámbito.
                   </p>
-                  <p>Porcentaje de victorias: {rate(s.win_rate)}</p>
-                  <p>
-                    {s.tournaments_played} torneos disputados ·{" "}
-                    {s.tournaments_registered} torneos con inscripción
-                  </p>
-                  <p>
-                    Mejor placement final:{" "}
-                    {s.best_final_placement ?? "No disponible"}
-                  </p>
-                  <p>
-                    {s.unique_opponents} rivales únicos · Primer set:{" "}
-                    {date(s.first_set_at)} · Último set: {date(s.last_set_at)}
-                  </p>
-                </div>
-              )}
+                ) : (
+                  <Resource<Breakdown>
+                    path={`players/${id}/breakdown?${filters}`}
+                  >
+                    {(b) => <PlayerCharts s={s} b={b} />}
+                  </Resource>
+                )
+              }
             </Resource>
           )}
           {section !== "stats" && (

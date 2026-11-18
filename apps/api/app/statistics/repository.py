@@ -8,10 +8,12 @@ from app.competitions.models import (
     Event,
     EventEntrant,
     Set,
+    SetSelection,
     SetSide,
     Tournament,
     TournamentParticipant,
 )
+from app.games.models import Character
 from app.integrations.models import DataSource, ExternalMapping
 from app.players.models import Player
 from app.statistics.policy import eligibility
@@ -203,6 +205,7 @@ def registrations(filters, player_id):
             Tournament.starts_at.label("tournament_starts_at"),
             Event.id.label("event_id"),
             Event.name.label("event_name"),
+            Event.num_entrants.label("entrants"),
         )
         .select_from(EntrantMember)
         .join(TournamentParticipant, TournamentParticipant.id == EntrantMember.participant_id)
@@ -224,6 +227,38 @@ def placements(filters, player_id):
             rows.c.tournament_starts_at.desc().nullslast(), rows.c.event_id, rows.c.entrant_id
         )
     )
+
+
+def characters(session, matches, player_id):
+    """Games per character the player picked in these sets, with how many they won."""
+    games = func.count(SetSelection.id)
+    rows = session.execute(
+        select(
+            Character.name,
+            Character.image_url,
+            games.label("games"),
+            games.filter(SetSelection.won.is_(True)).label("wins"),
+            games.filter(SetSelection.won.is_(False)).label("losses"),
+        )
+        .select_from(SetSelection)
+        .join(EntrantMember, EntrantMember.entrant_id == SetSelection.entrant_id)
+        .join(TournamentParticipant, TournamentParticipant.id == EntrantMember.participant_id)
+        .join(Character, Character.id == SetSelection.character_id)
+        .where(
+            TournamentParticipant.player_id == player_id,
+            SetSelection.set_id.in_(select(matches.c.id)),
+        )
+        .group_by(Character.name, Character.image_url)
+        .order_by(games.desc(), Character.name)
+    ).mappings()
+    return [
+        {
+            "character": r["name"],
+            "icon": r["image_url"],
+            **{k: r[k] for k in ("games", "wins", "losses")},
+        }
+        for r in rows
+    ]
 
 
 def page(session, stmt, page_number, page_size):

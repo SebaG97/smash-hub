@@ -33,6 +33,74 @@ const stats = {
   last_set_at: null,
   unique_opponents: 1,
 };
+const breakdown = {
+  ranking: "Ranking Paraguay",
+  record: { wins: 2, losses: 1 },
+  months: [
+    { month: "2026-01", wins: 1, losses: 0 },
+    { month: "2026-02", wins: 1, losses: 1 },
+  ],
+  form: [
+    {
+      result: "L",
+      opponents: ["Gamma"],
+      tournament_id: "t",
+      tournament_name: "Open",
+      completed_at: "2026-02-10T20:00:00Z",
+      score: 1,
+      opponent_score: 2,
+    },
+    {
+      result: "W",
+      opponents: ["Beta"],
+      tournament_id: "t",
+      tournament_name: "Open",
+      completed_at: "2026-02-11T20:00:00Z",
+      score: 2,
+      opponent_score: 0,
+    },
+  ],
+  current_streak: { result: "W", length: 1 },
+  best_win_streak: 2,
+  scores: [
+    { score: 2, opponent_score: 0, sets: 2 },
+    { score: 1, opponent_score: 2, sets: 1 },
+  ],
+  games: { wins: 5, losses: 2 },
+  winners_side: { wins: 2, losses: 0 },
+  losers_side: { wins: 0, losses: 1 },
+  deciding: { wins: 0, losses: 1 },
+  vs_ranking: [
+    { tier: "top10", wins: 1, losses: 0 },
+    { tier: "top25", wins: 0, losses: 1 },
+    { tier: "ranked", wins: 0, losses: 0 },
+    { tier: "unranked", wins: 1, losses: 0 },
+  ],
+  best_wins: [
+    {
+      opponents: [{ id: "b", tag: "Beta" }],
+      place: 4,
+      tournament_id: "t",
+      tournament_name: "Open",
+      completed_at: "2026-02-11T20:00:00Z",
+      score: 2,
+      opponent_score: 0,
+    },
+  ],
+  placements: [
+    {
+      tournament_id: "t",
+      tournament_name: "Open",
+      event_name: "Singles",
+      starts_at: "2026-02-10T20:00:00Z",
+      placement: 3,
+      entrants: 21,
+    },
+  ],
+  characters: [
+    { character: "Mario", icon: null, games: 7, wins: 5, losses: 2 },
+  ],
+};
 const match = {
   id: "set",
   tournament_id: "t",
@@ -65,38 +133,44 @@ it("integrates API statistics into the existing profile and links comparisons", 
   mock((url) =>
     url.includes("/statistics?")
       ? stats
-      : url.includes("/opponents?")
-        ? page([
-            {
-              opponent: { id: "b", tag: "Beta" },
-              sets_played: 3,
-              wins: 2,
-              losses: 1,
-              win_rate: 66.67,
-              last_encounter_at: null,
-            },
-          ])
-        : url.includes("/matches?")
-          ? page([match])
-          : {
-              id: "a",
-              tag: "Alpha",
-              aliases: [],
-              history: page([]),
-              scopes,
-            },
+      : url.includes("/breakdown?")
+        ? breakdown
+        : url.includes("/opponents?")
+          ? page([
+              {
+                opponent: { id: "b", tag: "Beta" },
+                sets_played: 3,
+                wins: 2,
+                losses: 1,
+                win_rate: 66.67,
+                last_encounter_at: null,
+              },
+            ])
+          : url.includes("/matches?")
+            ? page([match])
+            : {
+                id: "a",
+                tag: "Alpha",
+                aliases: [],
+                history: page([]),
+                scopes,
+              },
   );
   render(<PlayerPage id="a" />);
   fireEvent.click(await screen.findByRole("tab", { name: "Estadísticas" }));
   expect(
-    await screen.findByText("Porcentaje de victorias: 66.67 %"),
+    await screen.findByRole("img", { name: "Ganó el 67 % de sus sets" }),
   ).toBeInTheDocument();
+  expect(screen.getByText("Últimos 2 sets")).toBeInTheDocument();
+  expect(screen.getByTitle(/Le ganó a Beta 2–0 · Open/)).toBeInTheDocument();
   expect(
-    screen.getByText(/1 torneos disputados · 2 torneos con inscripción/),
+    screen.getByRole("listitem", { name: "feb 26: 1 ganados, 1 perdidos" }),
   ).toBeInTheDocument();
-  expect(
-    screen.getByText("Mejor placement final: No disponible"),
-  ).toBeInTheDocument();
+  expect(screen.getByText("Top 10")).toBeInTheDocument();
+  expect(screen.getByText(/en Ranking Paraguay/)).toBeInTheDocument();
+  expect(screen.getByText("4.º")).toBeInTheDocument();
+  expect(screen.getByText("superó al 90 %")).toBeInTheDocument();
+  expect(screen.getByText("Mario")).toBeInTheDocument();
   expect(
     await screen.findByText("Puntuación no disponible · Final"),
   ).toBeInTheDocument();
@@ -118,11 +192,13 @@ it("renders no denominator without inventing a percentage", async () => {
   render(<PlayerStatistics id="a" scopes={scopes} />);
   expect(screen.getAllByRole("status").length).toBeGreaterThan(0);
   expect(
-    await screen.findByText("Porcentaje de victorias: No calculable"),
+    await screen.findByText("No hay sets elegibles en este ámbito."),
   ).toBeInTheDocument();
   expect(
-    screen.getByText("No hay sets elegibles en este ámbito."),
-  ).toBeInTheDocument();
+    vi
+      .mocked(fetch)
+      .mock.calls.some(([url]) => String(url).includes("/breakdown?")),
+  ).toBe(false);
 });
 
 it("shows absent modality without requesting misleading statistics", () => {
@@ -135,7 +211,13 @@ it("shows absent modality without requesting misleading statistics", () => {
 });
 
 it("changes game/modality scope and validates the period", async () => {
-  mock((url) => (url.includes("/statistics?") ? stats : page([])));
+  mock((url) =>
+    url.includes("/statistics?")
+      ? stats
+      : url.includes("/breakdown?")
+        ? breakdown
+        : page([]),
+  );
   render(
     <PlayerStatistics
       id="a"
@@ -145,7 +227,7 @@ it("changes game/modality scope and validates the period", async () => {
       ]}
     />,
   );
-  await screen.findByText(/Porcentaje de victorias/);
+  await screen.findByText("Mes a mes");
   fireEvent.change(screen.getByRole("combobox"), {
     target: { value: "game:doubles" },
   });

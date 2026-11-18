@@ -5,6 +5,7 @@ from app.integrations.startgg.client import ImportFailure, parse_slug
 from app.players.mains import player_mains
 from app.players.models import Player
 from app.statistics import repository as repo
+from app.statistics.breakdown import breakdown as build_breakdown
 from app.statistics.contracts import Filters
 
 
@@ -99,6 +100,47 @@ def statistics(session, id, filters):
         else None,
         "best_final_placement": best,
         "unique_opponents": unique,
+    }
+
+
+def ranking_places(session):
+    """{hub player id: place} in the latest published ranking, and that ranking's name."""
+    from app.insights.engine import ranked_players
+    from app.seeding.models import SeedingProject
+
+    name = session.scalar(
+        select(SeedingProject.name)
+        .where(
+            SeedingProject.kind == "ranking",
+            SeedingProject.published.is_(True),
+            SeedingProject.current_run_id.is_not(None),
+        )
+        .order_by(SeedingProject.event_date.desc())
+    )
+    if name is None:
+        return {}, None
+    return {pid: i + 1 for i, pid in enumerate(ranked_players(session))}, name
+
+
+def breakdown(session, id, filters):
+    identity = player(session, id)
+    data = repo.perspective(repo.eligible_sets(session, filters), id)
+    rows = list(session.execute(select(data)).mappings())
+    places, ranking = ranking_places(session) if filters.mode == "singles" else ({}, None)
+    ids = {p for r in rows for p in r["opponent_ids"]}
+    tags = dict(session.execute(select(Player.id, Player.tag).where(Player.id.in_(ids))).all())
+    placements = session.execute(select(repo.placements(filters, id).subquery())).mappings()
+    return {
+        **build_breakdown(
+            rows,
+            list(placements),
+            places=places,
+            tags=tags,
+            characters=repo.characters(session, data, id),
+        ),
+        "player": identity,
+        "filters": metadata(filters),
+        "ranking": ranking if places else None,
     }
 
 

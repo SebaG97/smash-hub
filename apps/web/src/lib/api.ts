@@ -135,6 +135,54 @@ export type CompetitiveMatch = {
   source: string | null;
   source_url: string | null;
 };
+export type WinLoss = { wins: number; losses: number };
+/** Data for the charts of the statistics tab (GET players/{id}/breakdown). */
+export type Breakdown = {
+  ranking: string | null;
+  record: WinLoss;
+  months: (WinLoss & { month: string })[];
+  form: {
+    result: "W" | "L";
+    opponents: string[];
+    tournament_id: string;
+    tournament_name: string;
+    completed_at: string | null;
+    score: number | null;
+    opponent_score: number | null;
+  }[];
+  current_streak: { result: "W" | "L" | null; length: number };
+  best_win_streak: number;
+  scores: { score: number; opponent_score: number; sets: number }[];
+  games: WinLoss;
+  winners_side: WinLoss;
+  losers_side: WinLoss;
+  deciding: WinLoss;
+  vs_ranking: (WinLoss & {
+    tier: "top10" | "top25" | "ranked" | "unranked";
+  })[];
+  best_wins: {
+    opponents: { id: string; tag: string }[];
+    place: number;
+    tournament_id: string;
+    tournament_name: string;
+    completed_at: string | null;
+    score: number | null;
+    opponent_score: number | null;
+  }[];
+  placements: {
+    tournament_id: string;
+    tournament_name: string;
+    event_name: string;
+    starts_at: string | null;
+    placement: number;
+    entrants: number | null;
+  }[];
+  characters: (WinLoss & {
+    character: string;
+    icon: string | null;
+    games: number;
+  })[];
+};
 export type FrequentOpponent = {
   opponent: Player;
   sets_played: number;

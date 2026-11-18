@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.statistics import service
 from app.statistics.contracts import (
+    BreakdownView,
     Filters,
     HeadToHeadView,
     ListingFilters,
@@ -38,6 +39,12 @@ def execute(request, operation, *args):
 @router.get("/{id}/statistics", response_model=StatisticsView)
 def statistics(request: Request, id: UUID, filters: Annotated[Filters, Query()]):
     return execute(request, service.statistics, id, filters)
+
+
+@router.get("/{id}/breakdown", response_model=BreakdownView)
+def breakdown(request: Request, id: UUID, filters: Annotated[Filters, Query()]):
+    """Charts of the profile: form, months, scores, bracket side, ranking bands, mains."""
+    return execute(request, service.breakdown, id, filters)
 
 
 @router.get("/{id}/matches", response_model=MatchPage)
