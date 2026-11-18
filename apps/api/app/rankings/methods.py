@@ -26,19 +26,25 @@ def elo(games, *, k=32.0, initial=1500.0):
     return dict(ratings)
 
 
-def bradley_terry(games, *, prior=1.0, iterations=1000, tolerance=1e-5):
+def bradley_terry(games, *, prior=1.0, iterations=1000, tolerance=1e-5, weights=None):
     """Bradley-Terry strengths by Hunter's MM algorithm, order independent.
 
     Each player also gets ``prior`` virtual wins and losses against a fixed reference of
     strength 1, which keeps unbeaten or isolated players finite. Returned on an Elo-like
     scale: 1500 + 400*log10(strength), so the reference player is 1500.
+    ``weights`` ({game id: weight}) scales each set; missing ids weigh 1.
     """
+    weights = weights or {}
     wins = defaultdict(float)
     meetings = defaultdict(lambda: defaultdict(float))
-    for a, b, a_won in _pairs(games):
-        wins[a if a_won else b] += 1
-        meetings[a][b] += 1
-        meetings[b][a] += 1
+    for g in sorted(games, key=lambda g: (g["completed_at"], str(g["id"]))):
+        a, b, a_won = g["players_a"][0], g["players_b"][0], bool(g["a_won"])
+        w = weights.get(g["id"], 1.0)
+        if w <= 0:
+            continue
+        wins[a if a_won else b] += w
+        meetings[a][b] += w
+        meetings[b][a] += w
     players = sorted(meetings)
     index = {p: i for i, p in enumerate(players)}
     neighbours = [[(index[q], n) for q, n in meetings[p].items()] for p in players]
@@ -58,6 +64,57 @@ def bradley_terry(games, *, prior=1.0, iterations=1000, tolerance=1e-5):
         if change < tolerance:
             break
     return {p: 1500 + 400 * math.log10(gamma[i]) for p, i in index.items()}
+
+
+def set_weights(games, *, end, half_life_days=90.0, online_weight=0.01):
+    """Weight of each set for ``weighted_bradley_terry``, {game id: weight}.
+
+    - age: halves every ``half_life_days`` before ``end``, so old sets fade instead of
+      dropping off a window edge;
+    - online: ``online_weight`` times an offline set (games carry ``online``);
+    - repeated pairs: each set of a pair that met n times weighs 1/sqrt(n), so the whole
+      head-to-head counts like sqrt(n) sets and a weekly local rival does not outweigh
+      everyone else. Order independent: every set of the pair gets the same factor.
+    """
+    pairs = defaultdict(int)
+    for g in games:
+        pairs[frozenset((g["players_a"][0], g["players_b"][0]))] += 1
+    weights = {}
+    for g in games:
+        age = max((end - g["completed_at"]).total_seconds() / 86400, 0.0)
+        w = 0.5 ** (age / half_life_days) if half_life_days else 1.0
+        if g.get("online"):
+            w *= online_weight
+        w /= math.sqrt(pairs[frozenset((g["players_a"][0], g["players_b"][0]))])
+        weights[g["id"]] = w
+    return weights
+
+
+def weighted_bradley_terry(
+    games, *, end, half_life_days=90.0, online_weight=0.01, prior=1.0, **kwargs
+):
+    """Bradley-Terry over weighted sets (see ``set_weights``).
+
+    The ``prior`` virtual games against the 1500 reference do not fade, so a player whose
+    sets are few, old or online gets pulled toward 1500: little recent evidence, little
+    distance from the average.
+    """
+    weights = set_weights(
+        games, end=end, half_life_days=half_life_days, online_weight=online_weight
+    )
+    return bradley_terry(games, prior=prior, weights=weights, **kwargs)
+
+
+def elo_probability(rating_a, rating_b):
+    """P(A beats B) on the Elo scale; exact for Elo and for Bradley-Terry as returned here."""
+    return 1 / (1 + 10 ** ((rating_b - rating_a) / 400))
+
+
+def glicko_probability(rating_a, rd_a, rating_b, rd_b):
+    """P(A beats B) from two Glicko ratings, discounting by both uncertainties."""
+    q = math.log(10) / 400
+    g = 1 / math.sqrt(1 + 3 * q * q * (rd_a * rd_a + rd_b * rd_b) / math.pi**2)
+    return 1 / (1 + 10 ** (-g * (rating_a - rating_b) / 400))
 
 
 def wilson_lower_bound(wins, losses, *, z=1.96):

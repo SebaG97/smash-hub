@@ -400,6 +400,7 @@ def test_method_choice_is_official_and_survives_recalculation(project):
             "glicko1",
             "elo",
             "bradley_terry",
+            "weighted_bt",
             "points",
             "wilson",
         }

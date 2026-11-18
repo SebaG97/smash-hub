@@ -210,6 +210,7 @@ export type SeedingRow = {
   merged_sets: number;
   elo: number | null;
   bradley_terry: number | null;
+  weighted_bt?: number | null;
   points: number | null;
   win_rate: number | null;
   wilson: number | null;

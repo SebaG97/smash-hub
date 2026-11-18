@@ -16,11 +16,17 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.rankings.methods import bradley_terry, elo, glicko1, wilson_lower_bound
+from app.rankings.methods import (
+    bradley_terry,
+    elo,
+    glicko1,
+    weighted_bradley_terry,
+    wilson_lower_bound,
+)
 from app.rankings.policy import Policy, period_start, utc
 from app.rankings.service import calculate
 
-ALGORITHM = "seeding-multi-method-v2"
+ALGORITHM = "seeding-multi-method-v3"
 
 METHODS = {
     "combined": dict(
@@ -48,6 +54,12 @@ METHODS = {
         description="Estima la fuerza con todos los enfrentamientos a la vez, sin importar el "
         "orden. Escala tipo Elo: 100 puntos más equivalen a ~64 % de victorias esperadas.",
     ),
+    "weighted_bt": dict(
+        label="Bradley-Terry ponderado",
+        description="Bradley-Terry donde cada set pesa distinto: la mitad cada 90 días, el "
+        "online al 1 % y los cruces repetidos con el mismo rival suman cada vez menos. Con "
+        "pocos sets recientes el valor queda cerca de 1.500.",
+    ),
     "points": dict(
         label="Puntos por posición",
         description="Estilo circuito: 10·log2(inscritos/posición) por torneo presencial y se suman "
@@ -59,7 +71,9 @@ METHODS = {
         "(límite inferior del intervalo de Wilson al 95 %).",
     ),
 }
-Method = Literal["combined", "glicko2", "glicko1", "elo", "bradley_terry", "points", "wilson"]
+Method = Literal[
+    "combined", "glicko2", "glicko1", "elo", "bradley_terry", "weighted_bt", "points", "wilson"
+]
 
 
 class Parameters(BaseModel):
@@ -73,6 +87,9 @@ class Parameters(BaseModel):
     method: Method = "combined"
     elo_k: float = Field(default=32, gt=0, le=100)
     points_top_events: int = Field(default=5, ge=1, le=30)
+    # Weighted Bradley-Terry: half-life of a set and weight of an online set.
+    half_life_days: float = Field(default=90, gt=0, le=3650)
+    online_weight: float = Field(default=0.01, ge=0, le=1)
     # Rankings only list players with enough sets; seeding keeps every entrant.
     min_sets: int = Field(default=0, ge=0, le=200)
     # Mission 24: rankings ask for offline tournaments played (not sets, which punish
@@ -159,7 +176,15 @@ def compute(
             offline_events_all.add(s["startgg_event_id"])
         a_won = canon(s["winner_player_id"]) == a
         games.append(
-            dict(id=s["startgg_set_id"], completed_at=at, players_a=[a], players_b=[b], a_won=a_won)
+            dict(
+                id=s["startgg_set_id"],
+                completed_at=at,
+                players_a=[a],
+                players_b=[b],
+                a_won=a_won,
+                online=bool(s["online"]),
+                event_id=s["startgg_event_id"],
+            )
         )
         for raw, side, won in ((s["p1_player_id"], a, a_won), (s["p2_player_id"], b, not a_won)):
             (wins if won else losses)[side] += 1
@@ -179,6 +204,9 @@ def compute(
     elo_ratings = elo(games, k=p.elo_k)
     g1_ratings = glicko1(games)
     bt_ratings = bradley_terry(games)
+    wbt_ratings = weighted_bradley_terry(
+        games, end=end, half_life_days=p.half_life_days, online_weight=p.online_weight
+    )
 
     rows = []
     for pid in seeded:
@@ -264,6 +292,7 @@ def compute(
                 if pid in g1_ratings
                 else None,
                 bradley_terry=round(bt_ratings[pid], 1) if pid in bt_ratings else None,
+                weighted_bt=round(wbt_ratings[pid], 1) if pid in wbt_ratings else None,
                 points=round(sum(x for x, _ in candidates), 1) if candidates else None,
                 points_events=[
                     dict(
@@ -315,6 +344,7 @@ def compute(
         glicko1="glicko1_conservative",
         elo="elo",
         bradley_terry="bradley_terry",
+        weighted_bt="weighted_bt",
         points="points",
         wilson="wilson",
     )
@@ -454,6 +484,14 @@ def _reasons(r, p, rated, method):
         reasons.append(
             f"Bradley-Terry: {_num(r['bradley_terry'])} en escala tipo Elo, el {rank}.º. "
             f"Como referencia, su Glicko-2 es {_num(r['rating'])}."
+        )
+    elif method == "weighted_bt":
+        reasons.append(
+            f"Bradley-Terry ponderado: {_num(r['weighted_bt'])} en escala tipo Elo, el {rank}.º. "
+            f"Los sets pierden la mitad del peso cada {_num(p.half_life_days)} días, el online "
+            f"pesa {_num(p.online_weight * 100, 0 if p.online_weight * 100 >= 1 else 1)} % y "
+            "los cruces repetidos con el mismo rival suman cada vez menos. Sin ponderar daría "
+            f"{_num(r['bradley_terry'])}."
         )
     elif method == "points":
         if r["points"] is None:

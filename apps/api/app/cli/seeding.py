@@ -9,6 +9,7 @@ python -m app.cli.seeding merge --slug center-stage-2026 --from 5363782 --to 557
 python -m app.cli.seeding duplicate --slug center-stage-2026 --player 5509432 --keep 5570394
 python -m app.cli.seeding override --slug center-stage-2026 --player 70916 --seed 1 --reason "..."
 python -m app.cli.seeding recalculate --slug center-stage-2026
+python -m app.cli.seeding evaluate --slug ranking-py [--test-from 2026-06-01T00:00:00-03:00]
 python -m app.cli.seeding push --slug center-stage-2026 [--phase-id 123] [--confirm]
 """
 
@@ -247,6 +248,25 @@ async def push(args, settings):
     return {"status": "pushed", "verified": not wrong, **report}
 
 
+def evaluate(args, settings):
+    engine = engine_for(settings, write=False)
+    try:
+        with Session(engine) as session:
+            project = service.project_by_slug(session, args.slug)
+            result = service.evaluate(
+                session,
+                project,
+                window_start=datetime.fromisoformat(args.start) if args.start else None,
+                window_end=datetime.fromisoformat(args.end) if args.end else None,
+                test_from=datetime.fromisoformat(args.test_from) if args.test_from else None,
+            )
+    finally:
+        engine.dispose()
+    if not args.per_event:
+        result.pop("per_event")
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description="Seeding de eventos (Misión 05)")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -284,6 +304,16 @@ def main():
     o.add_argument("--reason", required=True)
     r = sub.add_parser("recalculate")
     r.add_argument("--slug", required=True)
+    ev = sub.add_parser(
+        "evaluate", help="Qué método predice mejor los sets de torneos que no vio (solo lee)"
+    )
+    ev.add_argument("--slug", required=True)
+    ev.add_argument("--start", help="Inicio de la ventana, ISO 8601 (por defecto el del proyecto)")
+    ev.add_argument("--end", help="Fin de la ventana, ISO 8601 (por defecto el del proyecto)")
+    ev.add_argument(
+        "--test-from", help="Desde cuándo se predice, ISO 8601 (por defecto, inicio + 120 días)"
+    )
+    ev.add_argument("--per-event", action="store_true", help="Incluir el detalle por torneo")
     p = sub.add_parser("push")
     p.add_argument("--slug", required=True)
     p.add_argument("--phase-id")
@@ -328,6 +358,8 @@ def main():
                     "run_id": str(service.recalculate(s, pr, ACTOR).id),
                 },
             )
+        elif args.command == "evaluate":
+            result = evaluate(args, settings)
         else:
             result = asyncio.run(push(args, settings))
     except ImportFailure as exc:

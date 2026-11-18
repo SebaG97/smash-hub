@@ -392,6 +392,38 @@ def recalculate(
     return run
 
 
+def evaluate(session, project, *, window_start=None, window_end=None, test_from=None):
+    """Backtest of the head-to-head methods over the project's sets (nothing is stored)."""
+    from app.seeding.evaluation import backtest, default_test_from, games_from
+
+    start = utc(window_start) if window_start else utc(project.window_start)
+    end = utc(window_end) if window_end else utc(project.event_date)
+    if end <= start:
+        raise InvalidRequest("La ventana debe terminar después de empezar.")
+    sets = [
+        {c.name: getattr(s, c.name) for c in SeedingSet.__table__.columns}
+        for s in session.scalars(select(SeedingSet).where(SeedingSet.project_id == project.id))
+    ]
+    if project.kind == "ranking":
+        allowed = ranked_events(session)
+        sets = [s for s in sets if s["startgg_event_id"] in allowed]
+    games = games_from(
+        sets,
+        merges=project.merges or {},
+        duplicates=project.duplicates or {},
+        window_start=start,
+        window_end=end,
+    )
+    test_from = utc(test_from) if test_from else default_test_from(start, end)
+    result = backtest(games, default_parameters(session, project), test_from=test_from)
+    return dict(
+        window_start=start.isoformat(),
+        window_end=end.isoformat(),
+        test_from=test_from.isoformat(),
+        **result,
+    )
+
+
 def ranked_events(session):
     """start.gg event ids that feed rankings (Mission 20): only hub events that are their
     tournament's main bracket, in tournaments an organizer left checked for rankings."""
@@ -642,6 +674,7 @@ EXPORT_FIELDS = [
     "placement_score",
     "elo",
     "bradley_terry",
+    "weighted_bt",
     "points",
     "win_rate",
     "wilson",
@@ -680,6 +713,7 @@ def export_csv(session, project):
                 placement_score=r.get("placement_score"),
                 elo=r.get("elo"),
                 bradley_terry=r.get("bradley_terry"),
+                weighted_bt=r.get("weighted_bt"),
                 points=r.get("points"),
                 win_rate=r.get("win_rate"),
                 wilson=r.get("wilson"),

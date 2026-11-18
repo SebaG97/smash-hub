@@ -51,3 +51,55 @@ def test_glicko1_rewards_wins_and_shrinks_uncertainty():
     ratings = glicko1(games)
     assert ratings["a"][0] > 1500 > ratings["b"][0]
     assert ratings["a"][1] < 350
+
+
+def test_weighted_bradley_terry_fades_old_sets_and_online():
+    from app.rankings.methods import set_weights, weighted_bradley_terry
+
+    end = T0 + timedelta(days=180)
+    # b beat a long ago; a beat b recently: recent evidence wins.
+    games = [game(1, "b", "a", day=0), game(2, "a", "b", day=180)]
+    ratings = weighted_bradley_terry(games, end=end)
+    assert ratings["a"] > ratings["b"]
+    weights = set_weights(games, end=end)
+    # 180 days = two half-lives, and the pair met twice: 1/sqrt(2) each.
+    assert weights["1"] == pytest.approx(0.25 / 2**0.5)
+    assert weights["2"] == pytest.approx(1 / 2**0.5)
+    online = dict(game(3, "c", "d", day=180), online=True)
+    assert set_weights([online], end=end)["3"] == pytest.approx(0.01)
+    # Unweighted Bradley-Terry sees the same 1-1 record as a tie.
+    plain = bradley_terry(games)
+    assert plain["a"] == pytest.approx(plain["b"])
+
+
+def test_repeated_rival_counts_less_than_many_rivals():
+    from app.rankings.methods import weighted_bradley_terry
+
+    end = T0 + timedelta(days=1)
+    farmer = [game(i, "f", "local", day=0) for i in range(8)]
+    traveller = [game(10 + i, "t", f"r{i}", day=0) for i in range(8)]
+    ratings = weighted_bradley_terry(farmer + traveller, end=end)
+    assert ratings["t"] > ratings["f"]
+
+
+def test_backtest_scores_every_method_on_the_same_sets():
+    from app.seeding.engine import Parameters
+    from app.seeding.evaluation import EVALUATED, backtest
+
+    def event_games(event, day, results):
+        return [
+            dict(game(f"{event}-{i}", w, lo, day=day), online=False, event_id=event)
+            for i, (w, lo) in enumerate(results)
+        ]
+
+    ladder = [("a", "b"), ("b", "c"), ("a", "c"), ("c", "d"), ("b", "d")]
+    games = []
+    for week in range(10):
+        games += event_games(f"e{week}", week * 7, ladder)
+    report = backtest(games, Parameters(), test_from=T0 + timedelta(days=35))
+    assert report["events"] == 5 and report["sets"] == 25
+    assert {m["method"] for m in report["methods"]} == set(EVALUATED)
+    for m in report["methods"]:
+        # A perfectly stable ladder: every method should beat a coin flip.
+        assert m["log_loss"] < report["coin_flip"]
+        assert m["accuracy"] == 100.0

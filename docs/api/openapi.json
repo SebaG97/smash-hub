@@ -11926,6 +11926,7 @@
               "glicko1",
               "elo",
               "bradley_terry",
+              "weighted_bt",
               "points",
               "wilson"
             ],
@@ -11945,6 +11946,20 @@
             "minimum": 1.0,
             "title": "Points Top Events",
             "default": 5
+          },
+          "half_life_days": {
+            "type": "number",
+            "maximum": 3650.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Half Life Days",
+            "default": 90
+          },
+          "online_weight": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Online Weight",
+            "default": 0.01
           },
           "min_sets": {
             "type": "integer",
@@ -12517,6 +12532,7 @@
                   "glicko1",
                   "elo",
                   "bradley_terry",
+                  "weighted_bt",
                   "points",
                   "wilson"
                 ]

@@ -86,7 +86,7 @@ Acceso (ADR-021): sesión `sh_session` de una cuenta `admin` o `superadmin` (las
 
 ### Métodos y rankings (Misión 05.1, ADR-012)
 
-`GET /seeding/{slug}` agrega `kind` (`seeding` o `ranking`), `country_code`, `method` (método oficial) y `methods` (`[{id, label, description}]`). Cada fila de `seeds` agrega `scores` y `ranks` por método, `reasons_by_method`, `elo`, `bradley_terry`, `points`, `win_rate`, `wilson` y `eligible` (en rankings, si llega al mínimo de sets). Métodos: `combined`, `glicko2`, `elo`, `bradley_terry`, `points`, `wilson`. En rankings `PUT /overrides` responde 422.
+`GET /seeding/{slug}` agrega `kind` (`seeding` o `ranking`), `country_code`, `method` (método oficial) y `methods` (`[{id, label, description}]`). Cada fila de `seeds` agrega `scores` y `ranks` por método, `reasons_by_method`, `elo`, `bradley_terry`, `weighted_bt`, `points`, `win_rate`, `wilson` y `eligible` (en rankings, si llega al mínimo de sets). Métodos: `combined`, `glicko2`, `glicko1`, `elo`, `bradley_terry`, `weighted_bt` (Bradley-Terry con sets ponderados por antigüedad, online y cruces repetidos; parámetros `half_life_days` y `online_weight`), `points`, `wilson`. En rankings `PUT /overrides` responde 422.
 
 ### Administración desde la web (Misión 05.2)
 
